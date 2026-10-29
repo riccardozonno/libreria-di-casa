@@ -95,6 +95,36 @@ describe("login", () => {
   });
 });
 
+describe("eventi di accesso nel registro", () => {
+  it("registra login riusciti, falliti e il blocco, con l'IP", async () => {
+    const user = await createUser({ email: "anna@example.com", password: GOOD_PASSWORD });
+
+    await signIn("anna@example.com", GOOD_PASSWORD, "203.0.113.50");
+    for (let attempt = 0; attempt < 5; attempt += 1) await signIn("anna@example.com", "password-sbagliata-123");
+
+    const rows = await prisma.auditLog.findMany({ where: { entityId: user.id }, orderBy: { createdAt: "asc" } });
+    expect(rows.map((row) => row.action)).toEqual([
+      "auth.login",
+      "auth.login_failed",
+      "auth.login_failed",
+      "auth.login_failed",
+      "auth.login_failed",
+      "auth.login_failed",
+      "auth.lockout",
+    ]);
+    expect(rows[0]).toMatchObject({ actorId: user.id, ip: "203.0.113.50" });
+  });
+
+  it("registra il reset della password", async () => {
+    const user = await createUser({ email: "nuovo@example.com" });
+    const token = new URL((await createInviteLink(user.id)).url).searchParams.get("token")!;
+
+    await call("/reset-password", { token, newPassword: GOOD_PASSWORD });
+
+    expect(await prisma.auditLog.count({ where: { action: "auth.password_reset", entityId: user.id } })).toBe(1);
+  });
+});
+
 describe("blocco dopo tentativi falliti", () => {
   it("blocca l'account per 15 minuti dopo 5 errori, anche da IP diversi", async () => {
     await createUser({ email: "anna@example.com", password: GOOD_PASSWORD });

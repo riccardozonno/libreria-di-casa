@@ -4,6 +4,7 @@ import { prismaAdapter } from "better-auth/adapters/prisma";
 import { APIError, createAuthMiddleware } from "better-auth/api";
 import { nextCookies } from "better-auth/next-js";
 import { twoFactor } from "better-auth/plugins/two-factor";
+import { writeAudit } from "../audit";
 import { prisma } from "../db";
 import { env } from "../env";
 import { clearFailedLogins, findLoginState, isLocked, registerFailedLogin } from "./lockout";
@@ -19,6 +20,21 @@ const SIGN_IN_PATH = "/sign-in/email";
 function invalidCredentials(): APIError {
   return new APIError("UNAUTHORIZED", { code: "INVALID_EMAIL_OR_PASSWORD", message: "Invalid email or password" });
 }
+
+/** Eventi di accesso nel registro (ADR-0005): avvengono dentro Better Auth, quindi in una transazione a sé. */
+async function recordAuthEvent(user: { id: string; email: string }, action: string, request: Request | undefined): Promise<void> {
+  const ip = request?.headers.get("cf-connecting-ip") ?? null;
+  await prisma.$transaction((tx) => writeAudit(tx, user, { action, entityType: "user", entityId: user.id, ip }));
+}
+
+// Endpoint autenticati il cui successo va registrato (utente dalla sessione).
+const SESSION_EVENTS: Record<string, string> = {
+  "/change-password": "auth.password_change",
+  "/revoke-sessions": "auth.logout_all",
+  "/two-factor/enable": "auth.2fa_setup",
+  "/two-factor/disable": "auth.2fa_disable",
+  "/two-factor/verify-totp": "auth.login",
+};
 
 function readEmail(body: unknown): string | null {
   if (typeof body !== "object" || body === null || !("email" in body)) return null;
@@ -40,8 +56,9 @@ export const auth = betterAuth({
     password: { hash: hashPassword, verify: verifyPassword },
     resetPasswordTokenExpiresIn: ACCOUNT_LINK_TTL_SECONDS,
     revokeSessionsOnPasswordReset: true,
-    onPasswordReset: async ({ user }) => {
+    onPasswordReset: async ({ user }, request) => {
       await clearFailedLogins(user.id);
+      await recordAuthEvent(user, "auth.password_reset", request);
     },
   },
 
@@ -110,16 +127,29 @@ export const auth = betterAuth({
       if (!state.active) throw invalidCredentials();
     }),
     after: createAuthMiddleware(async (ctx) => {
+      const returned = ctx.context.returned;
+      const succeeded = !(returned instanceof APIError);
+      const sessionEvent = SESSION_EVENTS[ctx.path];
+      if (sessionEvent) {
+        const sessionUser = ctx.context.session?.user ?? ctx.context.newSession?.user;
+        if (succeeded && sessionUser) await recordAuthEvent(sessionUser, sessionEvent, ctx.request);
+        return;
+      }
       if (ctx.path !== SIGN_IN_PATH) return;
       const email = readEmail(ctx.body);
       if (!email) return;
       const state = await findLoginState(email);
       if (!state) return;
-      const failed = ctx.context.returned instanceof APIError && ctx.context.returned.statusCode === 401;
-      if (failed) {
-        await registerFailedLogin(state.id);
-      } else if (!(ctx.context.returned instanceof APIError)) {
+      const user = { id: state.id, email: email.trim().toLowerCase() };
+      if (returned instanceof APIError && returned.statusCode === 401) {
+        const locked = await registerFailedLogin(state.id);
+        await recordAuthEvent(user, "auth.login_failed", ctx.request);
+        if (locked) await recordAuthEvent(user, "auth.lockout", ctx.request);
+      } else if (succeeded) {
         await clearFailedLogins(state.id);
+        // Con la 2FA attiva il login si completa su /two-factor/verify-totp.
+        const needsSecondFactor = typeof returned === "object" && returned !== null && "twoFactorRedirect" in returned;
+        if (!needsSecondFactor) await recordAuthEvent(user, "auth.login", ctx.request);
       }
     }),
   },
