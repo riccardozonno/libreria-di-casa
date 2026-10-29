@@ -36,6 +36,10 @@ function cameraErrorMessage(error: unknown): string {
 
 export function BarcodeScanner({ onDetected }: { onDetected: (isbn13: string) => void }) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const onDetectedRef = useRef(onDetected);
+  useEffect(() => {
+    onDetectedRef.current = onDetected;
+  }, [onDetected]);
   const [status, setStatus] = useState<"starting" | "scanning" | "error">("starting");
   const [error, setError] = useState("");
 
@@ -43,6 +47,7 @@ export function BarcodeScanner({ onDetected }: { onDetected: (isbn13: string) =>
     let stream: MediaStream | null = null;
     let timer: ReturnType<typeof setTimeout> | undefined;
     let cancelled = false;
+    const stopStream = () => stream?.getTracks().forEach((track) => track.stop());
 
     async function start() {
       try {
@@ -52,7 +57,8 @@ export function BarcodeScanner({ onDetected }: { onDetected: (isbn13: string) =>
           audio: false,
         });
         const video = videoRef.current;
-        if (cancelled || !video) return;
+        // Smontato durante l'avvio (es. "Chiudi la fotocamera" mentre chiede il permesso): spegni subito.
+        if (cancelled || !video) return stopStream();
         video.srcObject = stream;
         await video.play();
         const detector = await createDetector();
@@ -67,7 +73,7 @@ export function BarcodeScanner({ onDetected }: { onDetected: (isbn13: string) =>
                 const isbn = normalizeIsbn(code.rawValue);
                 if (isbn) {
                   navigator.vibrate?.(60);
-                  onDetected(isbn);
+                  onDetectedRef.current(isbn);
                   return;
                 }
               }
@@ -79,7 +85,7 @@ export function BarcodeScanner({ onDetected }: { onDetected: (isbn13: string) =>
         };
         void tick();
       } catch (caught) {
-        if (cancelled) return;
+        if (cancelled) return stopStream();
         setStatus("error");
         setError(cameraErrorMessage(caught));
       }
@@ -89,9 +95,9 @@ export function BarcodeScanner({ onDetected }: { onDetected: (isbn13: string) =>
     return () => {
       cancelled = true;
       if (timer) clearTimeout(timer);
-      stream?.getTracks().forEach((track) => track.stop());
+      stopStream();
     };
-  }, [onDetected]);
+  }, []);
 
   return (
     <div className="relative overflow-hidden rounded-[var(--radius-lg)] bg-black shadow-[var(--shadow-float)]">

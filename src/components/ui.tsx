@@ -1,7 +1,7 @@
-import type { ComponentPropsWithoutRef, ReactNode } from "react";
+import { useId, type ComponentPropsWithoutRef, type ReactNode } from "react";
 import { locationColorClass, type LocationColorKey } from "@/lib/location-colors";
 
-// Componenti di base condivisi (server-safe: niente stato, niente hook).
+// Componenti di base condivisi (niente stato; TextField e TextArea usano useId per id univoci).
 
 type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
 
@@ -35,7 +35,8 @@ type FieldProps = ComponentPropsWithoutRef<"input"> & {
 };
 
 export function TextField({ label, name, error, hint, id, className = "", ...rest }: FieldProps) {
-  const inputId = id ?? `campo-${name}`;
+  const autoId = useId();
+  const inputId = id ?? `campo-${name}-${autoId}`;
   const describedBy = [error ? `${inputId}-errore` : null, hint ? `${inputId}-nota` : null].filter(Boolean).join(" ");
   return (
     <div className={`flex flex-col gap-1.5 ${className}`}>
@@ -67,7 +68,8 @@ export function TextField({ label, name, error, hint, id, className = "", ...res
 type TextAreaProps = ComponentPropsWithoutRef<"textarea"> & { label: string; name: string; error?: string };
 
 export function TextArea({ label, name, error, id, ...rest }: TextAreaProps) {
-  const inputId = id ?? `campo-${name}`;
+  const autoId = useId();
+  const inputId = id ?? `campo-${name}-${autoId}`;
   return (
     <div className="flex flex-col gap-1.5">
       <label htmlFor={inputId} className="text-[13px] font-semibold text-ink-soft">

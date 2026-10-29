@@ -18,7 +18,11 @@ interface CopyRowProps {
 
 export function CopyRow({ copy, location, canEdit, canDelete, isLastCopy, moveTargets }: CopyRowProps) {
   const [isEditing, setIsEditing] = useState(false);
-  const [updateState, updateAction, isUpdating] = useActionState(updateCopyAction, initialActionState);
+  const [updateState, updateAction, isUpdating] = useActionState(async (previous: ActionResult, formData: FormData) => {
+    const result = await updateCopyAction(previous, formData);
+    if (result.ok) setIsEditing(false);
+    return result;
+  }, initialActionState);
   const [deleteState, deleteAction, isDeleting] = useActionState(deleteCopyAction, initialActionState);
   const [moveState, moveAction, isMoving] = useActionState(async (previous: ActionResult, formData: FormData) => {
     const result = await moveCopyAction(previous, formData);
@@ -50,10 +54,7 @@ export function CopyRow({ copy, location, canEdit, canDelete, isLastCopy, moveTa
 
       {isEditing && canEdit && (
         <form
-          action={async (formData) => {
-            await updateAction(formData);
-            setIsEditing(false);
-          }}
+          action={updateAction}
           className="mt-3 flex flex-col gap-3"
         >
           <input type="hidden" name="copyId" value={copy.id} />

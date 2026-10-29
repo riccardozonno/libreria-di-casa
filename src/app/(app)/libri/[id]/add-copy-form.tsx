@@ -2,13 +2,17 @@
 
 import { useActionState, useState } from "react";
 import { Button, Notice, TextField } from "@/components/ui";
-import { initialActionState } from "@/lib/action-state";
+import { initialActionState, type ActionResult } from "@/lib/action-state";
 import { LocationSelect } from "@/components/location-select";
 import { addCopyAction } from "./actions";
 
 export function AddCopyForm({ bookId, locations }: { bookId: string; locations: { id: string; name: string }[] }) {
   const [isOpen, setIsOpen] = useState(false);
-  const [state, action, isPending] = useActionState(addCopyAction, initialActionState);
+  const [state, action, isPending] = useActionState(async (previous: ActionResult, formData: FormData) => {
+    const result = await addCopyAction(previous, formData);
+    if (result.ok) setIsOpen(false);
+    return result;
+  }, initialActionState);
 
   if (!isOpen) {
     return (
@@ -23,10 +27,7 @@ export function AddCopyForm({ bookId, locations }: { bookId: string; locations: 
 
   return (
     <form
-      action={async (formData) => {
-        await action(formData);
-        setIsOpen(false);
-      }}
+      action={action}
       className="mt-3 flex flex-col gap-3 rounded-[var(--radius-lg)] bg-surface p-4 shadow-[var(--shadow-card)]"
     >
       <input type="hidden" name="bookId" value={bookId} />
