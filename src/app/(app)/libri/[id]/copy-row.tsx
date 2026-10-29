@@ -2,9 +2,10 @@
 
 import { useActionState, useEffect, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
+import { LocationSelect } from "@/components/location-select";
 import { Button, Notice, TextArea, TextField } from "@/components/ui";
-import { initialActionState } from "@/lib/action-state";
-import { deleteCopyAction, updateCopyAction } from "./actions";
+import { initialActionState, type ActionResult } from "@/lib/action-state";
+import { deleteCopyAction, moveCopyAction, updateCopyAction } from "./actions";
 
 interface CopyRowProps {
   copy: { id: string; shelf: string | null; notes: string | null };
@@ -12,13 +13,21 @@ interface CopyRowProps {
   canEdit: boolean;
   canDelete: boolean;
   isLastCopy: boolean;
+  /** Sedi verso cui l'utente può spostare questa copia (vuoto: nessun permesso). */
+  moveTargets: { id: string; name: string }[];
 }
 
-export function CopyRow({ copy, location, canEdit, canDelete, isLastCopy }: CopyRowProps) {
+export function CopyRow({ copy, location, canEdit, canDelete, isLastCopy, moveTargets }: CopyRowProps) {
   const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
   const [updateState, updateAction, isUpdating] = useActionState(updateCopyAction, initialActionState);
   const [deleteState, deleteAction, isDeleting] = useActionState(deleteCopyAction, initialActionState);
+  const [moveState, moveAction, isMoving] = useActionState(async (previous: ActionResult, formData: FormData) => {
+    const result = await moveCopyAction(previous, formData);
+    if (result.ok) setIsEditing(false);
+    return result;
+  }, initialActionState);
+  const canMove = moveTargets.length > 0;
 
   // Dopo l'eliminazione dell'ultima copia il libro non esiste più: si torna al catalogo.
   useEffect(() => {
@@ -38,14 +47,14 @@ export function CopyRow({ copy, location, canEdit, canDelete, isLastCopy }: Copy
           {copy.notes && <p className="whitespace-pre-line text-[14px] text-ink-soft">{copy.notes}</p>}
           {!copy.shelf && !copy.notes && <p className="text-[14px] text-ink-faint">Nessuna collocazione o nota.</p>}
         </div>
-        {canEdit && !isEditing && (
+        {(canEdit || canMove) && !isEditing && (
           <Button variant="ghost" className="shrink-0" onClick={() => setIsEditing(true)}>
             Modifica
           </Button>
         )}
       </div>
 
-      {isEditing && (
+      {isEditing && canEdit && (
         <form
           action={async (formData) => {
             await updateAction(formData);
@@ -66,6 +75,25 @@ export function CopyRow({ copy, location, canEdit, canDelete, isLastCopy }: Copy
           </div>
         </form>
       )}
+
+      {isEditing && canMove && (
+        <form action={moveAction} className="mt-4 flex flex-col gap-3 border-t border-line pt-4">
+          <input type="hidden" name="copyId" value={copy.id} />
+          <LocationSelect locations={moveTargets} legend="Sposta in un'altra sede" defaultValue="" />
+          <div className="flex gap-2">
+            <Button type="submit" variant="secondary" disabled={isMoving}>
+              {isMoving ? "Spostamento…" : "Sposta"}
+            </Button>
+            {!canEdit && (
+              <Button variant="ghost" onClick={() => setIsEditing(false)}>
+                Annulla
+              </Button>
+            )}
+          </div>
+        </form>
+      )}
+      {!moveState.ok && moveState.error && <div className="mt-3"><Notice tone="error">{moveState.error}</Notice></div>}
+      {moveState.ok && moveState.message && !isEditing && <div className="mt-3"><Notice tone="success">{moveState.message}</Notice></div>}
 
       {!updateState.ok && updateState.error && <div className="mt-3"><Notice tone="error">{updateState.error}</Notice></div>}
       {!deleteState.ok && deleteState.error && <div className="mt-3"><Notice tone="error">{deleteState.error}</Notice></div>}

@@ -105,6 +105,7 @@ export async function getBookDetail(bookId: string) {
           shelf: true,
           notes: true,
           createdAt: true,
+          createdById: true,
           location: { select: { id: true, name: true, color: true, archivedAt: true } },
         },
       },

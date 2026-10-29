@@ -154,3 +154,37 @@ export async function deleteCopy(actor: CurrentUser, copyId: string): Promise<De
   if (result.coverPath) await removeCover(result.coverPath);
   return { bookId: result.bookId, bookDeleted: result.bookDeleted };
 }
+
+export async function moveCopy(actor: CurrentUser, copyId: string, toLocationId: string): Promise<{ bookId: string }> {
+  const bookIdRow = await prisma.copy.findUnique({ where: { id: copyId }, select: { bookId: true } });
+  if (!bookIdRow) throw notFound("Copia");
+
+  return prisma.$transaction(async (tx) => {
+    await lockBook(tx, bookIdRow.bookId);
+    const copy = await tx.copy.findUnique({
+      where: { id: copyId },
+      select: { bookId: true, createdById: true, location: { select: { id: true, name: true, archivedAt: true } } },
+    });
+    if (!copy) throw notFound("Copia");
+    const target = await loadLocation(tx, toLocationId);
+    const allowed = can(actor, {
+      type: "copy.move",
+      from: toLocationRef(copy.location),
+      to: toLocationRef(target),
+      isCopyCreator: copy.createdById === actor.id,
+    });
+    if (!allowed) throw forbidden();
+
+    await tx.copy.update({ where: { id: copyId }, data: { locationId: target.id } });
+    await tx.copyMovement.create({
+      data: { bookId: copy.bookId, copyId, fromLocationId: copy.location.id, toLocationId: target.id, movedById: actor.id },
+    });
+    await writeAudit(tx, actor, {
+      action: "copy.move",
+      entityType: "copy",
+      entityId: copyId,
+      data: { bookId: copy.bookId, from: copy.location.name, to: target.name },
+    });
+    return { bookId: copy.bookId };
+  });
+}

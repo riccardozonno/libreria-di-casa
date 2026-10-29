@@ -62,6 +62,24 @@ test.describe("editor", () => {
     await expect(page.getByRole("button", { name: "+ Aggiungi una copia" })).toBeVisible();
   });
 
+  test("sposta la copia che ha inserito e lo spostamento compare nello storico", async ({ page }, testInfo) => {
+    const title = `Atlante ${testInfo.project.name}`;
+    await login(page, "editor");
+    await page.goto("/aggiungi");
+    await page.getByRole("button", { name: /Libro senza ISBN/ }).click();
+    await page.getByLabel("Titolo").fill(title);
+    await page.getByRole("button", { name: "Salva il libro" }).click();
+    await expect(page.getByRole("heading", { level: 1, name: title })).toBeVisible();
+
+    await page.getByRole("button", { name: "Modifica" }).click();
+    await page.locator("label").filter({ hasText: SEED.mare.name }).click();
+    await expect(page.getByRole("radio", { name: SEED.mare.name })).toBeChecked();
+    await page.getByRole("button", { name: "Sposta" }).click();
+
+    await expect(page.getByText("Copia spostata.")).toBeVisible();
+    await expect(page.getByRole("listitem").filter({ hasText: `${SEED.casa.name} → ${SEED.mare.name}` })).toBeVisible();
+  });
+
   test("non può modificare le copie in una sede non sua", async ({ page }) => {
     await login(page, "editor");
     await page.goto(`/libri/${SEED.book.id}`);

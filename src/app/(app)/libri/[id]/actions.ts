@@ -4,13 +4,14 @@ import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { copyDetailsSchema, uuidSchema } from "@/lib/schemas";
 import { withUser, type ActionResult } from "@/server/action-result";
-import { addCopy, deleteCopy, updateCopy } from "@/server/catalog/mutations";
+import { addCopy, deleteCopy, moveCopy, updateCopy } from "@/server/catalog/mutations";
 import { setReading } from "@/server/catalog/readings";
 
 // Azioni della scheda libro. Ogni azione: zod → utente dal DB → servizio (policy + transazione + audit).
 
 const copyFormSchema = copyDetailsSchema.extend({ copyId: uuidSchema });
 const addCopyFormSchema = copyDetailsSchema.extend({ bookId: uuidSchema, locationId: uuidSchema });
+const moveFormSchema = z.object({ copyId: uuidSchema, locationId: uuidSchema });
 const readingFormSchema = z.object({
   bookId: uuidSchema,
   userId: uuidSchema,
@@ -59,5 +60,15 @@ export async function setReadingAction(_previous: ActionResult, formData: FormDa
     await setReading(user, input.bookId, input.userId, input.read);
     revalidatePath(`/libri/${input.bookId}`);
     return { ok: true, data: undefined };
+  });
+}
+
+export async function moveCopyAction(_previous: ActionResult, formData: FormData): Promise<ActionResult> {
+  return withUser("moveCopy", async (user) => {
+    const input = moveFormSchema.parse(fields(formData, ["copyId", "locationId"]));
+    const { bookId } = await moveCopy(user, input.copyId, input.locationId);
+    revalidatePath(`/libri/${bookId}`);
+    revalidatePath("/");
+    return { ok: true, data: undefined, message: "Copia spostata." };
   });
 }
