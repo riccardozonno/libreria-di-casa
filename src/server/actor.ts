@@ -51,11 +51,13 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
 
 /**
  * Per le pagine: i layout non vengono rieseguiti a ogni navigazione client,
- * quindi ogni pagina verifica l'utente da sola.
+ * quindi ogni pagina verifica l'utente da sola. Un admin che deve ancora attivare
+ * la 2FA (produzione) può aprire solo il profilo.
  */
-export async function requireUser(): Promise<CurrentUser> {
+export async function requireUser(options: { allowPending2fa?: boolean } = {}): Promise<CurrentUser> {
   const user = await getCurrentUser();
   if (!user) redirect("/accedi");
+  if (user.mustEnable2fa && !options.allowPending2fa) redirect("/profilo?2fa=richiesta");
   return user;
 }
 

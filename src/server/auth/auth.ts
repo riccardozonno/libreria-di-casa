@@ -1,7 +1,7 @@
 import "server-only";
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
-import { APIError, createAuthMiddleware } from "better-auth/api";
+import { APIError, createAuthMiddleware, getSessionFromCtx } from "better-auth/api";
 import { nextCookies } from "better-auth/next-js";
 import { twoFactor } from "better-auth/plugins/two-factor";
 import { writeAudit } from "../audit";
@@ -116,6 +116,15 @@ export const auth = betterAuth({
 
   hooks: {
     before: createAuthMiddleware(async (ctx) => {
+      if (ctx.path === "/two-factor/disable" && env.REQUIRE_ADMIN_2FA) {
+        // In produzione la 2FA è obbligatoria per gli admin: non possono toglierla da soli.
+        const session = await getSessionFromCtx(ctx);
+        const user = session ? await prisma.user.findUnique({ where: { id: session.user.id }, select: { role: true } }) : null;
+        if (user?.role === "ADMIN") {
+          throw new APIError("FORBIDDEN", { code: "ADMIN_2FA_REQUIRED", message: "Per gli amministratori la verifica in due passaggi è obbligatoria." });
+        }
+        return;
+      }
       if (ctx.path !== SIGN_IN_PATH) return;
       const email = readEmail(ctx.body);
       if (!email) return;

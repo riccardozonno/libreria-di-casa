@@ -34,10 +34,12 @@ export function LoginForm({ initialStep }: { initialStep: Step }) {
     const form = new FormData(event.currentTarget);
     setIsPending(true);
     setError("");
-    const { error: totpError } = await authClient.twoFactor.verifyTotp({
-      code: String(form.get("code") ?? "").replace(/\s/g, ""),
-      trustDevice: form.get("trust") === "on",
-    });
+    const code = String(form.get("code") ?? "").replace(/\s/g, "");
+    const trustDevice = form.get("trust") === "on";
+    // 6 cifre: codice dell'app; altrimenti un codice di recupero.
+    const { error: totpError } = /^\d{6}$/.test(code)
+      ? await authClient.twoFactor.verifyTotp({ code, trustDevice })
+      : await authClient.twoFactor.verifyBackupCode({ code, trustDevice });
     setIsPending(false);
     if (totpError) return setError(authErrorMessage(totpError));
     router.replace("/");
@@ -48,9 +50,9 @@ export function LoginForm({ initialStep }: { initialStep: Step }) {
     return (
       <form onSubmit={handleTotp} className="flex flex-col gap-4" noValidate>
         <h1 className="text-[24px] font-bold tracking-tight">Verifica in due passaggi</h1>
-        <p className="text-[15px] text-ink-soft">Inserisci il codice a 6 cifre dell&apos;app di autenticazione.</p>
+        <p className="text-[15px] text-ink-soft">Inserisci il codice a 6 cifre dell&apos;app di autenticazione, oppure uno dei codici di recupero.</p>
         {error && <Notice tone="error">{error}</Notice>}
-        <TextField label="Codice" name="code" inputMode="numeric" autoComplete="one-time-code" pattern="[0-9 ]*" required autoFocus />
+        <TextField label="Codice" name="code" autoComplete="one-time-code" autoCapitalize="none" required autoFocus />
         <label className="flex min-h-11 items-center gap-3 text-[15px]">
           <input type="checkbox" name="trust" className="h-5 w-5 accent-[var(--accent)]" />
           Ricorda questo dispositivo per 30 giorni
