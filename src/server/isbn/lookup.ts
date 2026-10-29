@@ -18,6 +18,8 @@ export interface BookCandidate {
 }
 
 const TIMEOUT_MS = 6_000;
+const MAX_ATTEMPTS = 2;
+const RETRY_DELAY_MS = 400;
 const CACHE_TTL_MS = 24 * 3_600_000;
 const CACHE_MAX_ENTRIES = 500;
 const MAX_TITLE = 300;
@@ -67,23 +69,49 @@ function stripHtml(text: string): string {
   return text.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
 }
 
+/** Nome del servizio per i log: mai l'URL completo, che per Google contiene la chiave. */
+function serviceName(url: string): string {
+  return new URL(url).hostname;
+}
+
+/** GET JSON con un nuovo tentativo su errori temporanei (5xx, 429, rete). null se non disponibile. */
 async function fetchJson(url: string, fetchImpl: typeof fetch): Promise<unknown | null> {
-  try {
-    const response = await fetchImpl(url, { signal: AbortSignal.timeout(TIMEOUT_MS), headers: { accept: "application/json" } });
-    return response.ok ? await response.json() : null;
-  } catch {
-    return null;
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt += 1) {
+    try {
+      const response = await fetchImpl(url, { signal: AbortSignal.timeout(TIMEOUT_MS), headers: { accept: "application/json" } });
+      if (response.ok) return await response.json();
+      const isTransient = response.status >= 500 || response.status === 429;
+      console.warn(`[isbn] ${serviceName(url)} ha risposto ${response.status} (tentativo ${attempt})`);
+      if (!isTransient) return null;
+    } catch (error) {
+      console.warn(`[isbn] ${serviceName(url)} non raggiungibile (tentativo ${attempt})`, error instanceof Error ? error.message : error);
+    }
+    if (attempt < MAX_ATTEMPTS) await new Promise((resolve) => setTimeout(resolve, RETRY_DELAY_MS));
   }
+  return null;
+}
+
+/** ISBN-10 equivalente (solo per i 978…): Google indicizza alcuni libri italiani solo così. */
+export function toIsbn10(isbn13: string): string | null {
+  if (!isbn13.startsWith("978")) return null;
+  const body = isbn13.slice(3, 12);
+  const sum = [...body].reduce((acc, digit, index) => acc + Number(digit) * (10 - index), 0);
+  const check = (11 - (sum % 11)) % 11;
+  return body + (check === 10 ? "X" : String(check));
+}
+
+async function googleVolume(query: string, fetchImpl: typeof fetch) {
+  const url = new URL("https://www.googleapis.com/books/v1/volumes");
+  url.searchParams.set("q", `isbn:${query}`);
+  url.searchParams.set("maxResults", "1");
+  if (env.GOOGLE_BOOKS_API_KEY) url.searchParams.set("key", env.GOOGLE_BOOKS_API_KEY);
+  const parsed = googleSchema.safeParse(await fetchJson(url.toString(), fetchImpl));
+  return parsed.success ? parsed.data.items?.[0]?.volumeInfo : undefined;
 }
 
 export async function lookupGoogleBooks(isbn13: string, fetchImpl: typeof fetch = fetch): Promise<BookCandidate | null> {
-  const url = new URL("https://www.googleapis.com/books/v1/volumes");
-  url.searchParams.set("q", `isbn:${isbn13}`);
-  url.searchParams.set("maxResults", "1");
-  if (env.GOOGLE_BOOKS_API_KEY) url.searchParams.set("key", env.GOOGLE_BOOKS_API_KEY);
-
-  const parsed = googleSchema.safeParse(await fetchJson(url.toString(), fetchImpl));
-  const info = parsed.success ? parsed.data.items?.[0]?.volumeInfo : undefined;
+  const isbn10 = toIsbn10(isbn13);
+  const info = (await googleVolume(isbn13, fetchImpl)) ?? (isbn10 ? await googleVolume(isbn10, fetchImpl) : undefined);
   if (!info?.title) return null;
   const thumbnail = info.imageLinks?.thumbnail ?? info.imageLinks?.smallThumbnail ?? null;
   return {
@@ -113,14 +141,55 @@ export async function lookupOpenLibrary(isbn13: string, fetchImpl: typeof fetch 
   };
 }
 
-/** Cerca prima su Google Books, poi su Open Library. null se nessuno dei due conosce l'ISBN. */
+const openLibrarySearchSchema = z.object({
+  docs: z
+    .array(
+      z.object({
+        title: z.string().optional(),
+        subtitle: z.string().optional(),
+        author_name: z.array(z.string()).optional(),
+        first_publish_year: z.number().optional(),
+        cover_i: z.number().optional(),
+      }),
+    )
+    .optional(),
+});
+
+/** Ricerca di Open Library: copre edizioni che l'API "books" non restituisce. */
+export async function searchOpenLibrary(isbn13: string, fetchImpl: typeof fetch = fetch): Promise<BookCandidate | null> {
+  const url = `https://openlibrary.org/search.json?isbn=${isbn13}&limit=1&fields=title,subtitle,author_name,first_publish_year,cover_i`;
+  const parsed = openLibrarySearchSchema.safeParse(await fetchJson(url, fetchImpl));
+  const doc = parsed.success ? parsed.data.docs?.[0] : undefined;
+  if (!doc?.title) return null;
+  return {
+    isbn13,
+    title: fullTitle(doc.title, doc.subtitle),
+    authors: doc.author_name ?? [],
+    publishedYear: doc.first_publish_year ?? null,
+    description: null,
+    coverUrl: doc.cover_i
+      ? `https://covers.openlibrary.org/b/id/${doc.cover_i}-L.jpg?default=false`
+      : `https://covers.openlibrary.org/b/isbn/${isbn13}-L.jpg?default=false`,
+    source: "OPEN_LIBRARY",
+  };
+}
+
+/**
+ * Google Books (ISBN-13, poi ISBN-10) → Open Library (API books, poi ricerca).
+ * Si ricordano solo i risultati trovati: un "non trovato" può dipendere da un errore temporaneo.
+ */
 export async function lookupIsbn(isbn13: string, fetchImpl: typeof fetch = fetch): Promise<BookCandidate | null> {
   const cached = cache.get(isbn13);
   if (cached && cached.expiresAt > Date.now()) return cached.value;
 
-  const value = (await lookupGoogleBooks(isbn13, fetchImpl)) ?? (await lookupOpenLibrary(isbn13, fetchImpl));
-  if (cache.size >= CACHE_MAX_ENTRIES) cache.delete(cache.keys().next().value ?? "");
-  cache.set(isbn13, { value, expiresAt: Date.now() + CACHE_TTL_MS });
+  const value =
+    (await lookupGoogleBooks(isbn13, fetchImpl)) ??
+    (await lookupOpenLibrary(isbn13, fetchImpl)) ??
+    (await searchOpenLibrary(isbn13, fetchImpl));
+  if (value) {
+    if (cache.size >= CACHE_MAX_ENTRIES) cache.delete(cache.keys().next().value ?? "");
+    cache.set(isbn13, { value, expiresAt: Date.now() + CACHE_TTL_MS });
+  }
   return value;
 }
 

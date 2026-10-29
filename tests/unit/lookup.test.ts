@@ -49,12 +49,11 @@ describe("lookupIsbn", () => {
   });
 
   it("ripiega su Open Library se Google non trova nulla", async () => {
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValueOnce(jsonResponse({ totalItems: 0 }))
-      .mockResolvedValueOnce(
-        jsonResponse({ [`ISBN:${ISBN}`]: { title: "Il barone rampante", authors: [{ name: "Italo Calvino" }], publish_date: "June 1957" } }),
-      );
+    const fetchMock = vi.fn(async (url: string) =>
+      url.startsWith("https://openlibrary.org/api/books")
+        ? jsonResponse({ [`ISBN:${ISBN}`]: { title: "Il barone rampante", authors: [{ name: "Italo Calvino" }], publish_date: "June 1957" } })
+        : jsonResponse({ totalItems: 0 }),
+    );
 
     const candidate = await lookupIsbn(ISBN, fetchMock as unknown as typeof fetch);
 
@@ -63,12 +62,71 @@ describe("lookupIsbn", () => {
     expect(candidate?.coverUrl).toContain("covers.openlibrary.org");
   });
 
-  it("restituisce null se nessuno conosce l'ISBN o le risposte sono malformate, e mette in cache", async () => {
+  it("restituisce null se nessuno conosce l'ISBN o le risposte sono malformate", async () => {
     const fetchMock = vi.fn(async () => jsonResponse({ items: "non è un array" }));
 
     expect(await lookupIsbn(ISBN, fetchMock as unknown as typeof fetch)).toBeNull();
-    expect(await lookupIsbn(ISBN, fetchMock as unknown as typeof fetch)).toBeNull();
+  });
+
+  it("non ricorda i risultati vuoti: riprovando lo stesso ISBN si interroga di nuovo", async () => {
+    const fetchMock = vi.fn(async () => jsonResponse({ totalItems: 0 }));
+
+    await lookupIsbn(ISBN, fetchMock as unknown as typeof fetch);
+    const callsAfterFirst = fetchMock.mock.calls.length;
+    await lookupIsbn(ISBN, fetchMock as unknown as typeof fetch);
+
+    expect(fetchMock.mock.calls.length).toBe(callsAfterFirst * 2);
+  });
+
+  it("ricorda i risultati trovati", async () => {
+    const fetchMock = vi.fn(async () => jsonResponse(googleHit));
+
+    await lookupIsbn(ISBN, fetchMock as unknown as typeof fetch);
+    await lookupIsbn(ISBN, fetchMock as unknown as typeof fetch);
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("riprova Google una volta se risponde 503 o 429", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const fetchMock = vi
+      .fn()
+      .mockResolvedValueOnce(jsonResponse({ error: { status: "UNAVAILABLE" } }, 503))
+      .mockResolvedValueOnce(jsonResponse(googleHit));
+
+    const candidate = await lookupIsbn(ISBN, fetchMock as unknown as typeof fetch);
+
+    expect(candidate?.source).toBe("GOOGLE_BOOKS");
     expect(fetchMock).toHaveBeenCalledTimes(2);
+    warn.mockRestore();
+  });
+
+  it("se Google non trova l'ISBN-13 prova con l'ISBN-10", async () => {
+    const fetchMock = vi.fn(async (url: string) => {
+      const q = new URL(url).searchParams.get("q");
+      return jsonResponse(q === "isbn:8804668237" ? googleHit : { totalItems: 0 });
+    });
+
+    const candidate = await lookupIsbn(ISBN, fetchMock as unknown as typeof fetch);
+
+    expect(candidate?.source).toBe("GOOGLE_BOOKS");
+    expect(candidate?.isbn13).toBe(ISBN);
+  });
+
+  it("come ultima risorsa usa la ricerca di Open Library", async () => {
+    const fetchMock = vi.fn(async (url: string) => {
+      if (url.startsWith("https://openlibrary.org/search.json")) {
+        return jsonResponse({
+          docs: [{ title: "Il barone rampante", author_name: ["Italo Calvino"], first_publish_year: 1957, cover_i: 123 }],
+        });
+      }
+      return jsonResponse(url.includes("googleapis") ? { totalItems: 0 } : {});
+    });
+
+    const candidate = await lookupIsbn(ISBN, fetchMock as unknown as typeof fetch);
+
+    expect(candidate).toMatchObject({ title: "Il barone rampante", authors: ["Italo Calvino"], publishedYear: 1957, source: "OPEN_LIBRARY" });
+    expect(candidate?.coverUrl).toBe("https://covers.openlibrary.org/b/id/123-L.jpg?default=false");
   });
 
   it("sopravvive a errori di rete", async () => {
