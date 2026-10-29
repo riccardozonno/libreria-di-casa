@@ -14,4 +14,4 @@
 | [0010](0010-backup-restic.md) | Backup restic su USB e B2 | accepted | 2026-10-29 |
 | [0011](0011-ricerca-trigram.md) | Ricerca con testo normalizzato e pg_trgm | accepted | 2026-10-29 |
 | [0012](0012-migrazioni-e-aggiornamenti.md) | Migrazioni dedicate e aggiornamenti con rollback | accepted | 2026-10-29 |
-| [0013](0013-rendering-dinamico-senza-cache-components.md) | Rendering dinamico senza Cache Components | proposed | 2026-10-29 |
+| [0013](0013-rendering-dinamico-senza-cache-components.md) | Rendering dinamico senza Cache Components | accepted | 2026-10-29 |

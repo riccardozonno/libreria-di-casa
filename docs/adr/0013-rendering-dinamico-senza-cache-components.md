@@ -1,8 +1,8 @@
 # ADR-0013: Rendering dinamico senza Cache Components
 
 **Date**: 2026-10-29
-**Status**: proposed
-**Deciders**: Claude (fase 2), da confermare con Riccardo Zonno
+**Status**: accepted
+**Deciders**: Riccardo Zonno, Claude
 
 ## Context
 Next.js 16.4 genera i progetti con `cacheComponents` e `partialPrefetching` attivi. Con Cache Components ogni lettura della sessione deve stare dietro un `<Suspense>` e i dati legati all'utente vanno messi in cache con `use cache: private`. Tutte le nostre pagine dipendono dalla sessione e dal ruolo, che devono valere subito (ADR-0004); la CSP con nonce richiede comunque il rendering dinamico.

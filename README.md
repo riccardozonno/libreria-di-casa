@@ -3,7 +3,7 @@
 I libri di famiglia, in ogni sede. Web app installabile sul telefono (PWA) per catalogare libri e copie
 in più case, con ruoli (amministratore, editor per sede, lettore).
 
-> Stato: **fase 2 (MVP locale)**. Documentazione completa (deploy sul Raspberry Pi, backup, guida d'uso) nelle fasi successive.
+> Stato: **fase 3 (funzioni restanti)**. Documentazione completa (deploy sul Raspberry Pi, backup, guida d'uso) nelle fasi successive.
 > Progetto e decisioni: [docs/PLAN.md](docs/PLAN.md) · [architettura](docs/architecture.md) · [permessi](docs/permissions.md) · [ADR](docs/adr/README.md).
 
 ## Avvio in locale (Mac, OrbStack)
