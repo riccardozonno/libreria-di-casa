@@ -26,7 +26,7 @@ enum BookSource {
 // --- Better Auth (user / session / account / verification / twoFactor) ---
 
 model User {
-  id               String    @id @db.Uuid
+  id               String    @id @default(uuid()) @db.Uuid
   name             String
   email            String    @unique
   emailVerified    Boolean   @default(false)
@@ -52,7 +52,7 @@ model User {
 }
 
 model Session {
-  id        String   @id @db.Uuid
+  id        String   @id @default(uuid()) @db.Uuid
   expiresAt DateTime
   token     String   @unique
   createdAt DateTime @default(now())
@@ -66,7 +66,7 @@ model Session {
 }
 
 model Account {
-  id                    String    @id @db.Uuid
+  id                    String    @id @default(uuid()) @db.Uuid
   accountId             String
   providerId            String
   userId                String    @db.Uuid
@@ -85,7 +85,7 @@ model Account {
 }
 
 model Verification {
-  id         String   @id @db.Uuid
+  id         String   @id @default(uuid()) @db.Uuid
   identifier String
   value      String
   expiresAt  DateTime
@@ -96,11 +96,14 @@ model Verification {
 }
 
 model TwoFactor {
-  id          String @id @db.Uuid
-  secret      String
-  backupCodes String
-  userId      String @db.Uuid
-  user        User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id                      String    @id @default(uuid()) @db.Uuid
+  secret                  String
+  backupCodes             String
+  verified                Boolean   @default(true)
+  failedVerificationCount Int       @default(0)
+  lockedUntil             DateTime?
+  userId                  String    @db.Uuid
+  user                    User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
 }
