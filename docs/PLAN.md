@@ -42,7 +42,7 @@ Piano, modello dati, matrice permessi, architettura, ADR. Revisione dell'agente 
 11. E2E: login, aggiunta via ISBN (lookup simulato), ricerca, permessi editor/lettore.
 12. Istruzioni per provarlo dal Mac e dall'iPhone (tunnel temporaneo `trycloudflare`). ⏸
 
-### Fase 3 — Funzioni restanti ✅ (29/10/2026, in attesa di OK)
+### Fase 3 — Funzioni restanti ✅ (approvata il 29/10/2026)
 1. ~~Spostamento copie con storico~~ (anticipato in fase 2 su richiesta: admin o editor della sede di partenza).
 2. **TDD** CSV: parser/validatore, anteprima, prova a secco, duplicati per ISBN, report errori; export totale/per sede.
 3. Gestione utenti: crea, ruolo, sedi, disattiva (revoca sessioni), link invito/reset, protezione ultimo admin.
