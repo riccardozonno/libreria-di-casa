@@ -1,7 +1,6 @@
 "use client";
 
-import { useActionState, useEffect, useState, type ReactNode } from "react";
-import { useRouter } from "next/navigation";
+import { useActionState, useState, type ReactNode } from "react";
 import { LocationSelect } from "@/components/location-select";
 import { Button, Notice, TextArea, TextField } from "@/components/ui";
 import { initialActionState, type ActionResult } from "@/lib/action-state";
@@ -18,7 +17,6 @@ interface CopyRowProps {
 }
 
 export function CopyRow({ copy, location, canEdit, canDelete, isLastCopy, moveTargets }: CopyRowProps) {
-  const router = useRouter();
   const [isEditing, setIsEditing] = useState(false);
   const [updateState, updateAction, isUpdating] = useActionState(updateCopyAction, initialActionState);
   const [deleteState, deleteAction, isDeleting] = useActionState(deleteCopyAction, initialActionState);
@@ -29,10 +27,6 @@ export function CopyRow({ copy, location, canEdit, canDelete, isLastCopy, moveTa
   }, initialActionState);
   const canMove = moveTargets.length > 0;
 
-  // Dopo l'eliminazione dell'ultima copia il libro non esiste più: si torna al catalogo.
-  useEffect(() => {
-    if (deleteState.ok && deleteState.data.bookDeleted) router.replace("/");
-  }, [deleteState, router]);
 
   const confirmMessage = isLastCopy
     ? "È l'ultima copia: verrà eliminato anche il libro con le sue letture. Continuare?"

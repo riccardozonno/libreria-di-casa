@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { BookCover } from "@/components/book-cover";
-import { LocationTag, PageHeader } from "@/components/ui";
+import { LocationTag, Notice, PageHeader } from "@/components/ui";
 import { locationColorClass } from "@/lib/location-colors";
 import { requireUser } from "@/server/actor";
 import { searchBooks } from "@/server/catalog/queries";
@@ -9,7 +9,7 @@ import { listLocations } from "@/server/locations/service";
 
 export const metadata: Metadata = { title: "Catalogo" };
 
-type SearchParams = Promise<{ q?: string; sede?: string; pagina?: string }>;
+type SearchParams = Promise<{ q?: string; sede?: string; pagina?: string; eliminato?: string }>;
 
 function pageHref(params: { q?: string; sede?: string }, page: number): string {
   const query = new URLSearchParams();
@@ -32,6 +32,11 @@ export default async function CatalogPage({ searchParams }: { searchParams: Sear
   return (
     <>
       <PageHeader title="Catalogo" subtitle={`${result.total} ${result.total === 1 ? "libro" : "libri"}${isFiltered ? " trovati" : ""}`} />
+      {params.eliminato === "1" && (
+        <div className="mb-3">
+          <Notice tone="success">Libro eliminato.</Notice>
+        </div>
+      )}
 
       <form role="search" action="/" method="get" className="sticky top-0 z-30 -mx-4 bg-paper/95 px-4 pb-3 pt-2 backdrop-blur-md">
         {locationId && <input type="hidden" name="sede" value={locationId} />}

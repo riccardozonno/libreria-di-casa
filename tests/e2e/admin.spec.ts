@@ -41,6 +41,25 @@ test.describe("amministratore", () => {
     await expect(page.getByRole("button", { name: "Importa" })).toBeDisabled();
   });
 
+  test("eliminando l'ultima copia di un libro torna al catalogo", async ({ page }, testInfo) => {
+    const title = `Da eliminare ${testInfo.project.name}`;
+    await login(page, "admin");
+    await page.goto("/aggiungi");
+    await page.getByRole("button", { name: /Libro senza ISBN/ }).click();
+    await page.getByLabel("Titolo").fill(title);
+    await page.locator("label").filter({ hasText: SEED.casa.name }).click();
+    await page.getByRole("button", { name: "Salva il libro" }).click();
+    await expect(page.getByRole("heading", { level: 1, name: title })).toBeVisible();
+
+    page.once("dialog", (dialog) => dialog.accept());
+    await page.getByRole("button", { name: "Modifica" }).click();
+    await page.getByRole("button", { name: "Elimina libro" }).click();
+
+    await expect(page).toHaveURL(/\/\?eliminato=1$/);
+    await expect(page.getByText("Libro eliminato.")).toBeVisible();
+    await expect(page.getByText(title)).toHaveCount(0);
+  });
+
   test("consulta il registro attività con gli accessi", async ({ page }) => {
     await login(page, "admin");
     await page.goto("/admin/registro?categoria=auth");

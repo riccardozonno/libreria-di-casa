@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { z } from "zod";
 import { copyDetailsSchema, uuidSchema } from "@/lib/schemas";
 import { withUser, type ActionResult } from "@/server/action-result";
@@ -35,13 +36,16 @@ export async function deleteCopyAction(
   _previous: ActionResult<{ bookDeleted: boolean }>,
   formData: FormData,
 ): Promise<ActionResult<{ bookDeleted: boolean }>> {
-  return withUser("deleteCopy", async (user) => {
+  const outcome = await withUser("deleteCopy", async (user) => {
     const copyId = uuidSchema.parse(String(formData.get("copyId") ?? ""));
     const result = await deleteCopy(user, copyId);
     revalidatePath("/");
     if (!result.bookDeleted) revalidatePath(`/libri/${result.bookId}`);
     return { ok: true, data: { bookDeleted: result.bookDeleted }, message: result.bookDeleted ? "Libro eliminato." : "Copia eliminata." };
   });
+  // La scheda non esiste più: si torna al catalogo dal server (redirect fuori da withUser, che lo tratterebbe come errore).
+  if (outcome.ok && outcome.data.bookDeleted) redirect("/?eliminato=1");
+  return outcome;
 }
 
 export async function addCopyAction(_previous: ActionResult, formData: FormData): Promise<ActionResult> {
