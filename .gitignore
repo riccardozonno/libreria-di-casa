@@ -1,0 +1,20 @@
+# dipendenze e build
+node_modules/
+.next/
+out/
+coverage/
+playwright-report/
+test-results/
+*.tsbuildinfo
+next-env.d.ts
+
+# segreti e dati locali
+.env
+.env.*
+!.env.example
+/data/
+/backups/
+
+# strumenti personali
+.claude/settings.local.json
+.DS_Store
