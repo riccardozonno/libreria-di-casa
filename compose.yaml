@@ -1,0 +1,87 @@
+# HOME LIBRARY — Docker Compose di produzione (vedi ADR-0009).
+# Nessun servizio pubblica porte sull'host: l'unico ingresso è cloudflared.
+# Sviluppo sul Mac: docker compose -f compose.yaml -f compose.dev.yaml ...
+
+name: homelibrary
+
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+services:
+  db:
+    image: postgres:18-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:?}
+      POSTGRES_USER: ${POSTGRES_USER:?}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?}
+      APP_DB_PASSWORD: ${APP_DB_PASSWORD:?}
+    volumes:
+      - pgdata:/var/lib/postgresql
+      - ./ops/db/init-roles.sh:/docker-entrypoint-initdb.d/10-init-roles.sh:ro
+    networks: [backend]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+    logging: *logging
+
+  # One-shot: applica le migrazioni (solo `migrate deploy`, mai reset). Vedi ADR-0012.
+  migrate:
+    image: homelibrary-app:${APP_TAG:-latest}
+    build: .
+    command: ["node", "node_modules/prisma/build/index.js", "migrate", "deploy"]
+    environment:
+      MIGRATION_DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+    depends_on:
+      db:
+        condition: service_healthy
+    networks: [backend]
+    restart: "no"
+    profiles: [migrate]
+    logging: *logging
+
+  app:
+    image: homelibrary-app:${APP_TAG:-latest}
+    build: .
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://app:${APP_DB_PASSWORD}@db:5432/${POSTGRES_DB}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?}
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL:?}
+      REQUIRE_ADMIN_2FA: ${REQUIRE_ADMIN_2FA:-false}
+      TRUST_CLOUDFLARE_ONLY: ${TRUST_CLOUDFLARE_ONLY:-false}
+      GOOGLE_BOOKS_API_KEY: ${GOOGLE_BOOKS_API_KEY:-}
+      COVERS_DIR: /data/covers
+    volumes:
+      - covers:/data/covers
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /app/.next/cache
+    depends_on:
+      db:
+        condition: service_healthy
+    networks: [backend, edge]
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+    logging: *logging
+
+volumes:
+  pgdata:
+  covers:
+
+networks:
+  # Solo traffico interno: il database non ha accesso a internet.
+  backend:
+    internal: true
+  # cloudflared ↔ app, con uscita verso internet (API dei libri).
+  edge:

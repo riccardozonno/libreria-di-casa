@@ -1,0 +1,36 @@
+# Solo sviluppo sul Mac: espone i servizi su 127.0.0.1 (mai su altre interfacce)
+# e aggiunge un database di test in memoria. Non usare in produzione.
+#   docker compose -f compose.yaml -f compose.dev.yaml up -d db db-test
+
+services:
+  db:
+    # Le reti "internal" non pubblicano porte: in sviluppo il db sta anche su una rete normale.
+    networks: [backend, devhost]
+    ports:
+      - "127.0.0.1:5432:5432"
+
+  app:
+    ports:
+      - "127.0.0.1:3000:3000"
+
+  db-test:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_DB: homelibrary_test
+      POSTGRES_USER: migrator
+      POSTGRES_PASSWORD: test-only-password
+      APP_DB_PASSWORD: test-only-app-password
+    volumes:
+      - ./ops/db/init-roles.sh:/docker-entrypoint-initdb.d/10-init-roles.sh:ro
+    tmpfs:
+      - /var/lib/postgresql
+    ports:
+      - "127.0.0.1:5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U migrator -d homelibrary_test"]
+      interval: 2s
+      timeout: 3s
+      retries: 20
+
+networks:
+  devhost:

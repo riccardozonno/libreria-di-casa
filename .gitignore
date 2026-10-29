@@ -18,3 +18,12 @@ next-env.d.ts
 # strumenti personali
 .claude/settings.local.json
 .DS_Store
+
+# pnpm / next
+.pnp.*
+*.pem
+.pnpm-debug.log*
+/build
+
+# client Prisma generato
+/src/generated/
