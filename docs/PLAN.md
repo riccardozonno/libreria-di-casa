@@ -43,7 +43,7 @@ Piano, modello dati, matrice permessi, architettura, ADR. Revisione dell'agente 
 12. Istruzioni per provarlo dal Mac e dall'iPhone (tunnel temporaneo `trycloudflare`). ⏸
 
 ### Fase 3 — Funzioni restanti
-1. ~~Spostamento copie con storico~~ (anticipato in fase 2 su richiesta: admin o chi ha inserito la copia).
+1. ~~Spostamento copie con storico~~ (anticipato in fase 2 su richiesta: admin o editor della sede di partenza).
 2. **TDD** CSV: parser/validatore, anteprima, prova a secco, duplicati per ISBN, report errori; export totale/per sede.
 3. Gestione utenti: crea, ruolo, sedi, disattiva (revoca sessioni), link invito/reset, protezione ultimo admin.
 4. Registro attività consultabile con filtri (admin).

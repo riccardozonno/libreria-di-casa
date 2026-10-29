@@ -24,7 +24,7 @@ export type Action =
   | { type: "copy.create"; location: LocationRef }
   | { type: "copy.update"; location: LocationRef }
   | { type: "copy.delete"; location: LocationRef; isLastCopy: boolean }
-  | { type: "copy.move"; from: LocationRef; to: LocationRef; isCopyCreator: boolean }
+  | { type: "copy.move"; from: LocationRef; to: LocationRef }
   | { type: "book.update" }
   | { type: "book.delete" }
   | { type: "location.manage" }
@@ -60,11 +60,10 @@ export function can(actor: Actor, action: Action): boolean {
     case "copy.delete":
       return isAdmin(actor) || (!action.isLastCopy && edits(actor, action.location));
     case "copy.move":
-      // Regola dell'utente (29/10/2026): l'admin, oppure l'editor che ha inserito quella copia,
-      // verso qualsiasi sede attiva. Da una sede archiviata sposta solo l'admin.
+      // Regola dell'utente (29/10/2026, opzione B): l'admin, oppure un editor della sede di partenza,
+      // verso qualsiasi sede attiva; poi la copia "segue la sede". Da una sede archiviata sposta solo l'admin.
       if (action.from.id === action.to.id || action.to.archived) return false;
-      if (isAdmin(actor)) return true;
-      return actor.role === "EDITOR" && action.isCopyCreator && !action.from.archived;
+      return isAdmin(actor) || edits(actor, action.from);
     case "book.update":
     case "book.delete":
     case "location.manage":

@@ -85,14 +85,7 @@ export default async function BookPage({ params }: { params: Params }) {
           {book.copies.map((copy) => {
             const location = toLocationRef(copy.location);
             const moveTargets = locations
-              .filter((target) =>
-                can(user, {
-                  type: "copy.move",
-                  from: location,
-                  to: { id: target.id, archived: target.archived },
-                  isCopyCreator: copy.createdById === user.id,
-                }),
-              )
+              .filter((target) => can(user, { type: "copy.move", from: location, to: { id: target.id, archived: target.archived } }))
               .map(({ id, name }) => ({ id, name }));
             return (
               <CopyRow

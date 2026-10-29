@@ -62,7 +62,7 @@ test.describe("editor", () => {
     await expect(page.getByRole("button", { name: "+ Aggiungi una copia" })).toBeVisible();
   });
 
-  test("sposta la copia che ha inserito e lo spostamento compare nello storico", async ({ page }, testInfo) => {
+  test("sposta una copia della propria sede e lo spostamento compare nello storico", async ({ page }, testInfo) => {
     const title = `Atlante ${testInfo.project.name}`;
     await login(page, "editor");
     await page.goto("/aggiungi");

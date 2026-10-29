@@ -126,43 +126,43 @@ describe("eliminare una copia", () => {
   });
 });
 
-// Regola decisa dall'utente il 29/10/2026 (sostituisce "editor di entrambe le sedi"):
-// sposta l'admin, oppure l'editor che ha inserito quella copia, verso qualsiasi sede attiva.
+// Regola decisa dall'utente il 29/10/2026 (opzione B): sposta l'admin, oppure un editor della sede
+// in cui la copia si trova, verso qualsiasi sede attiva. Poi la copia "segue la sede".
 describe("spostare una copia", () => {
   it("l'admin sempre, tra sedi attive", () => {
-    expect(can(admin, { type: "copy.move", from: casa, to: mare, isCopyCreator: false })).toBe(true);
+    expect(can(admin, { type: "copy.move", from: casa, to: mare })).toBe(true);
   });
 
-  it("l'editor che ha inserito la copia, anche verso una sede in cui non è editor", () => {
-    expect(can(editorCasa, { type: "copy.move", from: casa, to: mare, isCopyCreator: true })).toBe(true);
-    expect(can(editorCasa, { type: "copy.move", from: mare, to: montagna, isCopyCreator: true })).toBe(true);
+  it("l'editor della sede di partenza, anche verso una sede in cui non è editor", () => {
+    expect(can(editorCasa, { type: "copy.move", from: casa, to: mare })).toBe(true);
+    expect(can(editorCasaMare, { type: "copy.move", from: mare, to: montagna })).toBe(true);
   });
 
-  it("un editor che non ha inserito la copia no, anche se è editor di entrambe le sedi", () => {
-    expect(can(editorCasaMare, { type: "copy.move", from: casa, to: mare, isCopyCreator: false })).toBe(false);
+  it("un editor che non gestisce la sede di partenza no", () => {
+    expect(can(editorCasa, { type: "copy.move", from: mare, to: casa })).toBe(false);
   });
 
-  it("chi l'ha inserita ma ora è lettore o disattivato no", () => {
-    expect(can(readerConSedi, { type: "copy.move", from: casa, to: mare, isCopyCreator: true })).toBe(false);
-    expect(can(actor("EDITOR", ["casa"], false), { type: "copy.move", from: casa, to: mare, isCopyCreator: true })).toBe(false);
+  it("lettori (anche con vecchie assegnazioni) e utenti disattivati no", () => {
+    expect(can(readerConSedi, { type: "copy.move", from: casa, to: mare })).toBe(false);
+    expect(can(actor("EDITOR", ["casa"], false), { type: "copy.move", from: casa, to: mare })).toBe(false);
   });
 
   it("verso una sede archiviata nessuno", () => {
-    expect(can(admin, { type: "copy.move", from: casa, to: vecchia, isCopyCreator: false })).toBe(false);
-    expect(can(editorCasa, { type: "copy.move", from: casa, to: vecchia, isCopyCreator: true })).toBe(false);
+    expect(can(admin, { type: "copy.move", from: casa, to: vecchia })).toBe(false);
+    expect(can(editorCasa, { type: "copy.move", from: casa, to: vecchia })).toBe(false);
   });
 
   it("fuori da una sede archiviata solo l'admin", () => {
-    expect(can(admin, { type: "copy.move", from: vecchia, to: casa, isCopyCreator: false })).toBe(true);
-    expect(can(editorVecchia, { type: "copy.move", from: vecchia, to: casa, isCopyCreator: true })).toBe(false);
+    expect(can(admin, { type: "copy.move", from: vecchia, to: casa })).toBe(true);
+    expect(can(editorVecchia, { type: "copy.move", from: vecchia, to: casa })).toBe(false);
   });
 
   it("nella stessa sede non è uno spostamento", () => {
-    expect(can(admin, { type: "copy.move", from: casa, to: casa, isCopyCreator: true })).toBe(false);
+    expect(can(admin, { type: "copy.move", from: casa, to: casa })).toBe(false);
   });
 
   it("lettore mai", () => {
-    expect(can(reader, { type: "copy.move", from: casa, to: mare, isCopyCreator: false })).toBe(false);
+    expect(can(reader, { type: "copy.move", from: casa, to: mare })).toBe(false);
   });
 });
 

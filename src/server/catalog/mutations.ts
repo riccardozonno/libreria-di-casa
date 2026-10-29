@@ -163,17 +163,11 @@ export async function moveCopy(actor: CurrentUser, copyId: string, toLocationId:
     await lockBook(tx, bookIdRow.bookId);
     const copy = await tx.copy.findUnique({
       where: { id: copyId },
-      select: { bookId: true, createdById: true, location: { select: { id: true, name: true, archivedAt: true } } },
+      select: { bookId: true, location: { select: { id: true, name: true, archivedAt: true } } },
     });
     if (!copy) throw notFound("Copia");
     const target = await loadLocation(tx, toLocationId);
-    const allowed = can(actor, {
-      type: "copy.move",
-      from: toLocationRef(copy.location),
-      to: toLocationRef(target),
-      isCopyCreator: copy.createdById === actor.id,
-    });
-    if (!allowed) throw forbidden();
+    if (!can(actor, { type: "copy.move", from: toLocationRef(copy.location), to: toLocationRef(target) })) throw forbidden();
 
     await tx.copy.update({ where: { id: copyId }, data: { locationId: target.id } });
     await tx.copyMovement.create({

@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { addCopy, createBookWithCopy, moveCopy } from "@/server/catalog/mutations";
+import { createBookWithCopy, moveCopy } from "@/server/catalog/mutations";
 import { getBookDetail } from "@/server/catalog/queries";
 import { prisma } from "@/server/db";
 import { bookData, makeLocation, makeUser, noCopyDetails } from "./fixtures";
 
-// Spostamento copie (regola del 29/10/2026): admin, oppure l'editor che ha inserito quella copia.
+// Spostamento copie (regola del 29/10/2026, opzione B): admin, oppure un editor della sede di partenza.
 
 async function setup() {
   const casa = await makeLocation("Casa");
@@ -25,7 +25,7 @@ async function setup() {
 }
 
 describe("spostamento delle copie", () => {
-  it("chi ha inserito la copia la sposta anche in una sede in cui non è editor; resta lo storico", async () => {
+  it("l'editor della sede la sposta anche in una sede in cui non è editor; resta lo storico", async () => {
     const { mare, autore, bookId, copyId } = await setup();
 
     await moveCopy(autore, copyId, mare.id);
@@ -40,13 +40,25 @@ describe("spostamento delle copie", () => {
     expect(audit).toMatchObject({ actorId: autore.id, entityId: copyId });
   });
 
-  it("un altro editor non può spostarla, anche se è editor di entrambe le sedi", async () => {
-    const { mare, altroEditor, copyId, casa } = await setup();
+  it("dopo lo spostamento la copia segue la sede: la gestiscono gli editor di arrivo, non più chi l'ha spostata", async () => {
+    const { casa, mare, autore, altroEditor, copyId } = await setup();
+    await moveCopy(autore, copyId, mare.id);
 
-    await expect(moveCopy(altroEditor, copyId, mare.id)).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await expect(moveCopy(autore, copyId, casa.id)).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await moveCopy(altroEditor, copyId, casa.id);
 
     expect((await prisma.copy.findUniqueOrThrow({ where: { id: copyId } })).locationId).toBe(casa.id);
-    expect(await prisma.copyMovement.count()).toBe(0);
+    expect(await prisma.copyMovement.count()).toBe(2);
+  });
+
+  it("un editor che non gestisce la sede di partenza non può spostarla", async () => {
+    const { casa, mare, admin, altroEditor } = await setup();
+    const soloMare = await makeUser("EDITOR", { editorOf: [mare.id] });
+    const { bookId } = await createBookWithCopy(admin, { book: bookData({ title: "Altro" }), source: "MANUAL", coverPath: null, locationId: casa.id, copy: noCopyDetails });
+    const copy = await prisma.copy.findFirstOrThrow({ where: { bookId } });
+
+    await expect(moveCopy(soloMare, copy.id, mare.id)).rejects.toMatchObject({ code: "FORBIDDEN" });
+    await moveCopy(altroEditor, copy.id, mare.id);
   });
 
   it("l'admin sposta qualsiasi copia", async () => {
@@ -57,14 +69,6 @@ describe("spostamento delle copie", () => {
     expect((await prisma.copy.findUniqueOrThrow({ where: { id: copyId } })).locationId).toBe(mare.id);
   });
 
-  it("chi ha inserito una seconda copia sposta solo quella", async () => {
-    const { casa, mare, altroEditor, bookId, copyId } = await setup();
-    const second = await addCopy(altroEditor, bookId, { locationId: casa.id, copy: noCopyDetails });
-
-    await moveCopy(altroEditor, second.copyId, mare.id);
-    await expect(moveCopy(altroEditor, copyId, mare.id)).rejects.toMatchObject({ code: "FORBIDDEN" });
-  });
-
   it("niente spostamenti verso sedi archiviate o nella stessa sede", async () => {
     const { casa, vecchia, admin, copyId } = await setup();
 
@@ -72,7 +76,7 @@ describe("spostamento delle copie", () => {
     await expect(moveCopy(admin, copyId, casa.id)).rejects.toMatchObject({ code: "FORBIDDEN" });
   });
 
-  it("se chi l'ha inserita diventa lettore perde il permesso", async () => {
+  it("un editor diventato lettore perde il permesso", async () => {
     const { mare, autore, copyId } = await setup();
     await prisma.user.update({ where: { id: autore.id }, data: { role: "READER" } });
 
