@@ -1,0 +1,158 @@
+import type { ComponentPropsWithoutRef, ReactNode } from "react";
+
+// Componenti di base condivisi (server-safe: niente stato, niente hook).
+
+type ButtonVariant = "primary" | "secondary" | "ghost" | "danger";
+
+const VARIANT_CLASSES: Record<ButtonVariant, string> = {
+  primary: "bg-accent text-accent-ink shadow-[var(--shadow-card)] active:opacity-85",
+  secondary: "bg-surface text-ink border border-line active:bg-sunken",
+  ghost: "text-accent active:bg-accent-soft",
+  danger: "bg-danger-soft text-danger active:opacity-85",
+};
+
+export function buttonClasses(variant: ButtonVariant = "primary", extra = ""): string {
+  return [
+    "inline-flex min-h-11 items-center justify-center gap-2 rounded-[var(--radius-md)] px-4 text-[15px] font-semibold",
+    "transition-[opacity,background-color] duration-[var(--duration-fast)] disabled:opacity-50",
+    VARIANT_CLASSES[variant],
+    extra,
+  ].join(" ");
+}
+
+type ButtonProps = ComponentPropsWithoutRef<"button"> & { variant?: ButtonVariant };
+
+export function Button({ variant = "primary", className = "", type = "button", ...rest }: ButtonProps) {
+  return <button type={type} className={buttonClasses(variant, className)} {...rest} />;
+}
+
+type FieldProps = ComponentPropsWithoutRef<"input"> & {
+  label: string;
+  name: string;
+  error?: string;
+  hint?: string;
+};
+
+export function TextField({ label, name, error, hint, id, className = "", ...rest }: FieldProps) {
+  const inputId = id ?? `campo-${name}`;
+  const describedBy = [error ? `${inputId}-errore` : null, hint ? `${inputId}-nota` : null].filter(Boolean).join(" ");
+  return (
+    <div className={`flex flex-col gap-1.5 ${className}`}>
+      <label htmlFor={inputId} className="text-[13px] font-semibold text-ink-soft">
+        {label}
+      </label>
+      <input
+        id={inputId}
+        name={name}
+        aria-invalid={error ? true : undefined}
+        aria-describedby={describedBy || undefined}
+        className="min-h-11 rounded-[var(--radius-sm)] border border-line bg-surface px-3 text-[16px] text-ink placeholder:text-ink-faint aria-[invalid=true]:border-danger"
+        {...rest}
+      />
+      {hint && !error && (
+        <p id={`${inputId}-nota`} className="text-[13px] text-ink-faint">
+          {hint}
+        </p>
+      )}
+      {error && (
+        <p id={`${inputId}-errore`} className="text-[13px] font-medium text-danger">
+          {error}
+        </p>
+      )}
+    </div>
+  );
+}
+
+type TextAreaProps = ComponentPropsWithoutRef<"textarea"> & { label: string; name: string; error?: string };
+
+export function TextArea({ label, name, error, id, ...rest }: TextAreaProps) {
+  const inputId = id ?? `campo-${name}`;
+  return (
+    <div className="flex flex-col gap-1.5">
+      <label htmlFor={inputId} className="text-[13px] font-semibold text-ink-soft">
+        {label}
+      </label>
+      <textarea
+        id={inputId}
+        name={name}
+        aria-invalid={error ? true : undefined}
+        aria-describedby={error ? `${inputId}-errore` : undefined}
+        className="min-h-24 rounded-[var(--radius-sm)] border border-line bg-surface px-3 py-2 text-[16px] text-ink"
+        {...rest}
+      />
+      {error && (
+        <p id={`${inputId}-errore`} className="text-[13px] font-medium text-danger">
+          {error}
+        </p>
+      )}
+    </div>
+  );
+}
+
+type NoticeTone = "error" | "success" | "info";
+
+const NOTICE_CLASSES: Record<NoticeTone, string> = {
+  error: "bg-danger-soft text-danger",
+  success: "bg-success-soft text-success",
+  info: "bg-accent-soft text-ink",
+};
+
+export function Notice({ tone = "info", children }: { tone?: NoticeTone; children: ReactNode }) {
+  return (
+    <div role={tone === "error" ? "alert" : "status"} className={`rounded-[var(--radius-sm)] px-3 py-2.5 text-[14px] font-medium ${NOTICE_CLASSES[tone]}`}>
+      {children}
+    </div>
+  );
+}
+
+export function PageHeader({ title, subtitle, action }: { title: string; subtitle?: ReactNode; action?: ReactNode }) {
+  return (
+    <header className="flex items-end justify-between gap-3 pb-4 pt-6">
+      <div className="min-w-0">
+        <h1 className="text-[28px] font-bold leading-tight tracking-tight text-ink">{title}</h1>
+        {subtitle && <p className="mt-1 text-[14px] text-ink-faint">{subtitle}</p>}
+      </div>
+      {action}
+    </header>
+  );
+}
+
+export function Section({ title, children, action }: { title: string; children: ReactNode; action?: ReactNode }) {
+  return (
+    <section className="mt-6" aria-label={title}>
+      <div className="mb-2 flex items-center justify-between px-1">
+        <h2 className="text-[13px] font-semibold uppercase tracking-wide text-ink-faint">{title}</h2>
+        {action}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+// Classi statiche (niente style inline: la CSP non ammette 'unsafe-inline').
+const SPINE_CLASSES = [
+  "bg-[var(--spine-1)]",
+  "bg-[var(--spine-2)]",
+  "bg-[var(--spine-3)]",
+  "bg-[var(--spine-4)]",
+  "bg-[var(--spine-5)]",
+  "bg-[var(--spine-6)]",
+  "bg-[var(--spine-7)]",
+] as const;
+
+/** Colore "dorso" stabile per una sede, dai colori dell'icona. */
+export function spineClass(locationId: string): string {
+  let hash = 0;
+  for (const char of locationId) hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
+  return SPINE_CLASSES[hash % SPINE_CLASSES.length] ?? SPINE_CLASSES[0];
+}
+
+export function LocationTag({ id, name, count }: { id: string; name: string; count?: number }) {
+  return (
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-sunken py-1 pl-1.5 pr-2.5 text-[12px] font-medium text-ink-soft">
+      <span aria-hidden className={`h-3.5 w-1.5 rounded-full ${spineClass(id)}`} />
+      {name}
+      {count !== undefined && count > 1 && <span className="text-ink-faint">×{count}</span>}
+    </span>
+  );
+}

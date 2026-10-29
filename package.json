@@ -13,7 +13,8 @@
     "test:coverage": "vitest run --coverage",
     "typecheck": "tsc --noEmit",
     "e2e": "playwright test",
-    "postinstall": "prisma generate"
+    "postinstall": "prisma generate && node scripts/copy-wasm.mjs",
+    "admin:create": "node --env-file=.env --conditions=react-server --import tsx scripts/create-admin.ts"
   },
   "dependencies": {
     "@node-rs/argon2": "^2.2.2",

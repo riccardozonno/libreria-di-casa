@@ -1,5 +1,6 @@
 import "server-only";
 import { headers } from "next/headers";
+import { redirect } from "next/navigation";
 import { auth } from "./auth/auth";
 import { prisma } from "./db";
 import { env } from "./env";
@@ -46,6 +47,16 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) return null;
   return loadActor(session.user.id);
+}
+
+/**
+ * Per le pagine: i layout non vengono rieseguiti a ogni navigazione client,
+ * quindi ogni pagina verifica l'utente da sola.
+ */
+export async function requireUser(): Promise<CurrentUser> {
+  const user = await getCurrentUser();
+  if (!user) redirect("/accedi");
+  return user;
 }
 
 export async function getClientIp(): Promise<string | null> {

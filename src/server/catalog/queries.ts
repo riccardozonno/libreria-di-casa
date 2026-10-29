@@ -69,8 +69,15 @@ export async function searchBooks(params: SearchParams): Promise<BookPage> {
       const current = byLocation.get(copy.location.id);
       byLocation.set(copy.location.id, { ...copy.location, copies: (current?.copies ?? 0) + 1 });
     }
-    const { copies: _copies, ...rest } = book;
-    return { ...rest, locations: [...byLocation.values()].sort((a, b) => a.name.localeCompare(b.name, "it")) };
+    return {
+      id: book.id,
+      title: book.title,
+      authors: book.authors,
+      publishedYear: book.publishedYear,
+      isbn13: book.isbn13,
+      coverPath: book.coverPath,
+      locations: [...byLocation.values()].sort((a, b) => a.name.localeCompare(b.name, "it")),
+    };
   });
 
   return { items, total, page, pageCount };
