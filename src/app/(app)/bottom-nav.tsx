@@ -29,6 +29,12 @@ const icons: Record<string, ReactNode> = {
       <path d="M10 20v-5h4v5" />
     </svg>
   ),
+  admin: (
+    <svg {...ICON_PROPS}>
+      <path d="M12 3 4 6v6c0 4.5 3.4 8 8 9 4.6-1 8-4.5 8-9V6l-8-3Z" />
+      <path d="m9 12 2 2 4-4" />
+    </svg>
+  ),
   profilo: (
     <svg {...ICON_PROPS}>
       <circle cx="12" cy="8" r="4" />
@@ -48,12 +54,13 @@ function isActive(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-export function BottomNav({ canAdd }: { canAdd: boolean }) {
+export function BottomNav({ canAdd, isAdmin }: { canAdd: boolean; isAdmin: boolean }) {
   const pathname = usePathname();
   const items: NavItem[] = [
     { href: "/", label: "Catalogo", icon: "catalogo" },
     ...(canAdd ? [{ href: "/aggiungi", label: "Aggiungi", icon: "aggiungi" } as const] : []),
     { href: "/sedi", label: "Sedi", icon: "sedi" },
+    ...(isAdmin ? [{ href: "/admin", label: "Admin", icon: "admin" } as const] : []),
     { href: "/profilo", label: "Profilo", icon: "profilo" },
   ];
 

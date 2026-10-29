@@ -20,7 +20,7 @@ export default async function AppLayout({ children }: { children: ReactNode }) {
       <main id="contenuto" className="safe-bottom mx-auto w-full max-w-2xl px-4 pt-[env(safe-area-inset-top)]">
         {children}
       </main>
-      <BottomNav canAdd={canAdd} />
+      <BottomNav canAdd={canAdd} isAdmin={can(user, { type: "user.manage" })} />
     </>
   );
 }
