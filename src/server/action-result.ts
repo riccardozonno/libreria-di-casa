@@ -22,8 +22,12 @@ function zodFieldErrors(error: z.ZodError): Record<string, string> {
 }
 
 export function toActionError(error: unknown, context: string): ActionResult<never> {
-  if (error instanceof DomainError) return { ok: false, error: error.message, details: error.details };
+  if (error instanceof DomainError) {
+    console.info(`[azione] ${context}: ${error.code}`);
+    return { ok: false, error: error.message, details: error.details };
+  }
   if (error instanceof z.ZodError) {
+    console.info(`[azione] ${context}: dati non validi (${error.issues.map((issue) => issue.path.join(".") || "_").join(", ")})`);
     return { ok: false, error: "Controlla i campi evidenziati.", fieldErrors: zodFieldErrors(error) };
   }
   console.error(`[azione] ${context}`, error);
@@ -34,7 +38,10 @@ export function toActionError(error: unknown, context: string): ActionResult<nev
 export async function withUser<T>(context: string, run: (user: CurrentUser) => Promise<ActionResult<T>>): Promise<ActionResult<T>> {
   try {
     const user = await getCurrentUser();
-    if (!user) return { ok: false, error: "Sessione scaduta: accedi di nuovo." };
+    if (!user) {
+      console.warn(`[azione] ${context}: nessuna sessione valida`);
+      return { ok: false, error: "Sessione scaduta: accedi di nuovo." };
+    }
     if (user.mustEnable2fa) return { ok: false, error: "Attiva la verifica in due passaggi dal profilo." };
     return await run(user);
   } catch (error) {

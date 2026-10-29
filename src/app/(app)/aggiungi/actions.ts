@@ -45,11 +45,14 @@ export async function lookupIsbnAction(rawIsbn: string): Promise<ActionResult<Lo
 
     const existing = await findBookByIsbn(isbn13);
     if (existing) {
+      console.info(`[isbn] ricerca ${isbn13}: già in catalogo`);
       const locations = [...new Set(existing.copies.map((copy) => copy.location.name))];
       return { ok: true, data: { status: "exists", book: { id: existing.id, title: existing.title, authors: existing.authors, locations } } };
     }
 
     const candidate = await lookupIsbn(isbn13);
+    // Traccia operativa: solo ISBN ed esito, nessun dato personale.
+    console.info(`[isbn] ricerca ${isbn13}: ${candidate ? `trovato su ${candidate.source}` : "non trovato"}`);
     if (!candidate) return { ok: true, data: { status: "not-found", isbn13 } };
     return { ok: true, data: { status: "found", candidate, coverPreview: await previewDataUrl(candidate.coverUrl) } };
   });

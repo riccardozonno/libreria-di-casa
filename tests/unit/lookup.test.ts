@@ -82,22 +82,26 @@ describe("lookupIsbn", () => {
     const fetchMock = vi.fn(async () => jsonResponse(googleHit));
 
     await lookupIsbn(ISBN, fetchMock as unknown as typeof fetch);
+    const callsAfterFirst = fetchMock.mock.calls.length;
     await lookupIsbn(ISBN, fetchMock as unknown as typeof fetch);
 
-    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls.length).toBe(callsAfterFirst);
   });
 
   it("riprova Google una volta se risponde 503 o 429", async () => {
     const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValueOnce(jsonResponse({ error: { status: "UNAVAILABLE" } }, 503))
-      .mockResolvedValueOnce(jsonResponse(googleHit));
+    // Ogni URL risponde 503 la prima volta e poi trova il libro.
+    const seen = new Set<string>();
+    const fetchMock = vi.fn(async (url: string) => {
+      if (seen.has(url)) return jsonResponse(googleHit);
+      seen.add(url);
+      return jsonResponse({ error: { status: "UNAVAILABLE" } }, 503);
+    });
 
     const candidate = await lookupIsbn(ISBN, fetchMock as unknown as typeof fetch);
 
     expect(candidate?.source).toBe("GOOGLE_BOOKS");
-    expect(fetchMock).toHaveBeenCalledTimes(2);
+    expect(fetchMock).toHaveBeenCalledTimes(6);
     warn.mockRestore();
   });
 
@@ -111,6 +115,30 @@ describe("lookupIsbn", () => {
 
     expect(candidate?.source).toBe("GOOGLE_BOOKS");
     expect(candidate?.isbn13).toBe(ISBN);
+  });
+
+  it("ripete la ricerca su Google quando risponde 0 risultati in modo incostante", async () => {
+    let googleCalls = 0;
+    const fetchMock = vi.fn(async (url: string) => {
+      if (!url.includes("googleapis")) return jsonResponse({});
+      googleCalls += 1;
+      return jsonResponse(googleCalls === 4 ? googleHit : { totalItems: 0 });
+    });
+
+    const candidate = await lookupIsbn(ISBN, fetchMock as unknown as typeof fetch);
+
+    expect(candidate?.source).toBe("GOOGLE_BOOKS");
+    // 3 varianti in parallelo per giro: la quarta chiamata è nel secondo giro, che è l'ultimo eseguito.
+    expect(googleCalls).toBe(6);
+  });
+
+  it("limita i tentativi su Google quando il libro non c'è davvero", async () => {
+    const fetchMock = vi.fn(async (url: string) => jsonResponse(url.includes("googleapis") ? { totalItems: 0 } : {}));
+
+    await lookupIsbn(ISBN, fetchMock as unknown as typeof fetch);
+
+    const googleCalls = fetchMock.mock.calls.filter(([url]) => String(url).includes("googleapis")).length;
+    expect(googleCalls).toBe(12);
   });
 
   it("come ultima risorsa usa la ricerca di Open Library", async () => {

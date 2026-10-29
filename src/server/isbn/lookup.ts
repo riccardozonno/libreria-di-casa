@@ -20,6 +20,8 @@ export interface BookCandidate {
 const TIMEOUT_MS = 6_000;
 const MAX_ATTEMPTS = 2;
 const RETRY_DELAY_MS = 400;
+const GOOGLE_ROUNDS = 4;
+const GOOGLE_RETRY_DELAY_MS = 150;
 const CACHE_TTL_MS = 24 * 3_600_000;
 const CACHE_MAX_ENTRIES = 500;
 const MAX_TITLE = 300;
@@ -100,18 +102,41 @@ export function toIsbn10(isbn13: string): string | null {
   return body + (check === 10 ? "X" : String(check));
 }
 
-async function googleVolume(query: string, fetchImpl: typeof fetch) {
+async function googleVolume(query: string, fetchImpl: typeof fetch, extra: Record<string, string> = {}) {
   const url = new URL("https://www.googleapis.com/books/v1/volumes");
   url.searchParams.set("q", `isbn:${query}`);
   url.searchParams.set("maxResults", "1");
+  url.searchParams.set("printType", "books");
+  for (const [key, value] of Object.entries(extra)) url.searchParams.set(key, value);
   if (env.GOOGLE_BOOKS_API_KEY) url.searchParams.set("key", env.GOOGLE_BOOKS_API_KEY);
   const parsed = googleSchema.safeParse(await fetchJson(url.toString(), fetchImpl));
   return parsed.success ? parsed.data.items?.[0]?.volumeInfo : undefined;
 }
 
-export async function lookupGoogleBooks(isbn13: string, fetchImpl: typeof fetch = fetch): Promise<BookCandidate | null> {
+/**
+ * Google Books risponde in modo incostante alla ricerca per ISBN: la stessa query restituisce
+ * 0 o 1 risultati a seconda della chiamata (misurato: 10–40% di successi su libri italiani).
+ * Si ripete alternando ISBN-13 e ISBN-10, fermandosi al primo risultato.
+ */
+async function findGoogleVolume(isbn13: string, fetchImpl: typeof fetch) {
   const isbn10 = toIsbn10(isbn13);
-  const info = (await googleVolume(isbn13, fetchImpl)) ?? (isbn10 ? await googleVolume(isbn10, fetchImpl) : undefined);
+  // Varianti equivalenti lanciate in parallelo a ogni giro: stesso tempo d'attesa, più probabilità di risposta.
+  const variants: { query: string; extra?: Record<string, string> }[] = [
+    { query: isbn13 },
+    { query: isbn10 ?? isbn13 },
+    { query: isbn13, extra: { country: "US" } },
+  ];
+  for (let round = 0; round < GOOGLE_ROUNDS; round += 1) {
+    const results = await Promise.all(variants.map((variant) => googleVolume(variant.query, fetchImpl, variant.extra)));
+    const info = results.find((result) => result?.title);
+    if (info) return info;
+    if (round < GOOGLE_ROUNDS - 1) await new Promise((resolve) => setTimeout(resolve, GOOGLE_RETRY_DELAY_MS));
+  }
+  return undefined;
+}
+
+export async function lookupGoogleBooks(isbn13: string, fetchImpl: typeof fetch = fetch): Promise<BookCandidate | null> {
+  const info = await findGoogleVolume(isbn13, fetchImpl);
   if (!info?.title) return null;
   const thumbnail = info.imageLinks?.thumbnail ?? info.imageLinks?.smallThumbnail ?? null;
   return {

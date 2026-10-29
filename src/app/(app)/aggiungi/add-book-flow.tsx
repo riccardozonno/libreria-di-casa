@@ -14,7 +14,7 @@ type ExistingBook = Extract<LookupOutcome, { status: "exists" }>["book"];
 
 type Step =
   | { kind: "start" }
-  | { kind: "form"; initial: BookFormInitial; notice?: string }
+  | { kind: "form"; initial: BookFormInitial; notice?: string; retryIsbn?: string }
   | { kind: "exists"; book: ExistingBook };
 
 const EMPTY_BOOK: BookFormInitial = {
@@ -52,7 +52,8 @@ export function AddBookFlow({ locations }: { locations: Location[] }) {
         return setStep({
           kind: "form",
           initial: { ...EMPTY_BOOK, isbn13: outcome.isbn13 },
-          notice: `Non ho trovato l'ISBN ${outcome.isbn13} su Google Books né su Open Library: inserisci i dati a mano.`,
+          notice: `Non ho trovato l'ISBN ${outcome.isbn13} su Google Books né su Open Library. Google a volte non risponde al primo colpo: puoi cercare di nuovo oppure inserire i dati a mano.`,
+          retryIsbn: outcome.isbn13,
         });
       }
       const { candidate, coverPreview } = outcome;
@@ -77,7 +78,14 @@ export function AddBookFlow({ locations }: { locations: Location[] }) {
     return (
       <div className="flex flex-col gap-4">
         {step.notice && <Notice>{step.notice}</Notice>}
-        <BookForm initial={step.initial} locations={locations} onCancel={restart} onExisting={lookup} />
+        {step.retryIsbn && (
+          <Button variant="secondary" onClick={() => lookup(step.retryIsbn ?? "")} disabled={isLooking}>
+            {isLooking ? "Cerco il libro…" : "Cerca di nuovo"}
+          </Button>
+        )}
+        {error && <Notice tone="error">{error}</Notice>}
+        <BookForm
+          key={step.initial.isbn13 + step.initial.source} initial={step.initial} locations={locations} onCancel={restart} onExisting={lookup} />
       </div>
     );
   }
