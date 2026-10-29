@@ -8,6 +8,8 @@ import { NextResponse, type NextRequest } from "next/server";
 const isDev = process.env.NODE_ENV === "development";
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 const publicOrigin = process.env.BETTER_AUTH_URL ? new URL(process.env.BETTER_AUTH_URL).origin : null;
+// Solo con un URL pubblico https: su http://localhost Safari "aggiornerebbe" gli asset a https e non li caricherebbe.
+const isHttps = publicOrigin?.startsWith("https://") ?? false;
 
 function contentSecurityPolicy(nonce: string): string {
   return [
@@ -25,7 +27,7 @@ function contentSecurityPolicy(nonce: string): string {
     "base-uri 'self'",
     "form-action 'self'",
     "frame-ancestors 'none'",
-    ...(isDev ? [] : ["upgrade-insecure-requests"]),
+    ...(isHttps ? ["upgrade-insecure-requests"] : []),
   ].join("; ");
 }
 
@@ -57,7 +59,7 @@ export function proxy(request: NextRequest): NextResponse {
   response.headers.set("referrer-policy", "strict-origin-when-cross-origin");
   response.headers.set("permissions-policy", "camera=(self), microphone=(), geolocation=(), payment=(), usb=()");
   response.headers.set("cross-origin-opener-policy", "same-origin");
-  if (!isDev) response.headers.set("strict-transport-security", "max-age=31536000; includeSubDomains");
+  if (isHttps) response.headers.set("strict-transport-security", "max-age=31536000; includeSubDomains");
   return response;
 }
 

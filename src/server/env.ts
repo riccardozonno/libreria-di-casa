@@ -18,8 +18,17 @@ const envSchema = z.object({
 
 export type Env = z.infer<typeof envSchema>;
 
+// `next build` valuta i moduli senza segreti (che non devono finire nell'immagine):
+// solo in quella fase si usano segnaposto. A runtime la validazione resta rigida.
+const BUILD_PLACEHOLDERS = {
+  DATABASE_URL: "postgresql://build:build@localhost:5432/build",
+  BETTER_AUTH_SECRET: "build-placeholder-secret-not-used-at-runtime",
+  BETTER_AUTH_URL: "http://localhost:3000",
+};
+
 function loadEnv(): Env {
-  const parsed = envSchema.safeParse(process.env);
+  const isBuild = process.env.NEXT_PHASE === "phase-production-build";
+  const parsed = envSchema.safeParse(isBuild ? { ...BUILD_PLACEHOLDERS, ...process.env } : process.env);
   if (!parsed.success) {
     const problems = parsed.error.issues.map((issue) => `${issue.path.join(".")}: ${issue.message}`).join("; ");
     throw new Error(`Configurazione non valida: ${problems}`);

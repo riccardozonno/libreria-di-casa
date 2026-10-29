@@ -3,9 +3,9 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -H 127.0.0.1",
     "build": "next build",
-    "start": "next start",
+    "start": "next start -H 127.0.0.1",
     "lint": "eslint",
     "test": "vitest run --project unit",
     "test:integration": "vitest run --project integration",
@@ -14,7 +14,7 @@
     "typecheck": "tsc --noEmit",
     "e2e": "playwright test",
     "postinstall": "prisma generate && node scripts/copy-wasm.mjs",
-    "admin:create": "node --env-file=.env --conditions=react-server --import tsx scripts/create-admin.ts"
+    "admin:create": "node --env-file-if-exists=.env --conditions=react-server --import tsx scripts/create-admin.ts"
   },
   "dependencies": {
     "@node-rs/argon2": "^2.2.2",

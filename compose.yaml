@@ -31,12 +31,20 @@ services:
     logging: *logging
 
   # One-shot: applica le migrazioni (solo `migrate deploy`, mai reset). Vedi ADR-0012.
+  # Stessa immagine per la CLI (primo admin):
+  #   docker compose run --rm migrate node --conditions=react-server --import tsx scripts/create-admin.ts --name … --email …
   migrate:
-    image: homelibrary-app:${APP_TAG:-latest}
-    build: .
+    image: homelibrary-tools:${APP_TAG:-latest}
+    build:
+      context: .
+      target: tools
     command: ["node", "node_modules/prisma/build/index.js", "migrate", "deploy"]
     environment:
+      TZ: Europe/Rome
       MIGRATION_DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      DATABASE_URL: postgresql://app:${APP_DB_PASSWORD}@db:5432/${POSTGRES_DB}
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?}
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL:?}
     depends_on:
       db:
         condition: service_healthy
@@ -47,9 +55,12 @@ services:
 
   app:
     image: homelibrary-app:${APP_TAG:-latest}
-    build: .
+    build:
+      context: .
+      target: runner
     restart: unless-stopped
     environment:
+      TZ: Europe/Rome
       DATABASE_URL: postgresql://app:${APP_DB_PASSWORD}@db:5432/${POSTGRES_DB}
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?}
       BETTER_AUTH_URL: ${BETTER_AUTH_URL:?}

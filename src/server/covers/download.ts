@@ -50,8 +50,26 @@ async function readLimited(response: Response): Promise<Uint8Array | null> {
   return output;
 }
 
+// Cache breve: il lookup scarica la copertina per l'anteprima, il salvataggio la riusa senza riscaricarla.
+const RECENT_TTL_MS = 15 * 60_000;
+const RECENT_MAX_ENTRIES = 50;
+const recent = new Map<string, { bytes: Uint8Array; expiresAt: number }>();
+
+function remember(url: string, bytes: Uint8Array): void {
+  if (recent.size >= RECENT_MAX_ENTRIES) recent.delete(recent.keys().next().value ?? "");
+  recent.set(url, { bytes, expiresAt: Date.now() + RECENT_TTL_MS });
+}
+
 /** Restituisce i byte dell'immagine oppure null (copertina assente o non consentita). Non lancia errori. */
 export async function downloadCover(rawUrl: string, fetchImpl: typeof fetch = fetch): Promise<Uint8Array | null> {
+  const cached = recent.get(rawUrl);
+  if (cached && cached.expiresAt > Date.now()) return cached.bytes;
+  const bytes = await fetchCover(rawUrl, fetchImpl);
+  if (bytes) remember(rawUrl, bytes);
+  return bytes;
+}
+
+async function fetchCover(rawUrl: string, fetchImpl: typeof fetch): Promise<Uint8Array | null> {
   let current = upgradeToHttps(rawUrl);
   for (let hop = 0; hop <= MAX_REDIRECTS; hop += 1) {
     if (!isAllowedCoverUrl(current)) return null;
