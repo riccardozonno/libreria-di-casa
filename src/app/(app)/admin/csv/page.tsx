@@ -27,7 +27,7 @@ export default async function CsvPage() {
           </a>
           {locations.map((location) => (
             <a key={location.id} href={`/api/export?sede=${location.id}`} className={buttonClasses("secondary")} download>
-              Solo {location.name}
+              Scarica catalogo {location.name}
             </a>
           ))}
         </div>
