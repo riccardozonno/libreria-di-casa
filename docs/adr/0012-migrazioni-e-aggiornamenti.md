@@ -1,7 +1,7 @@
 # ADR-0012: Migrazioni con servizio dedicato e aggiornamenti con rollback
 
 **Date**: 2026-10-29
-**Status**: proposed
+**Status**: accepted
 **Deciders**: Riccardo Zonno, Claude
 
 ## Context

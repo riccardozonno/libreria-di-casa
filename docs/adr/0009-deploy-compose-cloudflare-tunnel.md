@@ -1,7 +1,7 @@
 # ADR-0009: Docker Compose sul Pi, accesso solo da Cloudflare Tunnel, IP reale da CF-Connecting-IP
 
 **Date**: 2026-10-29
-**Status**: proposed
+**Status**: accepted
 **Deciders**: Riccardo Zonno, Claude
 
 ## Context

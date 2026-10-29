@@ -1,7 +1,7 @@
 # ADR-0001: Monolite Next.js 16 con livello di dominio lato server
 
 **Date**: 2026-10-29
-**Status**: proposed
+**Status**: accepted
 **Deciders**: Riccardo Zonno, Claude
 
 ## Context

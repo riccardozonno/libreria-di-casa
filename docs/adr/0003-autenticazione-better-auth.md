@@ -1,7 +1,7 @@
 # ADR-0003: Autenticazione con Better Auth, argon2id, inviti e reset tramite link monouso
 
 **Date**: 2026-10-29
-**Status**: proposed
+**Status**: accepted
 **Deciders**: Riccardo Zonno, Claude
 
 ## Context

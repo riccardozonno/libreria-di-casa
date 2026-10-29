@@ -88,7 +88,7 @@ Le letture seguono 1–4 (i lettori vedono tutto, ma serve comunque una sessione
 - Server Components per default; Client Components solo per scanner, form con stato e menu.
 - Tailwind 4, componenti propri sobri in stile iOS; barra di navigazione in basso su telefono (Catalogo · Aggiungi · Sedi · Profilo, più Admin per gli admin).
 - Accessibilità: target tattili ≥ 44 px, contrasto AA, focus visibile, etichette su tutti i campi, annunci `aria-live` per scanner ed errori.
-- PWA: `app/manifest.ts`, icone (inclusa `apple-touch-icon`, bozza in [design/icon.svg](design/icon.svg)), service worker minimale: cache solo degli asset statici con hash e del WASM dello scanner, pagina offline; **mai** HTML, dati o `/api/covers`; cache svuotata al logout.
+- PWA: `app/manifest.ts`, icone (inclusa `apple-touch-icon`, proposte in `design/icon-a.svg` e `design/icon-b.svg`), service worker minimale: cache solo degli asset statici con hash e del WASM dello scanner, pagina offline; **mai** HTML, dati o `/api/covers`; cache svuotata al logout.
 
 ## Ambienti
 | | Sviluppo (Mac M5 Pro) | Produzione (Pi 5) |

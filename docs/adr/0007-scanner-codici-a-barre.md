@@ -1,7 +1,7 @@
 # ADR-0007: Scansione dei codici a barre con il polyfill barcode-detector (zxing-wasm) self-hosted
 
 **Date**: 2026-10-29
-**Status**: proposed
+**Status**: accepted
 **Deciders**: Riccardo Zonno, Claude
 
 ## Context

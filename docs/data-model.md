@@ -138,7 +138,7 @@ model AuditLog {
 | Regola | Dove è applicata |
 |---|---|
 | ISBN sempre ISBN-13 valido (checksum) o null | zod + funzione `normalizeIsbn` |
-| Un libro ha sempre ≥ 1 copia | Servizio: creazione libro+copia nella stessa transazione; aggiunta/eliminazione/spostamento bloccano la riga del libro (`FOR UPDATE`) prima di contare le copie; eliminando l'ultima copia si elimina il libro (file copertina rimosso dopo il commit, istantanea completa nell'audit) |
+| Un libro ha sempre ≥ 1 copia | Servizio: creazione libro+copia nella stessa transazione; aggiunta/eliminazione/spostamento bloccano la riga del libro (`FOR UPDATE`) prima di contare le copie; eliminare l'ultima copia (= eliminare il libro) è riservato all'admin (file copertina rimosso dopo il commit, istantanea completa nell'audit) |
 | ISBN creato in contemporanea da due persone | L'errore di unicità P2002 diventa la proposta "aggiungi una copia" |
 | Niente copie nuove o in arrivo in sedi archiviate | Servizio + policy |
 | Nome sede unico ignorando maiuscole e accenti | Colonna `nameKey @unique` calcolata dall'app |

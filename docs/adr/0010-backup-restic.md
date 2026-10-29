@@ -1,7 +1,7 @@
 # ADR-0010: Backup restic notturno su USB e Backblaze B2
 
 **Date**: 2026-10-29
-**Status**: proposed
+**Status**: accepted
 **Deciders**: Riccardo Zonno, Claude
 
 ## Context

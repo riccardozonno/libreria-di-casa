@@ -1,7 +1,7 @@
 # ADR-0008: Lookup ISBN lato server e copertine salvate in locale
 
 **Date**: 2026-10-29
-**Status**: proposed
+**Status**: accepted
 **Deciders**: Riccardo Zonno, Claude
 
 ## Context

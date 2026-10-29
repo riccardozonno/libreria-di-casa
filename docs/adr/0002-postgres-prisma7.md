@@ -1,7 +1,7 @@
 # ADR-0002: PostgreSQL 18 e Prisma 7.x stabile
 
 **Date**: 2026-10-29
-**Status**: proposed
+**Status**: accepted
 **Deciders**: Riccardo Zonno, Claude
 
 ## Context

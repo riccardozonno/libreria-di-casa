@@ -1,7 +1,7 @@
 # ADR-0011: Ricerca con testo normalizzato e indice pg_trgm
 
 **Date**: 2026-10-29
-**Status**: proposed
+**Status**: accepted
 **Deciders**: Riccardo Zonno, Claude
 
 ## Context

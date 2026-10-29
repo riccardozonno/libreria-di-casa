@@ -1,7 +1,7 @@
 # ADR-0004: Autorizzazione con un modulo di policy centrale e ruoli letti dal DB a ogni richiesta
 
 **Date**: 2026-10-29
-**Status**: proposed
+**Status**: accepted
 **Deciders**: Riccardo Zonno, Claude
 
 ## Context
