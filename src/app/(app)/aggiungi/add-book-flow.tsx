@@ -38,7 +38,13 @@ export function AddBookFlow({ locations }: { locations: Location[] }) {
     setIsScanning(false);
     setError("");
     startLookup(async () => {
-      const result = await lookupIsbnAction(isbn13);
+      let result: Awaited<ReturnType<typeof lookupIsbnAction>>;
+      try {
+        result = await lookupIsbnAction(isbn13);
+      } catch {
+        // Rete assente o pagina aperta prima di un aggiornamento dell'app (azione server non più valida).
+        return setError(`Ricerca non riuscita per l'ISBN ${isbn13}. Controlla la connessione e ricarica la pagina.`);
+      }
       if (!result.ok) return setError(result.error);
       const outcome = result.data;
       if (outcome.status === "exists") return setStep({ kind: "exists", book: outcome.book });
@@ -46,7 +52,7 @@ export function AddBookFlow({ locations }: { locations: Location[] }) {
         return setStep({
           kind: "form",
           initial: { ...EMPTY_BOOK, isbn13: outcome.isbn13 },
-          notice: "Non ho trovato questo ISBN su Google Books né su Open Library: inserisci i dati a mano.",
+          notice: `Non ho trovato l'ISBN ${outcome.isbn13} su Google Books né su Open Library: inserisci i dati a mano.`,
         });
       }
       const { candidate, coverPreview } = outcome;
