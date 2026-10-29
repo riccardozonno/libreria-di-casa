@@ -1,15 +1,35 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useRef, useState } from "react";
+import { ColorPicker } from "@/components/color-picker";
 import { Button, Notice, TextField } from "@/components/ui";
-import { initialActionState } from "@/lib/action-state";
-import { createLocationAction, renameLocationAction, setArchivedAction } from "./actions";
+import { initialActionState, type ActionResult } from "@/lib/action-state";
+import type { LocationColorKey } from "@/lib/location-colors";
+import { createLocationAction, setArchivedAction, updateLocationAction } from "./actions";
 
-export function CreateLocationForm() {
+type UsedColors = Partial<Record<LocationColorKey, string>>;
+
+export function CreateLocationForm({ usedBy, suggestedColor }: { usedBy: UsedColors; suggestedColor: LocationColorKey | null }) {
   const [state, action, isPending] = useActionState(createLocationAction, initialActionState);
+  const formRef = useRef<HTMLFormElement>(null);
+
+  // Dopo una creazione riuscita il modulo si svuota (il colore suggerito si aggiorna dal server).
+  useEffect(() => {
+    if (state.ok) formRef.current?.reset();
+  }, [state]);
+
+  if (!suggestedColor) {
+    return (
+      <div className="mt-6">
+        <Notice>Tutti i 10 colori sono già usati: per creare un&apos;altra sede cambia o libera prima un colore.</Notice>
+      </div>
+    );
+  }
+
   return (
-    <form action={action} className="mt-6 flex flex-col gap-3 rounded-[var(--radius-lg)] bg-surface p-4 shadow-[var(--shadow-card)]">
+    <form ref={formRef} action={action} className="mt-6 flex flex-col gap-4 rounded-[var(--radius-lg)] bg-surface p-4 shadow-[var(--shadow-card)]">
       <TextField label="Nuova sede" name="name" maxLength={60} required placeholder="Es. Casa al mare" />
+      <ColorPicker key={suggestedColor} usedBy={usedBy} defaultValue={suggestedColor} idPrefix="nuova-sede" />
       {!state.ok && state.error && <Notice tone="error">{state.error}</Notice>}
       {state.ok && state.message && <Notice tone="success">{state.message}</Notice>}
       <Button type="submit" disabled={isPending}>
@@ -19,32 +39,41 @@ export function CreateLocationForm() {
   );
 }
 
-export function LocationAdminControls({ location }: { location: { id: string; name: string; archived: boolean } }) {
-  const [isRenaming, setIsRenaming] = useState(false);
-  const [renameState, renameAction, isRenamingPending] = useActionState(renameLocationAction, initialActionState);
+interface AdminControlsProps {
+  location: { id: string; name: string; color: LocationColorKey; archived: boolean };
+  usedBy: UsedColors;
+}
+
+export function LocationAdminControls({ location, usedBy }: AdminControlsProps) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [updateState, updateAction, isUpdating] = useActionState(async (previous: ActionResult, formData: FormData) => {
+    const result = await updateLocationAction(previous, formData);
+    if (result.ok) setIsEditing(false);
+    return result;
+  }, initialActionState);
   const [archiveState, archiveAction, isArchiving] = useActionState(setArchivedAction, initialActionState);
-  const error = (!renameState.ok && renameState.error) || (!archiveState.ok && archiveState.error);
+  const error = (!updateState.ok && updateState.error) || (!archiveState.ok && archiveState.error);
 
   return (
     <div className="mt-3 flex flex-col gap-3 pl-5">
-      {isRenaming ? (
-        <form
-          action={async (formData) => {
-            await renameAction(formData);
-            setIsRenaming(false);
-          }}
-          className="flex items-end gap-2"
-        >
+      {isEditing ? (
+        <form action={updateAction} className="flex flex-col gap-4">
           <input type="hidden" name="id" value={location.id} />
-          <TextField label="Nuovo nome" name="name" defaultValue={location.name} maxLength={60} required className="flex-1" />
-          <Button type="submit" disabled={isRenamingPending}>
-            Salva
-          </Button>
+          <TextField label="Nome" name="name" defaultValue={location.name} maxLength={60} required />
+          <ColorPicker usedBy={usedBy} defaultValue={location.color} idPrefix={`sede-${location.id}`} />
+          <div className="flex gap-2">
+            <Button type="submit" disabled={isUpdating}>
+              Salva
+            </Button>
+            <Button variant="secondary" onClick={() => setIsEditing(false)}>
+              Annulla
+            </Button>
+          </div>
         </form>
       ) : (
         <div className="flex gap-2">
-          <Button variant="secondary" onClick={() => setIsRenaming(true)}>
-            Rinomina
+          <Button variant="secondary" onClick={() => setIsEditing(true)}>
+            Modifica
           </Button>
           <form action={archiveAction}>
             <input type="hidden" name="id" value={location.id} />

@@ -9,8 +9,8 @@ export const E2E_USERS = {
 } as const;
 
 export const SEED = {
-  casa: { id: "00000000-0000-4000-8000-0000000000c1", name: "Casa" },
-  mare: { id: "00000000-0000-4000-8000-0000000000c2", name: "Mare" },
+  casa: { id: "00000000-0000-4000-8000-0000000000c1", name: "Casa", color: "VERDE" },
+  mare: { id: "00000000-0000-4000-8000-0000000000c2", name: "Mare", color: "AZZURRO" },
   book: {
     id: "00000000-0000-4000-8000-0000000000b1",
     isbn13: "9788804668237",

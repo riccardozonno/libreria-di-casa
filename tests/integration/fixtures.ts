@@ -1,13 +1,18 @@
 import { loadActor, type CurrentUser } from "@/server/actor";
 import { prisma } from "@/server/db";
+import { LOCATION_COLORS } from "@/lib/location-colors";
 import { locationNameKey } from "@/lib/text";
 import type { BookData } from "@/lib/schemas";
 
 // Dati di prova per i test di integrazione.
 
+let colorCounter = 0;
+
+/** Ogni sede di prova riceve il colore successivo della palette (unico, come in produzione). */
 export async function makeLocation(name: string, archived = false): Promise<{ id: string; name: string }> {
+  const color = LOCATION_COLORS[colorCounter++ % LOCATION_COLORS.length]!.key;
   return prisma.location.create({
-    data: { name, nameKey: locationNameKey(name), archivedAt: archived ? new Date() : null },
+    data: { name, nameKey: locationNameKey(name), color, archivedAt: archived ? new Date() : null },
     select: { id: true, name: true },
   });
 }

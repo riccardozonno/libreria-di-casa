@@ -21,10 +21,11 @@ export default async function globalSetup(): Promise<void> {
 
     const passwordHash = await hash(E2E_PASSWORD, { memoryCost: 19_456, timeCost: 2, parallelism: 1 });
     for (const location of [SEED.casa, SEED.mare]) {
-      await client.query(`INSERT INTO "Location" (id, name, "nameKey", "updatedAt") VALUES ($1, $2, $3, now())`, [
+      await client.query(`INSERT INTO "Location" (id, name, "nameKey", color, "updatedAt") VALUES ($1, $2, $3, $4, now())`, [
         location.id,
         location.name,
         location.name.toLowerCase(),
+        location.color,
       ]);
     }
     for (const user of Object.values(E2E_USERS)) {

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
-import { PageHeader, spineClass } from "@/components/ui";
+import { PageHeader } from "@/components/ui";
+import { locationColorClass, locationColorLabel, nextFreeColor, type LocationColorKey } from "@/lib/location-colors";
 import { requireUser } from "@/server/actor";
 import { listLocations } from "@/server/locations/service";
 import { can } from "@/server/policy";
@@ -12,6 +13,8 @@ export default async function LocationsPage() {
   const user = await requireUser();
   const locations = await listLocations();
   const canManage = can(user, { type: "location.manage" });
+  const usedBy: Partial<Record<LocationColorKey, string>> = Object.fromEntries(locations.map((location) => [location.color, location.name]));
+  const suggestedColor = nextFreeColor(locations.map((location) => location.color));
 
   return (
     <>
@@ -25,7 +28,11 @@ export default async function LocationsPage() {
           {locations.map((location) => (
             <li key={location.id} className="px-4 py-3.5">
               <div className="flex items-center gap-3">
-                <span aria-hidden className={`h-10 w-2.5 shrink-0 rounded-full ${spineClass(location.id)} ${location.archived ? "opacity-40" : ""}`} />
+                <span
+                  role="img"
+                  aria-label={`Colore ${locationColorLabel(location.color)}`}
+                  className={`h-10 w-2.5 shrink-0 rounded-full ${locationColorClass(location.color)} ${location.archived ? "opacity-40" : ""}`}
+                />
                 <Link href={`/?sede=${location.id}`} className="min-w-0 flex-1">
                   <p className="text-[17px] font-semibold [overflow-wrap:anywhere]">
                     {location.name}
@@ -37,12 +44,12 @@ export default async function LocationsPage() {
                   </p>
                 </Link>
               </div>
-              {canManage && <LocationAdminControls location={location} />}
+              {canManage && <LocationAdminControls location={location} usedBy={usedBy} />}
             </li>
           ))}
         </ul>
       )}
-      {canManage && <CreateLocationForm />}
+      {canManage && <CreateLocationForm usedBy={usedBy} suggestedColor={suggestedColor} />}
     </>
   );
 }

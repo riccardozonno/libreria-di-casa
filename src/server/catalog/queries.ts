@@ -1,5 +1,6 @@
 import "server-only";
 import type { Prisma } from "@/generated/prisma/client";
+import type { LocationColorKey } from "@/lib/location-colors";
 import { searchTerms } from "@/lib/text";
 import { prisma } from "../db";
 
@@ -14,7 +15,7 @@ export interface BookListItem {
   publishedYear: number | null;
   isbn13: string | null;
   coverPath: string | null;
-  locations: { id: string; name: string; copies: number }[];
+  locations: { id: string; name: string; color: LocationColorKey; copies: number }[];
 }
 
 export interface BookPage {
@@ -59,12 +60,12 @@ export async function searchBooks(params: SearchParams): Promise<BookPage> {
       publishedYear: true,
       isbn13: true,
       coverPath: true,
-      copies: { select: { location: { select: { id: true, name: true } } } },
+      copies: { select: { location: { select: { id: true, name: true, color: true } } } },
     },
   });
 
   const items = books.map((book) => {
-    const byLocation = new Map<string, { id: string; name: string; copies: number }>();
+    const byLocation = new Map<string, { id: string; name: string; color: LocationColorKey; copies: number }>();
     for (const copy of book.copies) {
       const current = byLocation.get(copy.location.id);
       byLocation.set(copy.location.id, { ...copy.location, copies: (current?.copies ?? 0) + 1 });
@@ -104,7 +105,7 @@ export async function getBookDetail(bookId: string) {
           shelf: true,
           notes: true,
           createdAt: true,
-          location: { select: { id: true, name: true, archivedAt: true } },
+          location: { select: { id: true, name: true, color: true, archivedAt: true } },
         },
       },
       readings: {

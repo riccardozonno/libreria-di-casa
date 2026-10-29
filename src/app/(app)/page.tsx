@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { BookCover } from "@/components/book-cover";
 import { LocationTag, PageHeader } from "@/components/ui";
+import { locationColorClass } from "@/lib/location-colors";
 import { requireUser } from "@/server/actor";
 import { searchBooks } from "@/server/catalog/queries";
 import { listLocations } from "@/server/locations/service";
@@ -65,6 +66,7 @@ export default async function CatalogPage({ searchParams }: { searchParams: Sear
               aria-current={location.id === locationId ? "true" : undefined}
               className="shrink-0 rounded-full border border-line px-3.5 py-2 text-[14px] font-medium aria-[current=true]:border-accent aria-[current=true]:bg-accent aria-[current=true]:text-accent-ink"
             >
+              <span aria-hidden className={`mr-1.5 inline-block h-2.5 w-2.5 rounded-full ${locationColorClass(location.color)}`} />
               {location.name}
               {location.archived && " (archiviata)"}
             </Link>
@@ -93,7 +95,7 @@ export default async function CatalogPage({ searchParams }: { searchParams: Sear
                   </p>
                   <div className="mt-2 flex flex-wrap gap-1.5">
                     {book.locations.map((location) => (
-                      <LocationTag key={location.id} id={location.id} name={location.name} count={location.copies} />
+                      <LocationTag key={location.id} color={location.color} name={location.name} count={location.copies} />
                     ))}
                   </div>
                 </div>

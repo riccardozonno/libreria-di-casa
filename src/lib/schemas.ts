@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { normalizeIsbn } from "./isbn";
+import { LOCATION_COLOR_KEYS } from "./location-colors";
 
 // Schemi di validazione condivisi (form, Server Actions, import CSV). Messaggi in italiano.
 
@@ -47,6 +48,13 @@ export const locationNameSchema = z
   .trim()
   .min(1, "Inserisci un nome")
   .max(60, "Massimo 60 caratteri");
+
+export const locationInputSchema = z.object({
+  name: locationNameSchema,
+  color: z.enum(LOCATION_COLOR_KEYS, { error: "Scegli un colore" }),
+});
+
+export type LocationInput = z.infer<typeof locationInputSchema>;
 
 export const copyDetailsSchema = z.object({
   shelf: optionalText(120),

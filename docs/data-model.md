@@ -49,6 +49,7 @@ model Location {
   id          String    @id @default(uuid(7)) @db.Uuid
   name        String
   nameKey     String    @unique                // nome normalizzato (minuscolo, senza accenti/spazi doppi)
+  color       LocationColor @unique             // colore scelto dall'admin (palette di 10), mai ripetuto
   archivedAt  DateTime?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
@@ -142,6 +143,7 @@ model AuditLog {
 | ISBN creato in contemporanea da due persone | L'errore di unicità P2002 diventa la proposta "aggiungi una copia" |
 | Niente copie nuove o in arrivo in sedi archiviate | Servizio + policy |
 | Nome sede unico ignorando maiuscole e accenti | Colonna `nameKey @unique` calcolata dall'app |
+| Colore della sede unico (anche tra sedi archiviate) | Enum `LocationColor` + `@unique`; il servizio indica quale sede usa già il colore |
 | Sempre almeno un admin attivo | Servizio utenti: `pg_advisory_xact_lock` dedicato, poi conteggio degli admin attivi, nella stessa transazione della modifica |
 | Audit non modificabile | Ruolo DB `app` senza `UPDATE`/`DELETE` su `AuditLog`; le migrazioni usano il ruolo `migrator` |
 | Ogni modifica genera una riga di `AuditLog` nella stessa transazione | Helper `withAudit(tx, …)` usato da tutti i servizi |

@@ -88,7 +88,7 @@ export default async function BookPage({ params }: { params: Params }) {
               <CopyRow
                 key={copy.id}
                 copy={{ id: copy.id, shelf: copy.shelf, notes: copy.notes }}
-                location={<LocationTag id={copy.location.id} name={`${copy.location.name}${location.archived ? " (archiviata)" : ""}`} />}
+                location={<LocationTag color={copy.location.color} name={`${copy.location.name}${location.archived ? " (archiviata)" : ""}`} />}
                 canEdit={can(user, { type: "copy.update", location })}
                 canDelete={can(user, { type: "copy.delete", location, isLastCopy: copyCount <= 1 })}
                 isLastCopy={copyCount <= 1}

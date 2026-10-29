@@ -1,4 +1,5 @@
 import type { ComponentPropsWithoutRef, ReactNode } from "react";
+import { locationColorClass, type LocationColorKey } from "@/lib/location-colors";
 
 // Componenti di base condivisi (server-safe: niente stato, niente hook).
 
@@ -140,17 +141,17 @@ const SPINE_CLASSES = [
   "bg-[var(--spine-7)]",
 ] as const;
 
-/** Colore "dorso" stabile per una sede, dai colori dell'icona. */
+/** Colore "dorso" stabile per le copertine segnaposto (le sedi hanno invece un colore scelto dall'admin). */
 export function spineClass(locationId: string): string {
   let hash = 0;
   for (const char of locationId) hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
   return SPINE_CLASSES[hash % SPINE_CLASSES.length] ?? SPINE_CLASSES[0];
 }
 
-export function LocationTag({ id, name, count }: { id: string; name: string; count?: number }) {
+export function LocationTag({ color, name, count }: { color: LocationColorKey; name: string; count?: number }) {
   return (
     <span className="inline-flex items-center gap-1.5 rounded-full bg-sunken py-1 pl-1.5 pr-2.5 text-[12px] font-medium text-ink-soft">
-      <span aria-hidden className={`h-3.5 w-1.5 rounded-full ${spineClass(id)}`} />
+      <span aria-hidden className={`h-3.5 w-1.5 rounded-full ${locationColorClass(color)}`} />
       {name}
       {count !== undefined && count > 1 && <span className="text-ink-faint">×{count}</span>}
     </span>

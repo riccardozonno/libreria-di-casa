@@ -16,6 +16,20 @@ enum Role {
   READER
 }
 
+// Palette delle sedi (src/lib/location-colors.ts): un colore per sede, mai ripetuto.
+enum LocationColor {
+  ROSSO
+  ARANCIO
+  GIALLO
+  VERDE
+  TURCHESE
+  AZZURRO
+  BLU
+  VIOLA
+  ROSA
+  MARRONE
+}
+
 enum BookSource {
   GOOGLE_BOOKS
   OPEN_LIBRARY
@@ -111,12 +125,13 @@ model TwoFactor {
 // --- Dominio ---
 
 model Location {
-  id         String    @id @default(uuid(7)) @db.Uuid
+  id         String        @id @default(uuid(7)) @db.Uuid
   name       String
-  nameKey    String    @unique
+  nameKey    String        @unique
+  color      LocationColor @unique
   archivedAt DateTime?
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
+  createdAt  DateTime      @default(now())
+  updatedAt  DateTime      @updatedAt
 
   copies        Copy[]
   editors       LocationEditor[]
