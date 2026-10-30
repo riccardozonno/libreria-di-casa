@@ -64,7 +64,7 @@ Un'app minima messa davvero online, per verificare i rischi prima di riscrivere 
 7. CPU misurata per endpoint nei test; **al primo avvio dell'istanza ≤ 5 ms** (in fase 1 la verifica del JWT con `jose` arrivava a 8 ms): chiave di Access importata una volta con WebCrypto, moduli caricati solo se servono.
 6. Primo admin da riga di comando. ⏸
 
-### Fase 3 — MVP
+### Fase 3 — MVP — fatta il 30/10/2026, in prova dall'iPhone (⏸)
 Catalogo con ricerca e filtro per sede, scheda libro, "Letto da", aggiunta con scanner e lookup (Google Books con chiave come segreto del Worker → Open Library → manuale), copertine su R2, copie (aggiungi, modifica, elimina, sposta con storico), sedi, gestione utenti. E2E sui tre ruoli. Prova dall'iPhone sull'indirizzo `workers.dev`. ⏸
 
 ### Fase 4 — Funzioni restanti
