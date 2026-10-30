@@ -5,6 +5,7 @@ import { Button, Notice, PageHeader, TextField } from "../components/ui";
 import { send } from "../lib/api";
 import { type ActionState, failure, initialActionState, text } from "../lib/action-state";
 import { useLocations } from "../lib/locations";
+import { inviteText } from "../lib/invite";
 import { useSession } from "../lib/session";
 import { useApi } from "../lib/use-api";
 
@@ -65,20 +66,49 @@ function RoleAndLocations({ defaultRole, defaultLocations, locations, idPrefix }
   );
 }
 
+function InviteBox({ name, email }: { name: string; email: string }) {
+  const [copied, setCopied] = useState(false);
+  const message = inviteText({ name, email, appUrl: window.location.origin });
+
+  async function share() {
+    if (navigator.share) {
+      await navigator.share({ title: "Invito a HOME LIBRARY", text: message }).catch(() => undefined);
+      return;
+    }
+    await navigator.clipboard.writeText(message);
+    setCopied(true);
+  }
+
+  return (
+    <div className="flex flex-col gap-2 rounded-[var(--radius-sm)] bg-accent-soft p-3 text-[14px]">
+      <p className="font-semibold">Ora avvisa {name}</p>
+      <p>L&apos;app non manda email: il codice per entrare arriva da Cloudflare Access quando {name} apre l&apos;app e scrive la sua email. Mandagli questo messaggio:</p>
+      <p className="whitespace-pre-line rounded bg-surface px-2 py-1.5 text-[13px]">{message}</p>
+      <Button variant="secondary" onClick={() => void share()}>
+        {copied ? "Copiato ✓" : "Condividi l'invito"}
+      </Button>
+    </div>
+  );
+}
+
 function CreateUserForm({ locations, onCreated }: { locations: Location[]; onCreated: () => void }) {
   const [round, setRound] = useState(0);
+  const [invited, setInvited] = useState<{ name: string; email: string } | null>(null);
   const [state, action, isPending] = useActionState(async (_previous: ActionState, form: FormData): Promise<ActionState> => {
     const email = text(form, "email");
     try {
       const result = await send<{ accessSync: AccessSync }>("/users", "POST", { ...roleAndLocations(form), email });
+      setInvited({ name: text(form, "name").trim(), email: email.trim().toLowerCase() });
       setRound((current) => current + 1);
       onCreated();
       return syncNotice(result.accessSync, email.trim().toLowerCase());
     } catch (error) {
+      setInvited(null);
       return failure(error);
     }
   }, initialActionState);
   return (
+    <>
     <form key={round} action={action} className="flex flex-col gap-4 rounded-[var(--radius-lg)] bg-surface p-4 shadow-[var(--shadow-card)]">
       <TextField label="Nome" name="name" maxLength={100} required autoComplete="off" error={state.fields?.name} />
       <TextField label="Email (la stessa con cui riceverà il codice)" name="email" type="email" maxLength={200} required autoComplete="off" error={state.fields?.email} />
@@ -89,6 +119,12 @@ function CreateUserForm({ locations, onCreated }: { locations: Location[]; onCre
         {isPending ? "Creazione…" : "Aggiungi utente"}
       </Button>
     </form>
+    {invited && (
+      <div className="mt-3">
+        <InviteBox name={invited.name} email={invited.email} />
+      </div>
+    )}
+    </>
   );
 }
 

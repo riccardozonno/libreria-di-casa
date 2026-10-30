@@ -51,6 +51,17 @@ test.describe("amministratore", () => {
     await expect(page.getByText(USERS.editor.email)).toBeVisible();
     await expect(page.getByText(USERS.reader.email)).toBeVisible();
   });
+
+  test("aggiunge una persona e riceve il messaggio d'invito da mandarle (l'app non spedisce email)", async ({ page }) => {
+    const email = `nuova-${unique()}@e2e.test`;
+    await page.goto("/admin/utenti");
+    await page.getByLabel("Nome").last().fill("Nuova persona");
+    await page.getByLabel(/^Email/).fill(email);
+    await page.getByRole("button", { name: "Aggiungi utente" }).click();
+    await expect(page.getByText("Ora avvisa Nuova persona")).toBeVisible();
+    await expect(page.getByText(new RegExp(`Scrivi la tua email \\(${email.replace(/[.]/g, "\\.")}\\)`))).toBeVisible();
+    await expect(page.getByRole("button", { name: "Condividi l'invito" })).toBeVisible();
+  });
 });
 
 test.describe("editor", () => {
