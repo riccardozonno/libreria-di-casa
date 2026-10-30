@@ -12,13 +12,22 @@ export interface AccessVerifierDeps {
   clock?: () => number;
 }
 
-export type AccessJwtResult = { ok: true; email: string; issuedAt: number } | { ok: false; reason: string };
+export interface AccessIdentity {
+  email: string;
+  /** Secondi Unix. */
+  issuedAt: number;
+  expiresAt: number;
+}
+
+export type AccessJwtResult = ({ ok: true } & AccessIdentity) | { ok: false; reason: string };
 
 const CLOCK_SKEW_S = 60;
 const KEYS_TTL_MS = 60 * 60 * 1000;
 /** Un kid sconosciuto fa riscaricare i certificati, ma non più di una volta al minuto. */
 const MIN_REFRESH_INTERVAL_MS = 60 * 1000;
 const RS256 = { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" } as const;
+/** Token già verificati in questa istanza (lo stesso utente ne riusa uno per ore): niente RSA a ogni richiesta. */
+const MAX_VERIFIED_TOKENS = 256;
 
 interface JwtHeader {
   alg?: unknown;
@@ -67,7 +76,7 @@ function checkClaims(claims: JwtClaims, config: AccessJwtConfig, nowS: number): 
   }
   if (typeof claims.iat !== "number") return reject("istante di emissione mancante");
   if (typeof claims.email !== "string" || claims.email === "") return reject("email mancante");
-  return { ok: true, email: claims.email.toLowerCase(), issuedAt: claims.iat };
+  return { ok: true, email: claims.email.toLowerCase(), issuedAt: claims.iat, expiresAt: claims.exp };
 }
 
 /** Restituisce una funzione di verifica con la sua cache di chiavi (una per team e audience). */
@@ -78,6 +87,15 @@ export function createAccessVerifier(config: AccessJwtConfig, deps: AccessVerifi
   let jwks = new Map<string, JsonWebKey>();
   const imported = new Map<string, CryptoKey>();
   let fetchedAt: number | null = null;
+  const verified = new Map<string, AccessIdentity>();
+
+  function remember(token: string, identity: AccessIdentity): void {
+    if (verified.size >= MAX_VERIFIED_TOKENS) {
+      const oldest = verified.keys().next().value;
+      if (oldest !== undefined) verified.delete(oldest);
+    }
+    verified.set(token, identity);
+  }
 
   async function refreshKeys(): Promise<void> {
     fetchedAt = clock();
@@ -104,6 +122,14 @@ export function createAccessVerifier(config: AccessJwtConfig, deps: AccessVerifi
   }
 
   return async function verify(token: string): Promise<AccessJwtResult> {
+    const nowS = Math.floor(clock() / 1000);
+    const cached = verified.get(token);
+    if (cached) {
+      if (cached.expiresAt + CLOCK_SKEW_S > nowS) return { ok: true, ...cached };
+      verified.delete(token);
+      return reject("token scaduto");
+    }
+
     const parts = token.split(".");
     if (parts.length !== 3) return reject("token malformato");
     const [headerPart, payloadPart, signaturePart] = parts as [string, string, string];
@@ -121,6 +147,8 @@ export function createAccessVerifier(config: AccessJwtConfig, deps: AccessVerifi
     } catch {
       return reject("verifica non riuscita");
     }
-    return checkClaims(claims, config, Math.floor(clock() / 1000));
+    const result = checkClaims(claims, config, nowS);
+    if (result.ok) remember(token, { email: result.email, issuedAt: result.issuedAt, expiresAt: result.expiresAt });
+    return result;
   };
 }

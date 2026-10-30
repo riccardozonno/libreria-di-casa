@@ -72,7 +72,33 @@ describe("token valido", () => {
       ok: true,
       email: "anna.rossi@example.com",
       issuedAt: NOW_S - 30,
+      expiresAt: NOW_S + 3600,
     });
+  });
+
+  it("lo stesso token già verificato non viene riverificato (meno CPU), finché non scade", async () => {
+    let nowMs = NOW_S * 1000;
+    const verify = createAccessVerifier({ teamDomain: TEAM, audience: AUDIENCE }, { fetcher: certsFetcher(() => [keyA]), clock: () => nowMs });
+    const token = await sign(keyA, validClaims({ exp: NOW_S + 120 }));
+    const subtleVerify = vi.spyOn(crypto.subtle, "verify");
+
+    expect((await verify(token)).ok).toBe(true);
+    expect((await verify(token)).ok).toBe(true);
+    expect(subtleVerify).toHaveBeenCalledTimes(1);
+
+    nowMs += 200_000; // oltre exp + tolleranza
+    expect((await verify(token)).ok).toBe(false);
+    subtleVerify.mockRestore();
+  });
+
+  it("i token rifiutati non entrano nella memoria dei token verificati", async () => {
+    const { verify } = verifierWith(() => [keyA]);
+    const token = await sign(keyA, validClaims({ aud: ["altra-app"] }));
+    const subtleVerify = vi.spyOn(crypto.subtle, "verify");
+    await verify(token);
+    await verify(token);
+    expect(subtleVerify).toHaveBeenCalledTimes(2);
+    subtleVerify.mockRestore();
   });
 
   it("accetta anche aud come stringa singola", async () => {
