@@ -114,3 +114,18 @@ export const moveCopySchema = z.object({ toLocationId: idSchema });
 
 export type NewBookInput = z.infer<typeof newBookSchema>;
 export type AddCopyInput = z.infer<typeof addCopySchema>;
+
+export const ROLES = ["ADMIN", "EDITOR", "READER"] as const;
+
+export const userInputSchema = z.object({
+  name: z.string().trim().min(1, "Inserisci un nome").max(100, "Massimo 100 caratteri"),
+  role: z.enum(ROLES, { error: "Scegli un ruolo" }),
+  locationIds: z.array(idSchema).max(50).default([]),
+});
+
+export const newUserSchema = userInputSchema.extend({
+  email: z.string().trim().toLowerCase().pipe(z.email("Email non valida").max(200, "Massimo 200 caratteri")),
+});
+
+export type UserInput = z.infer<typeof userInputSchema>;
+export type NewUserInput = z.infer<typeof newUserSchema>;

@@ -11,7 +11,7 @@ export const ORIGIN = "https://homelibrary.test";
 export const db = () => createDb(env.DB);
 
 /** Risposte finte dei servizi esterni (Google Books, Open Library, copertine) per URL. */
-export type ExternalHandler = (url: string) => Response | Promise<Response> | undefined;
+export type ExternalHandler = (url: string) => Response | undefined | Promise<Response | undefined>;
 let external: ExternalHandler = () => undefined;
 export function mockExternal(handler: ExternalHandler): void {
   external = handler;
