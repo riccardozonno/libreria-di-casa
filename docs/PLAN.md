@@ -1,82 +1,104 @@
-# HOME LIBRARY — Piano a fasi
+# HOME LIBRARY v2 — Piano a fasi (riscrittura per Cloudflare)
 
-Web app per catalogare i libri di famiglia distribuiti su più sedi. Documenti collegati:
-[architettura](architecture.md) · [modello dati](data-model.md) · [permessi](permissions.md) · [ADR](adr/README.md).
+Obiettivo: la stessa app, interamente sul **piano gratuito di Cloudflare** (0 €, nessun dominio, nessun server da mantenere), con un "portiere" Cloudflare Access davanti a tutto. Decisione: [ADR-0014](adr/0014-riscrittura-cloudflare.md).
 
-## Requisiti in sintesi
+La versione 1 (Next.js + Postgres + Docker Compose, fasi 0–5 approvate) resta intatta su `main` e nel tag **`v1-nextjs`**. Questo lavoro vive sul branch **`cloudflare`**; diventa `main` solo a fine progetto e con il tuo OK.
 
-| Area | Requisito |
-|---|---|
-| Scala | ≤ 5 sedi, ≤ 10 utenti, qualche migliaio di libri |
-| UI | Solo italiano, mobile-first, PWA "HOME LIBRARY" installabile su iPhone e Android |
-| Ruoli | Amministratore, Editor (per sede), Lettore — controllati lato server su ogni operazione |
-| Catalogo | Libro (dati bibliografici, unico per ISBN-13, ammessi senza ISBN) → Copie (sede, collocazione, note) |
-| Letture | "Letto da": ogni utente segna sé stesso sul libro; l'admin corregge per tutti |
-| Aggiunta | Scansione codice a barre (anche iPhone Safari) → Google Books → Open Library → manuale |
-| Dati libro | Completabili da chi crea il libro; dopo il salvataggio modificabili solo dall'admin |
-| Movimenti | Spostamento copie con storico (chi, quando, da→a) nella scheda libro |
-| CSV | Export totale/per sede; import con anteprima, validazione, report errori, duplicati, prova a secco |
-| Utenti | Creati dall'admin; link d'invito/reset monouso (72 h); niente email per ora (interfaccia `Mailer` pronta) |
-| Sicurezza | argon2id, min 12 caratteri, cookie httpOnly/Secure/SameSite, CSRF, lockout, CSP, zod, 2FA TOTP predisposta |
-| Produzione | Raspberry Pi 5 + Docker Compose + Cloudflare Tunnel, nessuna porta esposta |
-| Backup | restic notturno (03:30) su USB e B2, 7/4/6, contiene tutto il necessario per ricostruire il sito |
+## Cosa resta uguale
+
+Requisiti di prodotto della v1, senza cambiamenti: sedi (≤ 5, colore unico scelto dall'admin), Libro → Copie, "Letto da", scanner su iPhone, lookup Google Books → Open Library → manuale, dati bibliografici bloccati dopo la creazione (tranne admin), spostamenti con storico (regola B), solo l'admin elimina l'ultima copia, CSV con anteprima e prova a secco, registro attività, PWA "HOME LIBRARY" con l'icona "Scaffale", UI solo in italiano e mobile-first. La [matrice dei permessi](permissions.md) resta valida, salvo la riga "proprio profilo" (vedi sotto).
+
+## Cosa cambia
+
+| Area | v1 | v2 |
+|---|---|---|
+| Interfaccia | Next.js (rendering sul server) | **React 19 + Vite**, app a pagina singola servita come file statici |
+| Server | Server Actions | **API JSON con Hono** su Cloudflare Workers |
+| Database | PostgreSQL 18 + Prisma | **D1** (SQLite) + **Drizzle**, migrazioni con `wrangler d1 migrations` |
+| Ricerca | `pg_trgm` | **FTS5** con rimozione degli accenti |
+| Copertine | disco + sharp | **R2**; ridimensionate sul telefono, il server controlla formato e dimensione |
+| Accesso | email + password, inviti/reset, blocco, 2FA | **Cloudflare Access**: email + codice di 6 cifre (niente password). L'app legge l'identità firmata da Access e la confronta con la sua tabella utenti (ruolo, sedi, attivo) |
+| Indirizzo | dominio + Cloudflare Tunnel | `https://<nome>.<tuo-account>.workers.dev`, protetto da Access |
+| Registro in sola aggiunta | ruolo Postgres separato | trigger SQLite che rifiutano UPDATE/DELETE |
+| Transazioni | `SELECT … FOR UPDATE`, lock | `batch()` atomici di D1 + aggiornamenti condizionali |
+| CSV | elaborato sul server | letto/generato **sul telefono**, inviato al server a blocchi (limite di 10 ms di CPU) |
+| Backup | container restic → USB + B2 | **GitHub Actions** ogni notte: export D1 + R2 → restic cifrato su B2, 7/4/6; più Time Travel di D1 |
+| Sviluppo | OrbStack + Docker | `wrangler`/Miniflare in locale, nessun Docker |
+
+Dalla matrice dei permessi spariscono cambio password, 2FA e link di invito/reset. Restano "esci da tutti i dispositivi" (revoca della sessione Access) e la disattivazione dell'utente, che vale subito perché l'app rilegge l'utente dal DB a ogni richiesta.
+
+## Vincoli del piano gratuito (da rispettare in ogni fase)
+
+| Limite | Valore | Come lo rispettiamo |
+|---|---|---|
+| CPU per richiesta | 10 ms | niente rendering sul server, niente hash di password, CSV sul client; ogni endpoint misurato nei test |
+| Dimensione del Worker | 3 MB compressi | solo l'API nel Worker (Hono, Drizzle, zod, jose); l'interfaccia è statica |
+| Richieste | 100.000/giorno | ampiamente sufficienti per 10 utenti |
+| Chiamate esterne per richiesta | 50 | lookup ISBN ≤ 12 chiamate |
+| D1 | 5 GB, 5 M righe lette e 100 k scritte al giorno | indici e FTS5 al posto delle scansioni complete |
+| R2 | 10 GB | copertine WebP piccole |
+| Access | 50 utenti | ≤ 10 utenti |
 
 ## Fasi
 
-Ogni fase finisce con ⏸ (attesa del tuo OK) e push su `main`.
+Ogni fase finisce con ⏸ (attesa del tuo OK) e push sul branch `cloudflare`.
 
-### Fase 1 — Progettazione (questa)
-Piano, modello dati, matrice permessi, architettura, ADR. Revisione dell'agente architect.
+### Fase 0 — Preparazione (questa)
+Tag `v1-nextjs`, branch `cloudflare`, questo piano, ADR-0014 (proposto), domande aperte. ⏸
 
-### Fase 2 — MVP locale (Mac M5 Pro, OrbStack)
-1. Scaffold: Next.js 16 + TS strict + ESLint + Tailwind 4 + Vitest + Playwright; pnpm; CI GitHub Actions.
-2. Docker: `Dockerfile` multi-stage (Node 24, output standalone, arm64/amd64), `compose.yaml` con `db` e `app`, override di sviluppo (porta solo su 127.0.0.1).
-3. Prisma 7: schema completo (anche le tabelle usate in fase 3), prima migrazione, indice trigram.
-4. **TDD** modulo permessi (`policy`): test della matrice completa prima del codice.
-5. Spike Better Auth (invito senza password → token di reset → account credential creato), poi **TDD** autenticazione: Better Auth (email+password, argon2id, cookie, rate limit, lockout per account, IP da `CF-Connecting-IP`), creazione primo admin da CLI, link d'invito/reset.
-6. Sedi: crea/rinomina/archivia (admin).
-7. Catalogo: elenco con ricerca (titolo/autore/ISBN), filtro per sede, paginazione; scheda libro; "Letto da".
-8. Aggiunta: scanner (`barcode-detector` + zxing-wasm self-hosted), lookup ISBN lato server (Google Books → Open Library), copertine salvate e ricodificate, inserimento manuale, proposta "aggiungi copia" se l'ISBN esiste.
-9. Modifica/eliminazione copie; registro attività scritto in transazione (consultazione in fase 3).
-10. Header di sicurezza e CSP con nonce (`proxy.ts`).
-11. E2E: login, aggiunta via ISBN (lookup simulato), ricerca, permessi editor/lettore.
-12. Istruzioni per provarlo dal Mac e dall'iPhone (tunnel temporaneo `trycloudflare`). ⏸
+### Fase 1 — Prova di fattibilità (go/no-go)
+Un'app minima messa davvero online, per verificare i rischi prima di riscrivere tutto.
+1. Ti guido nella creazione dell'account Cloudflare gratuito e del sottodominio `workers.dev` (le scelte le fai tu).
+2. Worker + interfaccia statica + D1 + R2 con il plugin Cloudflare per Vite; deploy su `workers.dev`.
+3. Access sul Worker, con login a codice via email; verifica della firma (JWT) nell'app.
+4. Misure: CPU di una query di catalogo con FTS5 su ~5.000 libri finti, verifica JWT, scrittura in batch.
+5. Prove dall'iPhone: login Access, installazione PWA sulla Home (cookie separati), fotocamera e scanner.
+6. Resoconto con i numeri e decisione go/no-go. ⏸
 
-### Fase 3 — Funzioni restanti ✅ (approvata il 29/10/2026)
-1. ~~Spostamento copie con storico~~ (anticipato in fase 2 su richiesta: admin o editor della sede di partenza).
-2. **TDD** CSV: parser/validatore, anteprima, prova a secco, duplicati per ISBN, report errori; export totale/per sede.
-3. Gestione utenti: crea, ruolo, sedi, disattiva (revoca sessioni), link invito/reset, protezione ultimo admin.
-4. Registro attività consultabile con filtri (admin).
-5. Profilo: cambio password, esci da tutti i dispositivi, 2FA TOTP (attivabile; obbligatoria per admin con flag di produzione).
-6. PWA: manifest, icona "HOME LIBRARY" stile Apple, service worker minimale, pagina "Installa l'app".
-7. E2E dei nuovi flussi. ⏸
+### Fase 2 — Fondamenta
+1. Progetto pulito sul branch (la v1 resta nel tag): pnpm, TS strict, ESLint, Tailwind 4, Vitest con `@cloudflare/vitest-pool-workers` (D1 e R2 veri in locale), Playwright, CI.
+2. Schema D1 completo con Drizzle: utenti, sedi, editor per sede, libri, copie, movimenti, letture, registro (con trigger di sola aggiunta), cache ISBN, indice FTS5.
+3. Middleware di autenticazione: JWT di Access verificato (firma, audience, emittente, scadenza), utente caricato dal DB a ogni richiesta, rifiuto di utenti sconosciuti o disattivati. In locale un'identità finta, attiva **solo** in sviluppo e con un test che lo garantisce.
+4. Porting con TDD di `policy`, schemi zod, ISBN, normalizzazione del testo, colori delle sedi; registro attività nello stesso batch della modifica.
+5. Intestazioni di sicurezza e CSP; controllo dell'Origin sulle richieste che modificano dati.
+6. Primo admin da riga di comando. ⏸
 
-### Fase 4 — Revisione ✅ (approvata il 30/10/2026)
-security-reviewer, database-reviewer, typescript-reviewer, react-reviewer, a11y. Correzione di critici/alti, riepilogo del resto. ⏸
+### Fase 3 — MVP
+Catalogo con ricerca e filtro per sede, scheda libro, "Letto da", aggiunta con scanner e lookup (Google Books con chiave come segreto del Worker → Open Library → manuale), copertine su R2, copie (aggiungi, modifica, elimina, sposta con storico), sedi, gestione utenti. E2E sui tre ruoli. Prova dall'iPhone sull'indirizzo `workers.dev`. ⏸
 
-### Fase 5 — Backup e ripristino sul Mac ✅ (approvata il 30/10/2026) — [resoconto](backup-restore.md)
-Servizio `backup` (restic + pg_dump + supercronic), repository locale di prova, script `backup.sh`/`restore.sh`, prova di ripristino completa su database vuoto, documentata. ⏸
+### Fase 4 — Funzioni restanti
+CSV (export e import con anteprima, prova a secco, duplicati, report errori, a blocchi), registro attività consultabile con filtri, profilo ("esci da tutti i dispositivi"), PWA (manifest, service worker, pagina offline, "Installa l'app"), sincronizzazione utenti ↔ Access (vedi domanda 2). ⏸
 
-### Fase 6 — Produzione sul Pi
-0. Resoconto dei bisogni reali (RAM, disco, tempi di build misurati) → lista d'acquisto Pi/SSD/USB.
-1. Preparazione Pi (guida homelab: SSD, DHCP, SSH a chiavi, ufw, unattended-upgrades, Docker).
-2. Cloudflare: dominio, nameserver, tunnel, hostname pubblico.
-3. Deploy (`setup.sh`), migrazioni, primo admin, 2FA admin obbligatoria.
-4. Backup su USB e B2, prova di ripristino reale. ⏸
+### Fase 5 — Revisione
+Security, database, TypeScript, React, accessibilità. In più: misura della CPU di ogni endpoint sotto i 10 ms, verifica che l'indirizzo non sia raggiungibile senza Access. ⏸
 
-### Fase 7 — Verifica finale online
-production-audit: login, permessi per ruolo, scansione da iPhone, CSV, esito del backup notturno. README completo.
+### Fase 6 — Backup e ripristino
+GitHub Actions notturno: `wrangler d1 export` + copia di R2 → restic su B2 (7/4/6, `check` settimanale), segreti solo nei GitHub Secrets con token in sola lettura. Script di ripristino guidato su un D1 e un bucket nuovi, **prova di ripristino reale** documentata. ⏸
+
+### Fase 7 — Produzione
+Access definitivo (lista email, durata della sessione), deploy da GitHub Actions su comando manuale, primo admin, verifica dei ruoli online, primo backup notturno riuscito. ⏸
+
+### Fase 8 — Verifica finale e passaggio a `main`
+Verifica online completa (login, ruoli, scansione da iPhone, CSV, backup), README completo con guida d'uso. Con il tuo OK: merge di `cloudflare` in `main` (la v1 resta nel tag `v1-nextjs`).
+
+## Definizione di "finito"
+Test, lint e typecheck passano; ogni endpoint sta sotto i 10 ms di CPU; l'app è online su `workers.dev` solo dietro Access; i ruoli sono verificati dai test; un ripristino reale da B2 è riuscito; README completo.
+
+## Cosa riusiamo della v1
+Logica pura con i suoi test (`policy`, `isbn`, `text`, `schemas`, `location-colors`, logica del lookup, formato e piano del CSV), componenti React non legati a Next (scanner, selettore colore, form), icone, `sw.js`, documentazione di prodotto. Da rifare: database, accesso, server, pagine, backup, test di integrazione ed E2E.
+
+## Domande aperte (fase 0)
+1. **Accesso senza password** solo con Cloudflare Access (email + codice): confermi?
+2. **Lista email di Access**: sincronizzata in automatico dall'app quando crei o disattivi un utente (serve un token Cloudflare con permessi solo su Access), oppure aggiornata a mano da te nel pannello Cloudflare?
+3. **Dati**: nessuna migrazione dalla v1 (contiene solo dati di prova); il catalogo vero si inserisce da zero o con l'import CSV. Confermi?
 
 ## Rischi principali
 
 | Rischio | Prob. | Mitigazione |
 |---|---|---|
-| Scansione su iPhone Safari (niente `BarcodeDetector` nativo) | Media | Polyfill zxing-wasm self-hosted, fallback di inserimento manuale; prova reale in fase 2 |
-| Better Auth: invito senza password iniziale | Media | Utente creato senza credenziale + token di reset con scadenza 72 h ([ADR-0003](adr/0003-autenticazione-better-auth.md)) |
-| Build Next.js lenta/pesante sul Pi | Media | Misura in fase 6; alternativa: build multi-arch su GitHub Actions + GHCR |
-| Google Books: quota o dati incompleti | Bassa | Fallback Open Library, cache delle risposte, completamento manuale |
-| Prisma 8 ancora in RC | Bassa | Fissiamo Prisma 7.x stabile |
-| Migrazione distruttiva in produzione | Bassa | Solo `migrate deploy`, backup prima di ogni aggiornamento, migrazioni expand/contract |
-
-## Complessità stimata
-Alta nel complesso (sicurezza, scanner, operatività), ma ogni fase è media e verificabile da sola.
+| Un endpoint supera i 10 ms di CPU | Media | Misura in fase 1 e in ogni test; lavoro pesante sul client; in ultima istanza Workers Paid (5 $/mese) senza riscrivere |
+| PWA su iPhone dietro Access (cookie separati, rinnovo del login) | Media | Prova reale in fase 1; durata della sessione Access lunga |
+| FTS5 non disponibile o accenti gestiti male su D1 | Bassa | Verifica in fase 1; ripiego: colonna normalizzata + `LIKE` su indice |
+| Cloudflare cambia le condizioni del piano gratuito | Bassa | Backup notturno portabile (SQLite + file) su B2, fuori da Cloudflare |
+| Accesso legato alla casella email di ognuno | Media | Consigliare la 2FA sugli account email; l'admin può disattivare un utente subito |
+| Registro "in sola aggiunta" più debole (trigger, non ruoli) | Bassa | L'app non esegue mai DDL; backup notturno; test sui trigger |
