@@ -46,7 +46,7 @@ Ogni fase finisce con ⏸ (attesa del tuo OK) e push sul branch `cloudflare`.
 ### Fase 0 — Preparazione ✅ (approvata il 30/10/2026)
 Tag `v1-nextjs`, branch `cloudflare`, questo piano, ADR-0014 (proposto), domande aperte. ⏸
 
-### Fase 1 — Prova di fattibilità (go/no-go)
+### Fase 1 — Prova di fattibilità (go/no-go) — fatta il 30/10/2026, [resoconto](fase1-resoconto.md), in attesa del go
 Un'app minima messa davvero online, per verificare i rischi prima di riscrivere tutto.
 1. Ti guido nella creazione dell'account Cloudflare gratuito e del sottodominio `workers.dev` (le scelte le fai tu).
 2. Worker + interfaccia statica + D1 + R2 con il plugin Cloudflare per Vite; deploy su `workers.dev`.
