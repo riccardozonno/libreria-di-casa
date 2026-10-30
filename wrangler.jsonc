@@ -23,7 +23,7 @@
   // I segreti (chiave Google Books, token Access) si impostano con `wrangler secret put`.
   "vars": {
     "ENVIRONMENT": "production",
-    "ACCESS_TEAM_DOMAIN": "",
-    "ACCESS_AUD": ""
+    "ACCESS_TEAM_DOMAIN": "solitary-brook-795e.cloudflareaccess.com",
+    "ACCESS_AUD": "3406c75f6351cad7cb4d0c40b3f683e6d3c9f16cb674c853db8463004ba5afce"
   }
 }
