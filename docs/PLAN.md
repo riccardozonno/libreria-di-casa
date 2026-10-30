@@ -64,11 +64,12 @@ Un'app minima messa davvero online, per verificare i rischi prima di riscrivere 
 7. CPU misurata per endpoint nei test; **al primo avvio dell'istanza ≤ 5 ms** (in fase 1 la verifica del JWT con `jose` arrivava a 8 ms): chiave di Access importata una volta con WebCrypto, moduli caricati solo se servono.
 6. Primo admin da riga di comando. ⏸
 
-### Fase 3 — MVP — fatta il 30/10/2026, in prova dall'iPhone (⏸)
+### Fase 3 — MVP ✅ (approvata il 30/10/2026)
+Fatto anche: sincronizzazione utenti ↔ gruppo Access (anticipata dalla fase 4), invito da condividere dopo la creazione di un utente, foto della copertina alla creazione. Correzioni dalla prova su iPhone: anno rifiutato online (orologio di Workers al caricamento), niente anni futuri.
 Catalogo con ricerca e filtro per sede, scheda libro, "Letto da", aggiunta con scanner e lookup (Google Books con chiave come segreto del Worker → Open Library → manuale), copertine su R2, copie (aggiungi, modifica, elimina, sposta con storico), sedi, gestione utenti. E2E sui tre ruoli. Prova dall'iPhone sull'indirizzo `workers.dev`. ⏸
 
 ### Fase 4 — Funzioni restanti
-CSV (export e import con anteprima, prova a secco, duplicati, report errori, a blocchi), registro attività consultabile con filtri, profilo ("esci da tutti i dispositivi"), PWA (manifest, service worker, pagina offline, "Installa l'app"), sincronizzazione utenti ↔ Access (policy per email, metodo One-time PIN, durata della sessione). ⏸
+CSV (export e import con anteprima, prova a secco, duplicati, report errori, a blocchi), registro attività consultabile con filtri, PWA (service worker, pagina offline, "Installa l'app"), anteprima della copertina trovata dalla ricerca ISBN. ⏸
 
 ### Fase 5 — Revisione
 Security, database, TypeScript, React, accessibilità. In più: misura della CPU di ogni endpoint sotto i 10 ms, verifica che l'indirizzo non sia raggiungibile senza Access. ⏸
