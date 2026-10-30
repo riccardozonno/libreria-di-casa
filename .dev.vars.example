@@ -1,3 +1,5 @@
-# Solo sviluppo locale (mai pubblicato): identità usata quando Access non è configurato.
-# Deve corrispondere a un utente creato con `pnpm admin:create --local`.
+# Solo sviluppo locale (mai pubblicato). Sovrascrive le "vars" di wrangler.jsonc.
+ENVIRONMENT=development
+# Identità usata quando Access non è configurato: crea prima l'utente con
+#   pnpm admin:create --email admin@example.test --name "Admin di prova"
 DEV_IDENTITY_EMAIL=admin@example.test

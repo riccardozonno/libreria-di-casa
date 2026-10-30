@@ -1,3 +1,4 @@
+/* global self, caches, fetch, URL */
 // Service worker di HOME LIBRARY (docs/architecture.md).
 // Mette in cache SOLO asset statici immutabili (JS/CSS con hash, icone, WASM dello scanner).
 // Mai pagine HTML, dati, copertine o API: i dati restano sempre online e protetti dalla sessione.

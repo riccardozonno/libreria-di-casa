@@ -80,7 +80,7 @@ describe("Access non configurato (fail closed)", () => {
   });
 
   it("in sviluppo senza identità dichiarata: 503", async () => {
-    const response = await callApi("/me", { env: { ...unconfigured, ENVIRONMENT: "development" } });
+    const response = await callApi("/me", { env: { ...unconfigured, ENVIRONMENT: "development", DEV_IDENTITY_EMAIL: undefined } });
     expect(response.status).toBe(503);
   });
 });

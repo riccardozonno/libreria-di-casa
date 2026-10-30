@@ -1,0 +1,14 @@
+# Intestazioni dei file statici (Workers Assets). L'API (/api/*) imposta le sue in worker/security.ts.
+# CSP: solo risorse nostre; 'wasm-unsafe-eval' serve allo scanner (zxing-wasm); niente script inline.
+# Niente upgrade-insecure-requests: workers.dev è già solo HTTPS (e HSTS), e in locale bloccherebbe WebKit.
+/*
+  Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; img-src 'self' data: blob:; connect-src 'self'; manifest-src 'self'; worker-src 'self'; media-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
+  X-Content-Type-Options: nosniff
+  X-Frame-Options: DENY
+  Referrer-Policy: no-referrer
+  Permissions-Policy: camera=(self), microphone=(), geolocation=(), payment=(), usb=()
+  Cross-Origin-Opener-Policy: same-origin
+  Strict-Transport-Security: max-age=31536000
+
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
