@@ -96,10 +96,14 @@ test.describe("lettore", () => {
     await page.goto(`/libri/${SEED.book.id}`);
     await expect(page.getByRole("button", { name: "Modifica" })).toHaveCount(0);
     await expect(page.getByRole("button", { name: "+ Aggiungi una copia" })).toHaveCount(0);
-    const toggle = page.getByRole("button", { name: /Segna come letto|L'ho letto/ });
-    if ((await toggle.getAttribute("aria-pressed")) === "true") await toggle.click();
-    await page.getByRole("button", { name: "Segna come letto" }).click();
-    await expect(page.getByRole("button", { name: "L'ho letto" })).toHaveAttribute("aria-pressed", "true");
+    // Il database è condiviso tra i due browser: si parte da "non letto".
+    const toggle = page.getByRole("button", { name: "L'ho letto" });
+    if ((await toggle.getAttribute("aria-pressed")) === "true") {
+      await toggle.click();
+      await expect(toggle).toHaveAttribute("aria-pressed", "false");
+    }
+    await toggle.click();
+    await expect(toggle).toHaveAttribute("aria-pressed", "true");
 
     await page.goto("/aggiungi");
     await expect(page.getByText(/Non ci sono sedi in cui puoi aggiungere libri/)).toBeVisible();

@@ -122,7 +122,7 @@ export function PageHeader({ title, subtitle, action }: { title: string; subtitl
 
 export function Section({ title, children, action }: { title: string; children: ReactNode; action?: ReactNode }) {
   return (
-    <section className="mt-6" aria-label={title}>
+    <section className="mt-6">
       <div className="mb-2 flex items-center justify-between px-1">
         <h2 className="text-[13px] font-semibold uppercase tracking-wide text-ink-faint">{title}</h2>
         {action}

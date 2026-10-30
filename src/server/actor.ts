@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { auth } from "./auth/auth";
@@ -43,11 +44,12 @@ export async function loadActor(userId: string): Promise<CurrentUser | null> {
   };
 }
 
-export async function getCurrentUser(): Promise<CurrentUser | null> {
+/** Una sola lettura per richiesta (layout, pagina e metadata la condividono); mai tra richieste diverse. */
+export const getCurrentUser = cache(async (): Promise<CurrentUser | null> => {
   const session = await auth.api.getSession({ headers: await headers() });
   if (!session) return null;
   return loadActor(session.user.id);
-}
+});
 
 /**
  * Per le pagine: i layout non vengono rieseguiti a ogni navigazione client,

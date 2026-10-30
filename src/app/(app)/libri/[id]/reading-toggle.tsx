@@ -20,7 +20,7 @@ export function ReadingToggle({ bookId, userId, hasRead }: { bookId: string; use
         }`}
       >
         <span aria-hidden>{hasRead ? "✓" : "○"}</span>
-        {hasRead ? "L'ho letto" : "Segna come letto"}
+        L&apos;ho letto
       </button>
       {!state.ok && state.error && (
         <p role="alert" className="mt-2 text-[14px] text-danger">

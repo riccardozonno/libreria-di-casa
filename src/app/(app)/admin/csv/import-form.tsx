@@ -10,7 +10,9 @@ export function ImportForm() {
   const [state, action, isPending] = useActionState(importCsvAction, initialActionState);
   const [intent, setIntent] = useState<"preview" | "import">("preview");
   const report = state.ok ? state.data : null;
-  const canImport = report !== null && !report.applied && report.summary.errors === 0 && report.summary.newCopies > 0;
+  // Un file scelto dopo l'anteprima va ricontrollato prima di poterlo importare.
+  const [checkedFile, setCheckedFile] = useState(false);
+  const canImport = checkedFile && report !== null && !report.applied && report.summary.errors === 0 && report.summary.newCopies > 0;
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -18,6 +20,7 @@ export function ImportForm() {
     const submitter = (event.nativeEvent as SubmitEvent).submitter;
     const formData = new FormData(event.currentTarget, submitter);
     setIntent(formData.get("intent") === "import" ? "import" : "preview");
+    setCheckedFile(formData.get("intent") !== "import");
     startTransition(() => action(formData));
   }
 
@@ -25,7 +28,7 @@ export function ImportForm() {
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
       <label className="flex flex-col gap-1.5 text-[13px] font-semibold text-ink-soft">
         File CSV
-        <input type="file" name="file" accept=".csv,text/csv" required className="text-[15px] font-normal text-ink" />
+        <input type="file" name="file" accept=".csv,text/csv" required className="text-[15px] font-normal text-ink" onChange={() => setCheckedFile(false)} />
       </label>
 
       <fieldset className="flex flex-col gap-2">
@@ -43,7 +46,7 @@ export function ImportForm() {
       {!state.ok && state.error && <Notice tone="error">{state.error}</Notice>}
 
       {report && (
-        <div className="flex flex-col gap-2" aria-live="polite">
+        <div className="flex flex-col gap-2">
           <Notice tone={report.applied ? "success" : report.summary.errors > 0 ? "error" : "info"}>
             {report.applied ? "Import completato: " : "Anteprima (nessuna modifica salvata): "}
             {report.summary.rows} righe · {report.summary.newBooks} libri nuovi · {report.summary.newCopies} copie
@@ -51,7 +54,7 @@ export function ImportForm() {
             {report.summary.errors > 0 && ` · ${report.summary.errors} errori: correggi il file e riprova`}
           </Notice>
           {report.errors.length > 0 && (
-            <ul className="max-h-64 overflow-y-auto rounded-[var(--radius-sm)] bg-danger-soft px-3 py-2 text-[14px] text-danger">
+            <ul tabIndex={0} aria-label="Errori nel file" className="max-h-64 overflow-y-auto rounded-[var(--radius-sm)] bg-danger-soft px-3 py-2 text-[14px] text-danger">
               {report.errors.map((error) => (
                 <li key={`${error.line}-${error.message}`}>
                   Riga {error.line}: {error.message}

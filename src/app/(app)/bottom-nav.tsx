@@ -77,9 +77,9 @@ export function BottomNav({ canAdd, isAdmin }: { canAdd: boolean; isAdmin: boole
               <Link
                 href={item.href}
                 aria-current={active ? "page" : undefined}
-                className={`flex flex-1 flex-col items-center justify-center gap-0.5 text-[11px] font-semibold ${active ? "text-accent" : "text-ink-faint"}`}
+                className={`flex flex-1 flex-col items-center justify-center gap-0.5 text-[11px] ${active ? "font-bold text-accent" : "font-medium text-ink-faint"}`}
               >
-                {icons[item.icon]}
+                <span className={`flex h-7 w-12 items-center justify-center rounded-full ${active ? "bg-accent-soft" : ""}`}>{icons[item.icon]}</span>
                 {item.label}
               </Link>
             </li>

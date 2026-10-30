@@ -92,11 +92,11 @@ export default async function AuditPage({ searchParams }: { searchParams: Search
       <PageHeader title="Registro attività" subtitle={`${result.total} eventi`} />
 
       <nav aria-label="Filtra per categoria" className="-mx-4 mb-3 flex gap-2 overflow-x-auto px-4 pb-1">
-        <Link href={href(undefined, 1)} aria-current={!category ? "true" : undefined} className="shrink-0 rounded-full border border-line px-3.5 py-2 text-[14px] font-medium aria-[current=true]:border-accent aria-[current=true]:bg-accent aria-[current=true]:text-accent-ink">
+        <Link href={href(undefined, 1)} aria-current={!category ? "true" : undefined} className="inline-flex min-h-11 shrink-0 items-center rounded-full border border-line px-3.5 text-[14px] font-medium aria-[current=true]:border-accent aria-[current=true]:bg-accent aria-[current=true]:text-accent-ink">
           Tutto
         </Link>
         {AUDIT_CATEGORIES.map((value) => (
-          <Link key={value} href={href(value, 1)} aria-current={category === value ? "true" : undefined} className="shrink-0 rounded-full border border-line px-3.5 py-2 text-[14px] font-medium aria-[current=true]:border-accent aria-[current=true]:bg-accent aria-[current=true]:text-accent-ink">
+          <Link key={value} href={href(value, 1)} aria-current={category === value ? "true" : undefined} className="inline-flex min-h-11 shrink-0 items-center rounded-full border border-line px-3.5 text-[14px] font-medium aria-[current=true]:border-accent aria-[current=true]:bg-accent aria-[current=true]:text-accent-ink">
             {CATEGORY_LABELS[value]}
           </Link>
         ))}

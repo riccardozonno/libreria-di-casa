@@ -29,6 +29,7 @@ interface BookFormProps {
 export function BookForm({ initial, locations, onCancel, onExisting }: BookFormProps) {
   const [state, formAction, isPending] = useActionState(createBookAction, initialActionState);
   const [photo, setPhoto] = useState<{ file: File; previewUrl: string } | null>(null);
+  const [photoError, setPhotoError] = useState("");
   const fieldErrors = state.ok ? {} : (state.fieldErrors ?? {});
 
   useEffect(() => {
@@ -42,8 +43,13 @@ export function BookForm({ initial, locations, onCancel, onExisting }: BookFormP
   async function handlePhoto(event: ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     if (!file) return;
-    const resized = await resizeImageFile(file);
-    setPhoto({ file: resized, previewUrl: URL.createObjectURL(resized) });
+    try {
+      const resized = await resizeImageFile(file);
+      setPhotoError("");
+      setPhoto({ file: resized, previewUrl: URL.createObjectURL(resized) });
+    } catch {
+      setPhotoError("Non riesco a leggere questa foto. Prova a scattarla di nuovo o scegline un'altra.");
+    }
   }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
@@ -76,6 +82,7 @@ export function BookForm({ initial, locations, onCancel, onExisting }: BookFormP
         </label>
       </div>
 
+      {photoError && <Notice tone="error">{photoError}</Notice>}
       {initial.isbn13 && <p className="text-[14px] text-ink-faint">ISBN {initial.isbn13}</p>}
       <TextField label="Titolo" name="title" defaultValue={initial.title} required maxLength={300} error={fieldErrors.title} />
       <TextArea label="Autori (uno per riga)" name="authors" defaultValue={initial.authors.join("\n")} rows={2} error={fieldErrors.authors} />
@@ -84,7 +91,11 @@ export function BookForm({ initial, locations, onCancel, onExisting }: BookFormP
 
       <div className="mt-2 border-t border-line pt-4">
         <LocationSelect locations={locations} legend="In quale sede si trova?" />
-        {fieldErrors.locationId && <p className="mt-1 text-[13px] text-danger">Scegli una sede.</p>}
+        {fieldErrors.locationId && (
+          <p role="alert" className="mt-1 text-[13px] text-danger">
+            Scegli una sede.
+          </p>
+        )}
       </div>
       <TextField label="Collocazione (facoltativa)" name="shelf" maxLength={120} placeholder="Es. Studio, scaffale 2" />
       <TextField label="Note (facoltative)" name="notes" maxLength={1000} />

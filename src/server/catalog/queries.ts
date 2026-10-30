@@ -1,4 +1,5 @@
 import "server-only";
+import { cache } from "react";
 import type { Prisma } from "@/generated/prisma/client";
 import type { LocationColorKey } from "@/lib/location-colors";
 import { searchTerms } from "@/lib/text";
@@ -84,7 +85,7 @@ export async function searchBooks(params: SearchParams): Promise<BookPage> {
   return { items, total, page, pageCount };
 }
 
-export async function getBookDetail(bookId: string) {
+export const getBookDetail = cache(async (bookId: string) => {
   return prisma.book.findUnique({
     where: { id: bookId },
     select: {
@@ -124,7 +125,7 @@ export async function getBookDetail(bookId: string) {
       },
     },
   });
-}
+});
 
 export type BookDetail = NonNullable<Awaited<ReturnType<typeof getBookDetail>>>;
 

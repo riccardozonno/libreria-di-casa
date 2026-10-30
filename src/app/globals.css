@@ -12,7 +12,7 @@
   --surface-sunken: #efeae1;
   --ink: #1b2236;
   --ink-soft: #4a5268;
-  --ink-faint: #737a8c;
+  --ink-faint: #5f6678;
   --line: #e2dccf;
   --accent: #22305a;
   --accent-ink: #ffffff;
@@ -84,6 +84,8 @@
 
 html {
   -webkit-text-size-adjust: 100%;
+  scroll-padding-top: 4.5rem;
+  scroll-padding-bottom: calc(var(--nav-height) + env(safe-area-inset-bottom) + 1rem);
   background: var(--paper);
 }
 
@@ -97,7 +99,6 @@ body {
 :focus-visible {
   outline: 3px solid var(--focus);
   outline-offset: 2px;
-  border-radius: 6px;
 }
 
 @media (prefers-reduced-motion: reduce) {

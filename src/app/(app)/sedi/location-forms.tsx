@@ -59,7 +59,7 @@ export function LocationAdminControls({ location, usedBy }: AdminControlsProps) 
       {isEditing ? (
         <form action={updateAction} className="flex flex-col gap-4">
           <input type="hidden" name="id" value={location.id} />
-          <TextField label="Nome" name="name" defaultValue={location.name} maxLength={60} required />
+          <TextField label="Nome" name="name" defaultValue={location.name} maxLength={60} required autoFocus />
           <ColorPicker usedBy={usedBy} defaultValue={location.color} idPrefix={`sede-${location.id}`} />
           <div className="flex gap-2">
             <Button type="submit" disabled={isUpdating}>
@@ -72,7 +72,7 @@ export function LocationAdminControls({ location, usedBy }: AdminControlsProps) 
         </form>
       ) : (
         <div className="flex gap-2">
-          <Button variant="secondary" onClick={() => setIsEditing(true)}>
+          <Button variant="secondary" onClick={() => setIsEditing(true)} aria-label={`Modifica ${location.name}`}>
             Modifica
           </Button>
           <form action={archiveAction}>

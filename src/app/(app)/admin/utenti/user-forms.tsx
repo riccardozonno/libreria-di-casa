@@ -118,7 +118,7 @@ export function UserRow({ user, isSelf, locations, locationNames }: { user: User
             {user.twoFactorEnabled && " · 2FA attiva"}
           </p>
         </div>
-        <Button variant="ghost" className="shrink-0" onClick={() => setIsOpen((open) => !open)} aria-expanded={isOpen}>
+        <Button variant="ghost" className="shrink-0" onClick={() => setIsOpen((open) => !open)} aria-expanded={isOpen} aria-label={`${isOpen ? "Chiudi" : "Gestisci"} ${user.name}`}>
           {isOpen ? "Chiudi" : "Gestisci"}
         </Button>
       </div>

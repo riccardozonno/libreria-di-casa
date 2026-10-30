@@ -58,7 +58,7 @@ export function CopyRow({ copy, location, canEdit, canDelete, isLastCopy, moveTa
           className="mt-3 flex flex-col gap-3"
         >
           <input type="hidden" name="copyId" value={copy.id} />
-          <TextField label="Collocazione" name="shelf" defaultValue={copy.shelf ?? ""} maxLength={120} placeholder="Es. Studio, scaffale 2" />
+          <TextField label="Collocazione" name="shelf" defaultValue={copy.shelf ?? ""} maxLength={120} placeholder="Es. Studio, scaffale 2" autoFocus />
           <TextArea label="Note" name="notes" defaultValue={copy.notes ?? ""} maxLength={1000} />
           <div className="flex gap-2">
             <Button type="submit" disabled={isUpdating}>
