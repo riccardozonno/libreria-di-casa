@@ -87,10 +87,10 @@ Test, lint e typecheck passano; ogni endpoint sta sotto i 10 ms di CPU; l'app è
 ## Cosa riusiamo della v1
 Logica pura con i suoi test (`policy`, `isbn`, `text`, `schemas`, `location-colors`, logica del lookup, formato e piano del CSV), componenti React non legati a Next (scanner, selettore colore, form), icone, `sw.js`, documentazione di prodotto. Da rifare: database, accesso, server, pagine, backup, test di integrazione ed E2E.
 
-## Domande aperte (fase 0)
-1. **Accesso senza password** solo con Cloudflare Access (email + codice): confermi?
-2. **Lista email di Access**: sincronizzata in automatico dall'app quando crei o disattivi un utente (serve un token Cloudflare con permessi solo su Access), oppure aggiornata a mano da te nel pannello Cloudflare?
-3. **Dati**: nessuna migrazione dalla v1 (contiene solo dati di prova); il catalogo vero si inserisce da zero o con l'import CSV. Confermi?
+## Decisioni della fase 0 (30/10/2026)
+1. **Accesso senza password**: solo Cloudflare Access (email + codice). ✅
+2. **Lista email di Access sincronizzata in automatico** dall'app quando l'admin crea, disattiva o riattiva un utente (token Cloudflare con permessi solo su Access, come segreto del Worker). ✅
+3. **Nessuna migrazione dalla v1**: il catalogo vero si inserisce da zero usando l'app. ✅
 
 ## Rischi principali
 
