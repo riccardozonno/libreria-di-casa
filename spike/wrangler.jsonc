@@ -14,8 +14,7 @@
     {
       "binding": "DB",
       "database_name": "homelibrary-spike",
-      // Sostituito con l'id vero dopo `wrangler d1 create` (in locale basta questo segnaposto).
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      "database_id": "c69214fb-1c61-4731-8583-c0756f21e884",
       "migrations_dir": "migrations"
     }
   ],
