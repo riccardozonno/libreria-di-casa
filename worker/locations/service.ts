@@ -4,6 +4,7 @@ import { can, type LocationRef } from "../../shared/policy";
 import type { LocationInput } from "../../shared/schemas";
 import { locationNameKey } from "../../shared/text";
 import { auditInsert } from "../audit";
+import { runBatch } from "../db/batch";
 import type { Db } from "../db/client";
 import { location } from "../db/schema";
 import { conflict, forbidden, isUniqueViolation, notFound } from "../errors";
@@ -48,7 +49,7 @@ export async function createLocation(db: Db, who: Requester, input: LocationInpu
   await assertColorFree(db, input.color);
   const id = crypto.randomUUID();
   try {
-    await db.batch([
+    await runBatch(db, [
       db.insert(location).values({ id, name: input.name, nameKey: locationNameKey(input.name), color: input.color }),
       auditInsert(db, who.audit, { action: "location.create", entityType: "location", entityId: id, data: input, ip: who.audit.ip }),
     ]);
@@ -65,7 +66,7 @@ export async function updateLocation(db: Db, who: Requester, id: string, input: 
   if (!before) throw notFound("Sede");
   await assertColorFree(db, input.color, id);
   try {
-    await db.batch([
+    await runBatch(db, [
       db.update(location).set({ name: input.name, nameKey: locationNameKey(input.name), color: input.color }).where(eq(location.id, id)),
       auditInsert(db, who.audit, { action: "location.update", entityType: "location", entityId: id, data: { before, after: input }, ip: who.audit.ip }),
     ]);
@@ -80,7 +81,7 @@ export async function setLocationArchived(db: Db, who: Requester, id: string, ar
   const current = await findLocationRef(db, id);
   if (!current) throw notFound("Sede");
   if (current.archived === archived) return;
-  await db.batch([
+  await runBatch(db, [
     db.update(location).set({ archivedAt: archived ? new Date().toISOString() : null }).where(eq(location.id, id)),
     auditInsert(db, who.audit, { action: archived ? "location.archive" : "location.restore", entityType: "location", entityId: id, ip: who.audit.ip }),
   ]);

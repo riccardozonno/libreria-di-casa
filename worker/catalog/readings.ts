@@ -1,0 +1,26 @@
+import { sql } from "drizzle-orm";
+import { can } from "../../shared/policy";
+import { auditWhen } from "../audit";
+import { runBatch } from "../db/batch";
+import type { Db } from "../db/client";
+import { forbidden, notFound } from "../errors";
+import type { Requester } from "../http";
+
+// "Letto da": ognuno segna sé stesso, l'admin chiunque. Idempotente: il registro solo se cambia qualcosa.
+
+export async function setReading(db: Db, who: Requester, bookId: string, userId: string, read: boolean): Promise<void> {
+  if (!can(who.actor, { type: "reading.mark", targetUserId: userId })) throw forbidden();
+  const bookExists = await db.get(sql`SELECT 1 AS ok FROM book WHERE id = ${bookId}`);
+  if (!bookExists) throw notFound("Libro");
+  if (read) {
+    const userExists = await db.get(sql`SELECT 1 AS ok FROM user WHERE id = ${userId}`);
+    if (!userExists) throw notFound("Utente");
+  }
+
+  // Registro prima, con la stessa condizione della modifica: niente righe per operazioni nulle.
+  const exists = sql`EXISTS (SELECT 1 FROM book_reading WHERE user_id = ${userId} AND book_id = ${bookId})`;
+  const entry = { action: read ? "reading.mark" : "reading.unmark", entityType: "reading" as const, entityId: bookId, data: { userId }, ip: who.audit.ip };
+  await runBatch(db, read
+    ? [auditWhen(sql`NOT ${exists}`, who.audit, entry), sql`INSERT OR IGNORE INTO book_reading (user_id, book_id, marked_by_id) VALUES (${userId}, ${bookId}, ${who.audit.id})`]
+    : [auditWhen(exists, who.audit, entry), sql`DELETE FROM book_reading WHERE user_id = ${userId} AND book_id = ${bookId}`]);
+}

@@ -89,3 +89,26 @@ export function parseAuthors(raw: string): string[] {
     .map((author) => author.trim())
     .filter((author) => author.length > 0);
 }
+
+export const BOOK_SOURCES = ["GOOGLE_BOOKS", "OPEN_LIBRARY", "MANUAL", "CSV"] as const;
+export type BookSource = (typeof BOOK_SOURCES)[number];
+
+const idSchema = z.string().trim().min(1, "Identificativo mancante").max(64);
+
+/** Nuovo libro con la sua prima copia (aggiunta da scanner, ricerca ISBN o a mano). */
+export const newBookSchema = z.object({
+  book: bookDataSchema,
+  source: z.enum(BOOK_SOURCES, { error: "Origine dei dati non valida" }),
+  locationId: idSchema,
+  copy: copyDetailsSchema.default({ shelf: null, notes: null }),
+});
+
+export const addCopySchema = z.object({
+  locationId: idSchema,
+  copy: copyDetailsSchema.default({ shelf: null, notes: null }),
+});
+
+export const moveCopySchema = z.object({ toLocationId: idSchema });
+
+export type NewBookInput = z.infer<typeof newBookSchema>;
+export type AddCopyInput = z.infer<typeof addCopySchema>;

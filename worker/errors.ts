@@ -11,6 +11,8 @@ export class DomainError extends Error {
     readonly code: DomainErrorCode,
     message: string,
     readonly fields?: Readonly<Record<string, string>>,
+    /** Dati in più per l'interfaccia (es. l'id del libro già esistente). */
+    readonly data?: Readonly<Record<string, string>>,
   ) {
     super(message);
     this.name = "DomainError";
