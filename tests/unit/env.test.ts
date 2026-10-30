@@ -1,5 +1,11 @@
-import { describe, expect, it } from "vitest";
-import { parseEnv } from "@/server/env";
+import { describe, expect, it, vi } from "vitest";
+
+// Il modulo valida anche process.env quando viene importato: in CI non c'è .env,
+// quindi si imposta una configurazione fittizia prima dell'import.
+vi.stubEnv("DATABASE_URL", "postgresql://app:x@localhost:5432/test");
+vi.stubEnv("BETTER_AUTH_SECRET", "test-secret-test-secret-test-secret-0123456789");
+vi.stubEnv("BETTER_AUTH_URL", "http://localhost:3000");
+const { parseEnv } = await import("@/server/env");
 
 const base = {
   DATABASE_URL: "postgresql://app:x@db:5432/homelibrary",
