@@ -16,13 +16,23 @@ const FALLBACK_MESSAGES: Record<number, string> = {
   503: "Il servizio non è ancora configurato.",
 };
 
-export async function api<T>(path: string, init?: RequestInit): Promise<T> {
-  let response: Response;
+const SAFE_METHODS = new Set(["GET", "HEAD"]);
+
+async function send(path: string, init?: RequestInit): Promise<Response> {
   try {
-    response = await fetch(`/api${path}`, { credentials: "same-origin", ...init });
+    return await fetch(`/api${path}`, { credentials: "same-origin", ...init });
   } catch {
     throw new ApiError("Connessione assente: controlla la rete e riprova.", 0);
   }
+}
+
+export async function api<T>(path: string, init?: RequestInit): Promise<T> {
+  let response = await send(path, init);
+  // Errore temporaneo del Worker (es. limite di CPU al primo avvio di un'istanza): una lettura si
+  // ripete una volta, l'istanza è ormai pronta. Le scritture no: ripeterle potrebbe duplicarle.
+  const isSafe = SAFE_METHODS.has((init?.method ?? "GET").toUpperCase());
+  if (response.status >= 500 && isSafe) response = await send(path, init);
+
   const body = (await response.json().catch(() => null)) as (T & { error?: string }) | null;
   if (!response.ok) {
     const message = body?.error ?? FALLBACK_MESSAGES[response.status] ?? "Qualcosa è andato storto. Riprova.";
