@@ -39,6 +39,7 @@ interface CallOptions {
   origin?: string | null;
   secFetchSite?: string;
   body?: unknown;
+  headers?: Record<string, string>;
   env?: Partial<Bindings>;
 }
 
@@ -49,6 +50,7 @@ export async function callApi(path: string, options: CallOptions = {}): Promise<
   const origin = options.origin === undefined ? (method === "GET" ? undefined : ORIGIN) : options.origin;
   if (origin) headers.set("Origin", origin);
   if (options.secFetchSite) headers.set("Sec-Fetch-Site", options.secFetchSite);
+  for (const [name, value] of Object.entries(options.headers ?? {})) headers.set(name, value);
   let body: BodyInit | undefined;
   if (options.body instanceof Uint8Array) body = new Uint8Array(options.body);
   else if (options.body instanceof FormData) body = options.body;

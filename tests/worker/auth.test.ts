@@ -79,6 +79,20 @@ describe("Access non configurato (fail closed)", () => {
     expect(await response.json()).toMatchObject({ email: "dev@example.com", role: "ADMIN" });
   });
 
+  it("in sviluppo l'intestazione X-Dev-Identity sceglie l'utente (per gli E2E dei ruoli)", async () => {
+    await seedUser({ email: "editor@example.com", role: "EDITOR" });
+    const response = await callApi("/me", { headers: { "X-Dev-Identity": "editor@example.com" }, env: { ...unconfigured, ENVIRONMENT: "development", DEV_IDENTITY_EMAIL: "dev@example.com" } });
+    expect(await response.json()).toMatchObject({ email: "editor@example.com", role: "EDITOR" });
+  });
+
+  it("X-Dev-Identity è ignorata in produzione e quando c'è Access", async () => {
+    await seedUser({ email: "editor@example.com", role: "EDITOR" });
+    const production = await callApi("/me", { headers: { "X-Dev-Identity": "editor@example.com" }, env: { ...unconfigured, ENVIRONMENT: "production" } });
+    expect(production.status).toBe(503);
+    const withAccess = await callApi("/me", { headers: { "X-Dev-Identity": "editor@example.com" }, env: { ENVIRONMENT: "development" } });
+    expect(withAccess.status).toBe(401);
+  });
+
   it("in sviluppo senza identità dichiarata: 503", async () => {
     const response = await callApi("/me", { env: { ...unconfigured, ENVIRONMENT: "development", DEV_IDENTITY_EMAIL: undefined } });
     expect(response.status).toBe(503);

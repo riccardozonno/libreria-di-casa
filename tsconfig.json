@@ -14,6 +14,7 @@
     "isolatedModules": true,
     "verbatimModuleSyntax": true,
     "resolveJsonModule": true,
+    "allowImportingTsExtensions": true,
     "types": ["./worker-configuration.d.ts", "vite/client", "@cloudflare/vitest-plugin/types"]
   },
   "include": ["src", "shared", "worker", "tests", "scripts", "*.ts", "worker-configuration.d.ts"],

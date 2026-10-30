@@ -25,8 +25,10 @@ export async function resolveIdentity(request: Request, env: Bindings): Promise<
   const accessConfigured = env.ACCESS_TEAM_DOMAIN !== "" && env.ACCESS_AUD !== "";
   if (!accessConfigured) {
     // Identità finta solo fuori produzione e solo se dichiarata in `.dev.vars` (mai pubblicato).
+    // Negli E2E l'intestazione X-Dev-Identity sceglie l'utente (admin, editor, lettore).
     if (env.ENVIRONMENT !== "production" && env.DEV_IDENTITY_EMAIL) {
-      return { ok: true, email: env.DEV_IDENTITY_EMAIL.toLowerCase(), issuedAtMs: Date.now() };
+      const email = request.headers.get("X-Dev-Identity") || env.DEV_IDENTITY_EMAIL;
+      return { ok: true, email: email.toLowerCase(), issuedAtMs: Date.now() };
     }
     return { ok: false, status: 503, error: "Accesso non configurato." };
   }
