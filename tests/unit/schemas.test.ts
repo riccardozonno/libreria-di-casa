@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { bookDataSchema, copyDetailsSchema, isbnSchema, locationNameSchema, optionalIsbnSchema, parseAuthors } from "../../shared/schemas";
 
 describe("schemi di validazione", () => {
@@ -39,5 +39,24 @@ describe("schemi di validazione", () => {
     expect(parseAuthors("Fruttero\nLucentini")).toEqual(["Fruttero", "Lucentini"]);
     expect(parseAuthors(" A ; B ;; ")).toEqual(["A", "B"]);
     expect(parseAuthors("")).toEqual([]);
+  });
+});
+
+describe("anno di pubblicazione", () => {
+  it("il limite usa la data del momento, non quella del caricamento del modulo (su Workers all'avvio è il 1970)", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(0);
+    vi.resetModules();
+    const { bookDataSchema: schemaLoadedIn1970 } = await import("../../shared/schemas");
+    vi.useRealTimers();
+
+    expect(schemaLoadedIn1970.parse({ title: "X", publishedYear: "2020" }).publishedYear).toBe(2020);
+    expect(schemaLoadedIn1970.safeParse({ title: "X", publishedYear: String(new Date().getFullYear() + 2) }).success).toBe(false);
+  });
+
+  it("un anno vuoto o assente è null, non un errore", () => {
+    expect(bookDataSchema.parse({ title: "X", publishedYear: null }).publishedYear).toBeNull();
+    expect(bookDataSchema.parse({ title: "X", publishedYear: "" }).publishedYear).toBeNull();
+    expect(bookDataSchema.parse({ title: "X" }).publishedYear).toBeNull();
   });
 });

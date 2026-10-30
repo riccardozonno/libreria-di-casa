@@ -4,7 +4,6 @@ import { LOCATION_COLOR_KEYS } from "./location-colors";
 
 // Schemi di validazione condivisi (form, Server Actions, import CSV). Messaggi in italiano.
 
-const CURRENT_YEAR = new Date().getFullYear();
 const optionalText = (max: number) =>
   z
     .string()
@@ -61,6 +60,22 @@ export const copyDetailsSchema = z.object({
   notes: optionalText(1000),
 });
 
+const MIN_YEAR = 1400;
+
+/**
+ * Anno facoltativo: vuoto → null. Il massimo (anno prossimo) si calcola a ogni validazione: su Workers
+ * la data durante il caricamento dei moduli è il 1970, quindi una costante calcolata lì sarebbe sbagliata.
+ */
+const publishedYearSchema = z.preprocess(
+  (value) => (value === "" || value === null || value === undefined ? null : value),
+  z.coerce
+    .number()
+    .int("Anno non valido")
+    .min(MIN_YEAR, "Anno non valido")
+    .refine((year) => year <= new Date().getFullYear() + 1, "Anno non valido")
+    .nullable(),
+);
+
 export const bookDataSchema = z.object({
   isbn13: optionalIsbnSchema,
   title: z.string().trim().min(1, "Il titolo è obbligatorio").max(300, "Massimo 300 caratteri"),
@@ -68,14 +83,7 @@ export const bookDataSchema = z.object({
     .array(z.string().trim().min(1).max(200))
     .max(20, "Massimo 20 autori")
     .default([]),
-  publishedYear: z.coerce
-    .number()
-    .int("Anno non valido")
-    .min(1400, "Anno non valido")
-    .max(CURRENT_YEAR + 1, "Anno non valido")
-    .nullable()
-    .optional()
-    .transform((value) => value ?? null),
+  publishedYear: publishedYearSchema,
   description: optionalText(5000),
 });
 
