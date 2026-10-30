@@ -63,7 +63,8 @@ export const copyDetailsSchema = z.object({
 const MIN_YEAR = 1400;
 
 /**
- * Anno facoltativo: vuoto → null. Il massimo (anno prossimo) si calcola a ogni validazione: su Workers
+ * Anno facoltativo: vuoto → null. Niente anni futuri (decisione del 30/10/2026: un libro che hai in casa
+ * non è del futuro). Il massimo si calcola a ogni validazione: su Workers
  * la data durante il caricamento dei moduli è il 1970, quindi una costante calcolata lì sarebbe sbagliata.
  */
 const publishedYearSchema = z.preprocess(
@@ -72,7 +73,7 @@ const publishedYearSchema = z.preprocess(
     .number()
     .int("Anno non valido")
     .min(MIN_YEAR, "Anno non valido")
-    .refine((year) => year <= new Date().getFullYear() + 1, "Anno non valido")
+    .refine((year) => year <= new Date().getFullYear(), "L'anno non può essere nel futuro")
     .nullable(),
 );
 

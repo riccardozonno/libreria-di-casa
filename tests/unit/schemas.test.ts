@@ -54,6 +54,12 @@ describe("anno di pubblicazione", () => {
     expect(schemaLoadedIn1970.safeParse({ title: "X", publishedYear: String(new Date().getFullYear() + 2) }).success).toBe(false);
   });
 
+  it("accetta l'anno corrente ma non gli anni futuri (un libro che hai in casa non è del futuro)", () => {
+    const thisYear = new Date().getFullYear();
+    expect(bookDataSchema.parse({ title: "X", publishedYear: String(thisYear) }).publishedYear).toBe(thisYear);
+    expect(bookDataSchema.safeParse({ title: "X", publishedYear: String(thisYear + 1) }).success).toBe(false);
+  });
+
   it("un anno vuoto o assente è null, non un errore", () => {
     expect(bookDataSchema.parse({ title: "X", publishedYear: null }).publishedYear).toBeNull();
     expect(bookDataSchema.parse({ title: "X", publishedYear: "" }).publishedYear).toBeNull();
