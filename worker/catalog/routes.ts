@@ -3,7 +3,11 @@ import { addCopySchema, bookDataSchema, copyDetailsSchema, moveCopySchema, newBo
 import { createDb } from "../db/client";
 import type { AppEnv } from "../env";
 import { readBody, requester } from "../http";
-import { addCopy, createBookWithCopy, deleteCopy, moveCopy, updateBook, updateCopy } from "./mutations";
+import { downloadCover, isAllowedCoverUrl, upgradeToHttps } from "../covers/download";
+import { detectImageType, MAX_COVER_BYTES } from "../covers/images";
+import { removeCover, storeCover } from "../covers/storage";
+import { DomainError } from "../errors";
+import { addCopy, assertCanCreateIn, createBookWithCopy, deleteCopy, moveCopy, setBookCover, updateBook, updateCopy } from "./mutations";
 import { getBookDetail, listBooks } from "./queries";
 import { setReading } from "./readings";
 
@@ -18,7 +22,43 @@ export const bookRoutes = new Hono<AppEnv>()
       }),
     );
   })
-  .post("/", async (c) => c.json(await createBookWithCopy(createDb(c.env.DB), requester(c), await readBody(c, newBookSchema)), 201))
+  .post("/", async (c) => {
+    const db = createDb(c.env.DB);
+    const who = requester(c);
+    const input = await readBody(c, newBookSchema);
+    await assertCanCreateIn(db, who, input.locationId);
+    // Copertina dalla ricerca ISBN: solo da host consentiti; se manca o non va, il libro si crea lo stesso.
+    let coverKey: string | null = null;
+    if (input.coverUrl && isAllowedCoverUrl(upgradeToHttps(input.coverUrl))) {
+      const image = await downloadCover(input.coverUrl);
+      if (image) coverKey = await storeCover(c.env.COVERS, image);
+    }
+    try {
+      return c.json(await createBookWithCopy(db, who, input, coverKey), 201);
+    } catch (error) {
+      await removeCover(c.env.COVERS, coverKey);
+      throw error;
+    }
+  })
+  .put("/:id/cover", async (c) => {
+    const declared = Number(c.req.header("Content-Length") ?? "0");
+    if (declared > MAX_COVER_BYTES) throw new DomainError("VALIDATION", "La foto è troppo grande (massimo 2 MB).");
+    const bytes = new Uint8Array(await c.req.arrayBuffer());
+    if (bytes.byteLength === 0 || bytes.byteLength > MAX_COVER_BYTES) throw new DomainError("VALIDATION", "La foto è vuota o troppo grande (massimo 2 MB).");
+    const type = detectImageType(bytes);
+    if (!type) return c.json({ error: "Il file non è un'immagine JPEG, PNG, WebP o GIF." }, 415);
+    const db = createDb(c.env.DB);
+    const who = requester(c);
+    const key = await storeCover(c.env.COVERS, { bytes, type });
+    try {
+      const previous = await setBookCover(db, who, c.req.param("id"), key);
+      c.executionCtx.waitUntil(removeCover(c.env.COVERS, previous));
+    } catch (error) {
+      await removeCover(c.env.COVERS, key);
+      throw error;
+    }
+    return c.body(null, 204);
+  })
   .get("/:id", async (c) => c.json(await getBookDetail(createDb(c.env.DB), c.req.param("id"))))
   .patch("/:id", async (c) => {
     await updateBook(createDb(c.env.DB), requester(c), c.req.param("id"), await readBody(c, bookDataSchema));
@@ -42,9 +82,7 @@ export const copyRoutes = new Hono<AppEnv>()
   .delete("/:id", async (c) => {
     const result = await deleteCopy(createDb(c.env.DB), requester(c), c.req.param("id"));
     // Copertina del libro eliminato: pulizia dopo la scrittura, un errore qui non annulla nulla.
-    if (result.coverKey) {
-      c.executionCtx.waitUntil(c.env.COVERS.delete(result.coverKey).catch((error: unknown) => console.error("Copertina non rimossa", result.coverKey, error)));
-    }
+    if (result.coverKey) c.executionCtx.waitUntil(removeCover(c.env.COVERS, result.coverKey));
     return c.json({ bookId: result.bookId, bookDeleted: result.bookDeleted });
   })
   .post("/:id/move", async (c) => {

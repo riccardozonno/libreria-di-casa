@@ -60,9 +60,15 @@ async function requireBook(db: Db, bookId: string): Promise<void> {
   if (!row) throw notFound("Libro");
 }
 
-export async function createBookWithCopy(db: Db, who: Requester, input: NewBookInput, coverKey: string | null = null): Promise<{ bookId: string; copyId: string }> {
-  const location = await requireLocation(db, input.locationId);
+/** Controllo anticipato (prima di scaricare la copertina): può creare un libro in questa sede? */
+export async function assertCanCreateIn(db: Db, who: Requester, locationId: string): Promise<NamedLocation> {
+  const location = await requireLocation(db, locationId);
   if (!can(who.actor, { type: "copy.create", location })) throw forbidden();
+  return location;
+}
+
+export async function createBookWithCopy(db: Db, who: Requester, input: NewBookInput, coverKey: string | null = null): Promise<{ bookId: string; copyId: string }> {
+  const location = await assertCanCreateIn(db, who, input.locationId);
   const bookId = crypto.randomUUID();
   const copyId = crypto.randomUUID();
   try {
@@ -181,4 +187,16 @@ export async function updateBook(db: Db, who: Requester, bookId: string, data: B
     if (isUniqueViolation(error)) throw conflict("Un altro libro ha già questo ISBN.");
     throw error;
   }
+}
+
+/** Nuova copertina (solo admin, come gli altri dati bibliografici). Restituisce la chiave precedente. */
+export async function setBookCover(db: Db, who: Requester, bookId: string, coverKey: string): Promise<string | null> {
+  if (!can(who.actor, { type: "book.update" })) throw forbidden();
+  const current = await db.get<{ cover_key: string | null } | undefined>(sql`SELECT cover_key FROM book WHERE id = ${bookId}`);
+  if (!current) throw notFound("Libro");
+  await runBatch(db, [
+    db.update(book).set({ coverKey }).where(eq(book.id, bookId)),
+    auditInsert(db, who.audit, { action: "book.update", entityType: "book", entityId: bookId, data: { cover: "nuova copertina" }, ip: who.audit.ip }),
+  ]);
+  return current.cover_key;
 }

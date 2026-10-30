@@ -1,4 +1,4 @@
-import { env } from "cloudflare:test";
+import { createExecutionContext, env, waitOnExecutionContext } from "cloudflare:test";
 import { vi } from "vitest";
 import { locationNameKey } from "../../shared/text";
 import app from "../../worker";
@@ -10,13 +10,25 @@ import { CERTS_URL, type SigningKey, signAccessToken } from "../helpers/access-t
 export const ORIGIN = "https://homelibrary.test";
 export const db = () => createDb(env.DB);
 
-/** Fa rispondere l'endpoint dei certificati di Access con la chiave di test. */
+/** Risposte finte dei servizi esterni (Google Books, Open Library, copertine) per URL. */
+export type ExternalHandler = (url: string) => Response | Promise<Response> | undefined;
+let external: ExternalHandler = () => undefined;
+export function mockExternal(handler: ExternalHandler): void {
+  external = handler;
+}
+
+/**
+ * Fa rispondere l'endpoint dei certificati di Access con la chiave di test; le altre chiamate esterne
+ * passano da `mockExternal` e, se non gestite, falliscono (i test non escono mai su internet).
+ */
 export function publishAccessKey(key: SigningKey) {
-  const realFetch = globalThis.fetch;
-  return vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+  external = () => undefined;
+  return vi.spyOn(globalThis, "fetch").mockImplementation(async (input) => {
     const url = input instanceof Request ? input.url : String(input);
     if (url === CERTS_URL) return Response.json({ keys: [key.publicJwk] });
-    return realFetch(input, init);
+    const response = await external(url);
+    if (response) return response;
+    throw new TypeError(`Chiamata esterna non prevista nel test: ${new URL(url).hostname}`);
   });
 }
 
@@ -44,7 +56,11 @@ export async function callApi(path: string, options: CallOptions = {}): Promise<
     body = JSON.stringify(options.body);
   }
   const request = new Request(`${ORIGIN}/api${path}`, { method, headers, body });
-  return app.fetch(request, { ...env, ...options.env });
+  // Con il contesto di esecuzione, come in produzione: anche il lavoro in background (waitUntil) finisce.
+  const ctx = createExecutionContext();
+  const response = await app.fetch(request, { ...env, ...options.env }, ctx);
+  await waitOnExecutionContext(ctx);
+  return response;
 }
 
 /** Utente di test con il suo token di Access: `const anna = await signedIn(key, { role: "ADMIN" })`. */

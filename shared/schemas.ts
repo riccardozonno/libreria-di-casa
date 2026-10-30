@@ -101,6 +101,8 @@ export const newBookSchema = z.object({
   source: z.enum(BOOK_SOURCES, { error: "Origine dei dati non valida" }),
   locationId: idSchema,
   copy: copyDetailsSchema.default({ shelf: null, notes: null }),
+  /** Copertina trovata dalla ricerca ISBN: il server la scarica solo da host consentiti. */
+  coverUrl: z.string().trim().max(2000).optional(),
 });
 
 export const addCopySchema = z.object({

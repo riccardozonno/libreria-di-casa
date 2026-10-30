@@ -3,6 +3,8 @@ import { requireUser } from "./auth/identity";
 import type { AppEnv } from "./env";
 import { DomainError } from "./errors";
 import { bookRoutes, copyRoutes } from "./catalog/routes";
+import { coverRoutes } from "./covers/routes";
+import { isbnRoutes } from "./isbn/routes";
 import { locationRoutes } from "./locations/routes";
 import { apiHeaders, sameOriginWrites } from "./security";
 
@@ -16,6 +18,8 @@ app.get("/me", (c) => c.json(c.get("user")));
 app.route("/locations", locationRoutes);
 app.route("/books", bookRoutes);
 app.route("/copies", copyRoutes);
+app.route("/isbn", isbnRoutes);
+app.route("/covers", coverRoutes);
 
 app.notFound((c) => c.json({ error: "Non trovato." }, 404));
 
