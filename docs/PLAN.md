@@ -54,7 +54,7 @@ Piano, modello dati, matrice permessi, architettura, ADR. Revisione dell'agente 
 ### Fase 4 — Revisione ✅ (approvata il 30/10/2026)
 security-reviewer, database-reviewer, typescript-reviewer, react-reviewer, a11y. Correzione di critici/alti, riepilogo del resto. ⏸
 
-### Fase 5 — Backup e ripristino sul Mac ✅ (30/10/2026, in attesa di OK) — [resoconto](backup-restore.md)
+### Fase 5 — Backup e ripristino sul Mac ✅ (approvata il 30/10/2026) — [resoconto](backup-restore.md)
 Servizio `backup` (restic + pg_dump + supercronic), repository locale di prova, script `backup.sh`/`restore.sh`, prova di ripristino completa su database vuoto, documentata. ⏸
 
 ### Fase 6 — Produzione sul Pi
