@@ -1,7 +1,9 @@
-// Normalizzazione del testo per ricerca e unicità (ADR-0011).
-// Deve essere identica in scrittura (searchText, nameKey) e in lettura (termini cercati).
+// Normalizzazione del testo per ricerca e unicità.
+// La ricerca usa FTS5 con `remove_diacritics`: la query va normalizzata allo stesso modo.
 
 const MAX_SEARCH_TERMS = 8;
+/** Caratteri con significato nella sintassi FTS5: diventano separatori, mai operatori. */
+const FTS_SYNTAX = /["*^():+]/g;
 
 export function normalizeForSearch(value: string): string {
   return value
@@ -12,22 +14,18 @@ export function normalizeForSearch(value: string): string {
     .trim();
 }
 
-export interface SearchableBook {
-  title: string;
-  authors: readonly string[];
-  isbn13: string | null;
-}
-
-export function buildSearchText(book: SearchableBook): string {
-  return normalizeForSearch([book.title, ...book.authors, book.isbn13 ?? ""].join(" "));
-}
-
 /** Parole da cercare (in AND). I trattini vengono tolti così un ISBN scritto con i trattini funziona. */
 export function searchTerms(query: string): string[] {
   return normalizeForSearch(query.replace(/-/g, ""))
     .split(" ")
     .filter((term) => term.length > 0)
     .slice(0, MAX_SEARCH_TERMS);
+}
+
+/** "Promessi spo" → `"promessi"* "spo"*`: ogni parola tra virgolette e come prefisso; null se vuota. */
+export function toFtsQuery(query: string): string | null {
+  const terms = searchTerms(query.replace(FTS_SYNTAX, " "));
+  return terms.length === 0 ? null : terms.map((term) => `"${term}"*`).join(" ");
 }
 
 export function locationNameKey(name: string): string {

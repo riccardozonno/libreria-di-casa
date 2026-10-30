@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { LOCATION_COLORS, locationColorClass, nextFreeColor } from "@/lib/location-colors";
+import { LOCATION_COLORS, locationColorClass, nextFreeColor } from "../../shared/location-colors";
 
 describe("palette delle sedi", () => {
   it("ha 10 colori con nome italiano e classi distinte", () => {

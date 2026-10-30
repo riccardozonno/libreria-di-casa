@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { bookDataSchema, copyDetailsSchema, isbnSchema, locationNameSchema, optionalIsbnSchema, parseAuthors } from "@/lib/schemas";
+import { bookDataSchema, copyDetailsSchema, isbnSchema, locationNameSchema, optionalIsbnSchema, parseAuthors } from "../../shared/schemas";
 
 describe("schemi di validazione", () => {
   it("isbnSchema normalizza e rifiuta ISBN non validi", () => {

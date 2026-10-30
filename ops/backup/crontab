@@ -1,2 +1,0 @@
-# Ogni notte alle 03:30 (fuso Europe/Rome, variabile TZ del container).
-30 3 * * * /usr/local/bin/backup.sh

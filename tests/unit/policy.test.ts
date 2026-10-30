@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { can, type Actor, type LocationRef } from "@/server/policy";
+import { can, type Actor, type LocationRef } from "../../shared/policy";
 
 // Matrice dei permessi: docs/permissions.md. Ogni riga × ogni ruolo × ogni caso di sede.
 

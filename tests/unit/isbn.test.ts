@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { normalizeIsbn, formatIsbn13 } from "@/lib/isbn";
+import { normalizeIsbn, formatIsbn13 } from "../../shared/isbn";
 
 describe("normalizeIsbn", () => {
   it("accetta un ISBN-13 valido", () => {

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { normalizeForSearch, buildSearchText, locationNameKey, searchTerms } from "@/lib/text";
+import { normalizeForSearch, locationNameKey, searchTerms, toFtsQuery } from "../../shared/text";
 
 describe("normalizeForSearch", () => {
   it("toglie accenti e maiuscole", () => {
@@ -15,15 +15,25 @@ describe("normalizeForSearch", () => {
   });
 });
 
-describe("buildSearchText", () => {
-  it("unisce titolo, autori e ISBN normalizzati", () => {
-    expect(
-      buildSearchText({ title: "Il Gattopardo", authors: ["Giuseppe Tomasi di Lampedusa"], isbn13: "9788807900389" }),
-    ).toBe("il gattopardo giuseppe tomasi di lampedusa 9788807900389");
+describe("toFtsQuery", () => {
+  it("cerca ogni parola come prefisso, tutte insieme (AND)", () => {
+    expect(toFtsQuery("Promessi Spo")).toBe('"promessi"* "spo"*');
   });
 
-  it("funziona senza ISBN né autori", () => {
-    expect(buildSearchText({ title: "Quaderno", authors: [], isbn13: null })).toBe("quaderno");
+  it("toglie gli accenti come l'indice FTS5 (remove_diacritics)", () => {
+    expect(toFtsQuery("Perché città")).toBe('"perche"* "citta"*');
+  });
+
+  it("neutralizza la sintassi FTS5: virgolette, operatori e parentesi diventano spazi", () => {
+    expect(toFtsQuery('a" OR (b*) NOT c^ -d:e')).toBe('"a"* "or"* "b"* "not"* "c"* "d"* "e"*');
+  });
+
+  it("un ISBN con i trattini resta un'unica parola", () => {
+    expect(toFtsQuery("978-88-04-66823-7")).toBe('"9788804668237"*');
+  });
+
+  it("restituisce null se non resta nessuna parola", () => {
+    expect(toFtsQuery('  " * ( ) ')).toBeNull();
   });
 });
 
