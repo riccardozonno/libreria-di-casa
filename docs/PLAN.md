@@ -51,7 +51,7 @@ Piano, modello dati, matrice permessi, architettura, ADR. Revisione dell'agente 
 6. PWA: manifest, icona "HOME LIBRARY" stile Apple, service worker minimale, pagina "Installa l'app".
 7. E2E dei nuovi flussi. ⏸
 
-### Fase 4 — Revisione ✅ (30/10/2026, in attesa di OK)
+### Fase 4 — Revisione ✅ (approvata il 30/10/2026)
 security-reviewer, database-reviewer, typescript-reviewer, react-reviewer, a11y. Correzione di critici/alti, riepilogo del resto. ⏸
 
 ### Fase 5 — Backup e ripristino sul Mac
