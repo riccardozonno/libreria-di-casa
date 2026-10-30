@@ -14,14 +14,16 @@ export interface LocationSummary {
 
 interface LocationsState {
   locations: LocationSummary[];
+  /** Falso finché non è arrivato il primo elenco (per non mostrare moduli con dati incompleti). */
+  loaded: boolean;
   reload: () => void;
 }
 
-const LocationsContext = createContext<LocationsState>({ locations: [], reload: () => undefined });
+const LocationsContext = createContext<LocationsState>({ locations: [], loaded: false, reload: () => undefined });
 
 export function LocationsProvider({ children }: { children: ReactNode }) {
   const { data, reload } = useApi<LocationSummary[]>("/locations");
-  return <LocationsContext.Provider value={{ locations: data ?? [], reload }}>{children}</LocationsContext.Provider>;
+  return <LocationsContext.Provider value={{ locations: data ?? [], loaded: data !== undefined, reload }}>{children}</LocationsContext.Provider>;
 }
 
 export function useLocations(): LocationsState {

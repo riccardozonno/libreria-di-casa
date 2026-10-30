@@ -34,8 +34,9 @@ function CreateLocationForm({ usedBy, suggestedColor, onCreated }: { usedBy: Use
     );
   }
   return (
-    // Si ricrea anche quando cambia il colore suggerito (es. arrivano le sedi): mai un colore già usato preselezionato.
-    <form key={`${round}-${suggestedColor}`} action={action} className="mt-6 flex flex-col gap-4 rounded-[var(--radius-lg)] bg-surface p-4 shadow-[var(--shadow-card)]">
+    // Si ricrea dopo ogni creazione (nome vuoto, nuovo colore suggerito). La pagina lo mostra solo
+    // a sedi caricate: così non si ricrea mentre si scrive e non propone un colore già usato.
+    <form key={round} action={action} className="mt-6 flex flex-col gap-4 rounded-[var(--radius-lg)] bg-surface p-4 shadow-[var(--shadow-card)]">
       <TextField label="Nuova sede" name="name" maxLength={60} required placeholder="Es. Casa al mare" error={state.fields?.name} />
       <ColorPicker usedBy={usedBy} defaultValue={suggestedColor} idPrefix={`nuova-sede-${round}`} />
       {state.fields?.color && <Notice tone="error">{state.fields.color}</Notice>}
@@ -105,15 +106,17 @@ function LocationAdminControls({ location, usedBy, onChanged }: { location: Loca
 
 export function LocationsPage() {
   const { me, can } = useSession();
-  const { locations, reload } = useLocations();
+  const { locations, loaded, reload } = useLocations();
   const canManage = can({ type: "location.manage" });
   const usedBy: UsedColors = Object.fromEntries(locations.map((location) => [location.color, location.name]));
   const suggestedColor = nextFreeColor(locations.map((location) => location.color));
 
   return (
     <>
-      <PageHeader title="Sedi" subtitle={`${locations.length} ${locations.length === 1 ? "sede" : "sedi"}`} />
-      {locations.length === 0 ? (
+      <PageHeader title="Sedi" subtitle={loaded ? `${locations.length} ${locations.length === 1 ? "sede" : "sedi"}` : undefined} />
+      {!loaded ? (
+        <p className="px-1 py-6 text-center text-ink-soft">Caricamento…</p>
+      ) : locations.length === 0 ? (
         <p className="rounded-[var(--radius-lg)] bg-surface px-5 py-8 text-center text-[15px] text-ink-soft shadow-[var(--shadow-card)]">
           {canManage ? "Crea la prima sede, per esempio la casa in cui vivi." : "Non ci sono ancora sedi."}
         </p>
@@ -139,7 +142,7 @@ export function LocationsPage() {
           ))}
         </ul>
       )}
-      {canManage && <CreateLocationForm usedBy={usedBy} suggestedColor={suggestedColor} onCreated={reload} />}
+      {canManage && loaded && <CreateLocationForm usedBy={usedBy} suggestedColor={suggestedColor} onCreated={reload} />}
     </>
   );
 }

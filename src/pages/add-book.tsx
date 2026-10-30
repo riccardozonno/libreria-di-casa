@@ -23,7 +23,7 @@ const EMPTY_BOOK: BookFormInitial = { isbn13: "", title: "", authors: [], publis
 
 export function AddBookPage() {
   const { can } = useSession();
-  const { locations } = useLocations();
+  const { locations, loaded } = useLocations();
   const addable = locations.filter((location) => can({ type: "copy.create", location: { id: location.id, archived: location.archived } }));
   const [step, setStep] = useState<Step>({ kind: "start" });
   const [isScanning, setIsScanning] = useState(false);
@@ -65,6 +65,7 @@ export function AddBookPage() {
     setError("");
   };
 
+  if (!loaded) return <p className="px-1 py-6 text-center text-ink-soft">Caricamento…</p>;
   if (addable.length === 0) {
     return (
       <>
