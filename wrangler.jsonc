@@ -24,6 +24,9 @@
   "vars": {
     "ENVIRONMENT": "production",
     "ACCESS_TEAM_DOMAIN": "solitary-brook-795e.cloudflareaccess.com",
-    "ACCESS_AUD": "3406c75f6351cad7cb4d0c40b3f683e6d3c9f16cb674c853db8463004ba5afce"
+    "ACCESS_AUD": "3406c75f6351cad7cb4d0c40b3f683e6d3c9f16cb674c853db8463004ba5afce",
+    // Gruppo Access "Utenti HOME LIBRARY", riscritto dall'app quando cambiano gli utenti (token: segreto CF_API_TOKEN).
+    "CF_ACCOUNT_ID": "326ab8b7c75407dcee433c023a995fb1",
+    "ACCESS_GROUP_ID": "b5898622-0cc4-4647-a02b-5cf47215a81e"
   }
 }
