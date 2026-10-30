@@ -90,9 +90,49 @@ services:
       start_period: 20s
     logging: *logging
 
+  # Backup notturno (ADR-0010): dump + copertine + configurazione → restic su disco USB e B2.
+  backup:
+    image: homelibrary-backup:${APP_TAG:-latest}
+    build: ops/backup
+    restart: unless-stopped
+    environment:
+      TZ: Europe/Rome
+      PGHOST: db
+      PGDATABASE: ${POSTGRES_DB}
+      PGUSER: ${POSTGRES_USER}
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      RESTIC_PASSWORD: ${RESTIC_PASSWORD:?}
+      RESTIC_REPOSITORY_USB: /backup/usb
+      RESTIC_REPOSITORY_B2: ${RESTIC_REPOSITORY_B2:-}
+      B2_ACCOUNT_ID: ${B2_ACCOUNT_ID:-}
+      B2_ACCOUNT_KEY: ${B2_ACCOUNT_KEY:-}
+      BACKUP_HEARTBEAT_URL: ${BACKUP_HEARTBEAT_URL:-}
+      APP_VERSION: ${APP_TAG:-latest}
+    volumes:
+      - covers:/data/covers:ro
+      - ./.env:/config/.env:ro
+      - ./compose.yaml:/config/compose.yaml:ro
+      - ${BACKUP_USB_PATH:?}:/backup/usb
+      - backup-status:/status
+      - backup-cache:/cache
+      - restore-area:/restore
+    read_only: true
+    tmpfs:
+      - /tmp
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    depends_on:
+      db:
+        condition: service_healthy
+    networks: [backend, egress]
+    logging: *logging
+
 volumes:
   pgdata:
   covers:
+  backup-status:
+  backup-cache:
+  restore-area:
 
 networks:
   # Solo traffico interno: il database non ha accesso a internet.
@@ -100,3 +140,5 @@ networks:
     internal: true
   # cloudflared ↔ app, con uscita verso internet (API dei libri).
   edge:
+  # Solo backup → Backblaze B2.
+  egress:

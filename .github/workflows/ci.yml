@@ -24,6 +24,8 @@ jobs:
       APP_DB_PASSWORD: ci-only
       BETTER_AUTH_SECRET: ci-only-secret-ci-only-secret-0123456789
       BETTER_AUTH_URL: http://localhost:3000
+      RESTIC_PASSWORD: ci-only
+      BACKUP_USB_PATH: /tmp/ci-backup
     steps:
       - uses: actions/checkout@v5
       - uses: pnpm/action-setup@v4

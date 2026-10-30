@@ -18,4 +18,7 @@ ALTER DEFAULT PRIVILEGES FOR ROLE :"owner" IN SCHEMA public
   GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO app;
 ALTER DEFAULT PRIVILEGES FOR ROLE :"owner" IN SCHEMA public
   GRANT USAGE, SELECT ON SEQUENCES TO app;
+-- Impostazioni del ruolo: valgono per tutto il cluster, quindi anche dopo un ripristino da dump.
+ALTER ROLE app SET statement_timeout = '30s';
+ALTER ROLE app SET lock_timeout = '10s';
 SQL
