@@ -55,7 +55,7 @@ Un'app minima messa davvero online, per verificare i rischi prima di riscrivere 
 5. Prove dall'iPhone: login Access, installazione PWA sulla Home (cookie separati), fotocamera e scanner.
 6. Resoconto con i numeri e decisione go/no-go. ⏸
 
-### Fase 2 — Fondamenta
+### Fase 2 — Fondamenta ✅ (30/10/2026) — [resoconto](fase2-resoconto.md)
 1. Progetto pulito sul branch (la v1 resta nel tag): pnpm, TS strict, ESLint, Tailwind 4, Vitest con `@cloudflare/vitest-pool-workers` (D1 e R2 veri in locale), Playwright, CI.
 2. Schema D1 completo con Drizzle: utenti, sedi, editor per sede, libri, copie, movimenti, letture, registro (con trigger di sola aggiunta), cache ISBN, indice FTS5.
 3. Middleware di autenticazione: JWT di Access verificato (firma, audience, emittente, scadenza), utente caricato dal DB a ogni richiesta, rifiuto di utenti sconosciuti o disattivati. In locale un'identità finta, attiva **solo** in sviluppo e con un test che lo garantisce.
@@ -97,7 +97,7 @@ Logica pura con i suoi test (`policy`, `isbn`, `text`, `schemas`, `location-colo
 
 | Rischio | Prob. | Mitigazione |
 |---|---|---|
-| Un endpoint supera i 10 ms di CPU | Media | Misura in fase 1 e in ogni test; lavoro pesante sul client; in ultima istanza Workers Paid (5 $/mese) senza riscrivere |
+| Un endpoint supera i 10 ms di CPU | Media | Misurato in fase 1 e 2: a regime 0–2 ms, al primo avvio di un'istanza 7–12 ms (accettato, opzione 1): le letture fallite si ripetono una volta; ricontrollo in fase 5; in ultima istanza Workers Paid (5 $/mese) senza riscrivere |
 | PWA su iPhone dietro Access (cookie separati, rinnovo del login) | Media | Prova reale in fase 1; durata della sessione Access lunga |
 | FTS5 non disponibile o accenti gestiti male su D1 | Bassa | Verifica in fase 1; ripiego: colonna normalizzata + `LIKE` su indice |
 | Cloudflare cambia le condizioni del piano gratuito | Bassa | Backup notturno portabile (SQLite + file) su B2, fuori da Cloudflare |
