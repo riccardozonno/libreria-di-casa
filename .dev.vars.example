@@ -1,5 +1,8 @@
 # Solo sviluppo locale (mai pubblicato). Sovrascrive le "vars" di wrangler.jsonc.
 ENVIRONMENT=development
-# Identità usata quando Access non è configurato: crea prima l'utente con
+# In locale non c'è Cloudflare Access davanti all'app: lo disattiviamo e usiamo un'identità di prova.
+ACCESS_TEAM_DOMAIN=
+ACCESS_AUD=
+# Identità usata al posto di Access: crea prima l'utente con
 #   pnpm admin:create --email admin@example.test --name "Admin di prova"
 DEV_IDENTITY_EMAIL=admin@example.test
