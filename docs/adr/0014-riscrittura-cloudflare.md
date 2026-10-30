@@ -1,7 +1,7 @@
 # ADR-0014: Riscrittura per il piano gratuito di Cloudflare
 
 **Data**: 2026-10-30
-**Stato**: accepted (fase 0, 30/10/2026; da confermare con il go/no-go della fase 1)
+**Stato**: accepted (fase 0, 30/10/2026; confermato dal GO della fase 1, [resoconto](../fase1-resoconto.md))
 **Decisori**: Riccardo Zonno, Claude
 
 ## Contesto

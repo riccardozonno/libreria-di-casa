@@ -46,7 +46,7 @@ Ogni fase finisce con ⏸ (attesa del tuo OK) e push sul branch `cloudflare`.
 ### Fase 0 — Preparazione ✅ (approvata il 30/10/2026)
 Tag `v1-nextjs`, branch `cloudflare`, questo piano, ADR-0014 (proposto), domande aperte. ⏸
 
-### Fase 1 — Prova di fattibilità (go/no-go) — fatta il 30/10/2026, [resoconto](fase1-resoconto.md), in attesa del go
+### Fase 1 — Prova di fattibilità (go/no-go) ✅ (GO il 30/10/2026) — [resoconto](fase1-resoconto.md)
 Un'app minima messa davvero online, per verificare i rischi prima di riscrivere tutto.
 1. Ti guido nella creazione dell'account Cloudflare gratuito e del sottodominio `workers.dev` (le scelte le fai tu).
 2. Worker + interfaccia statica + D1 + R2 con il plugin Cloudflare per Vite; deploy su `workers.dev`.
@@ -61,19 +61,20 @@ Un'app minima messa davvero online, per verificare i rischi prima di riscrivere 
 3. Middleware di autenticazione: JWT di Access verificato (firma, audience, emittente, scadenza), utente caricato dal DB a ogni richiesta, rifiuto di utenti sconosciuti o disattivati. In locale un'identità finta, attiva **solo** in sviluppo e con un test che lo garantisce.
 4. Porting con TDD di `policy`, schemi zod, ISBN, normalizzazione del testo, colori delle sedi; registro attività nello stesso batch della modifica.
 5. Intestazioni di sicurezza e CSP; controllo dell'Origin sulle richieste che modificano dati.
+7. CPU misurata per endpoint nei test; **al primo avvio dell'istanza ≤ 5 ms** (in fase 1 la verifica del JWT con `jose` arrivava a 8 ms): chiave di Access importata una volta con WebCrypto, moduli caricati solo se servono.
 6. Primo admin da riga di comando. ⏸
 
 ### Fase 3 — MVP
 Catalogo con ricerca e filtro per sede, scheda libro, "Letto da", aggiunta con scanner e lookup (Google Books con chiave come segreto del Worker → Open Library → manuale), copertine su R2, copie (aggiungi, modifica, elimina, sposta con storico), sedi, gestione utenti. E2E sui tre ruoli. Prova dall'iPhone sull'indirizzo `workers.dev`. ⏸
 
 ### Fase 4 — Funzioni restanti
-CSV (export e import con anteprima, prova a secco, duplicati, report errori, a blocchi), registro attività consultabile con filtri, profilo ("esci da tutti i dispositivi"), PWA (manifest, service worker, pagina offline, "Installa l'app"), sincronizzazione utenti ↔ Access (vedi domanda 2). ⏸
+CSV (export e import con anteprima, prova a secco, duplicati, report errori, a blocchi), registro attività consultabile con filtri, profilo ("esci da tutti i dispositivi"), PWA (manifest, service worker, pagina offline, "Installa l'app"), sincronizzazione utenti ↔ Access (policy per email, metodo One-time PIN, durata della sessione). ⏸
 
 ### Fase 5 — Revisione
 Security, database, TypeScript, React, accessibilità. In più: misura della CPU di ogni endpoint sotto i 10 ms, verifica che l'indirizzo non sia raggiungibile senza Access. ⏸
 
 ### Fase 6 — Backup e ripristino
-GitHub Actions notturno: `wrangler d1 export` + copia di R2 → restic su B2 (7/4/6, `check` settimanale), segreti solo nei GitHub Secrets con token in sola lettura. Script di ripristino guidato su un D1 e un bucket nuovi, **prova di ripristino reale** documentata. ⏸
+GitHub Actions notturno: export D1 **dei soli dati, tabella per tabella** (`--no-schema --table …`: l'export completo non funziona con FTS5; al ripristino migrazioni + dati, l'indice si ricostruisce) + copia di R2 → restic su B2 (7/4/6, `check` settimanale), segreti solo nei GitHub Secrets con token in sola lettura. Script di ripristino guidato su un D1 e un bucket nuovi, **prova di ripristino reale** documentata. ⏸
 
 ### Fase 7 — Produzione
 Access definitivo (lista email, durata della sessione), deploy da GitHub Actions su comando manuale, primo admin, verifica dei ruoli online, primo backup notturno riuscito. ⏸
