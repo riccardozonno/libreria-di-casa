@@ -24,6 +24,6 @@ export function authErrorMessage(error: { status?: number; code?: string } | nul
   if (error.code === "PASSWORD_TOO_LONG") return "La password è troppo lunga.";
   if (error.code === "INVALID_TOKEN") return "Il link non è valido o è scaduto. Chiedi un nuovo link all'amministratore.";
   if (error.code === "INVALID_CODE" || error.code === "INVALID_TWO_FACTOR_CODE") return "Codice non valido.";
-  if (error.status === 401) return "Email o password non corretti.";
+  if (error.status === 401) return "Email o password non corretti. Dopo 5 tentativi sbagliati l'accesso si blocca per 15 minuti.";
   return "Accesso non riuscito. Riprova.";
 }

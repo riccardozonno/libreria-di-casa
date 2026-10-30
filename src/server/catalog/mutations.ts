@@ -151,7 +151,10 @@ export async function deleteCopy(actor: CurrentUser, copyId: string): Promise<De
     return { bookId: copy.bookId, bookDeleted: true, coverPath: snapshot.coverPath };
   });
 
-  if (result.coverPath) await removeCover(result.coverPath);
+  // Il libro è già eliminato: un errore nella pulizia del file non deve far fallire l'operazione.
+  if (result.coverPath) {
+    await removeCover(result.coverPath).catch((error: unknown) => console.error("[copertine] file non rimosso", result.coverPath, error));
+  }
   return { bookId: result.bookId, bookDeleted: result.bookDeleted };
 }
 

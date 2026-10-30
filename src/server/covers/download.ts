@@ -52,12 +52,26 @@ async function readLimited(response: Response): Promise<Uint8Array | null> {
 
 // Cache breve: il lookup scarica la copertina per l'anteprima, il salvataggio la riusa senza riscaricarla.
 const RECENT_TTL_MS = 15 * 60_000;
-const RECENT_MAX_ENTRIES = 50;
+const RECENT_MAX_BYTES = 30 * 1024 * 1024;
 const recent = new Map<string, { bytes: Uint8Array; expiresAt: number }>();
+let recentBytes = 0;
+
+function forget(url: string): void {
+  const entry = recent.get(url);
+  if (!entry) return;
+  recentBytes -= entry.bytes.byteLength;
+  recent.delete(url);
+}
 
 function remember(url: string, bytes: Uint8Array): void {
-  if (recent.size >= RECENT_MAX_ENTRIES) recent.delete(recent.keys().next().value ?? "");
-  recent.set(url, { bytes, expiresAt: Date.now() + RECENT_TTL_MS });
+  const now = Date.now();
+  for (const [key, entry] of recent) if (entry.expiresAt <= now) forget(key);
+  forget(url);
+  // Le più vecchie escono per prime finché il totale resta sotto il limite.
+  while (recentBytes + bytes.byteLength > RECENT_MAX_BYTES && recent.size > 0) forget(recent.keys().next().value ?? "");
+  if (bytes.byteLength > RECENT_MAX_BYTES) return;
+  recent.set(url, { bytes, expiresAt: now + RECENT_TTL_MS });
+  recentBytes += bytes.byteLength;
 }
 
 /** Restituisce i byte dell'immagine oppure null (copertina assente o non consentita). Non lancia errori. */

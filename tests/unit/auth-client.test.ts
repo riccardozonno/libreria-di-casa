@@ -9,7 +9,7 @@ describe("messaggi di errore dell'accesso", () => {
     [{ status: 400, code: "PASSWORD_TOO_LONG" }, "La password è troppo lunga."],
     [{ status: 400, code: "INVALID_TOKEN" }, "Il link non è valido o è scaduto. Chiedi un nuovo link all'amministratore."],
     [{ status: 401, code: "INVALID_TWO_FACTOR_CODE" }, "Codice non valido."],
-    [{ status: 401, code: "INVALID_EMAIL_OR_PASSWORD" }, "Email o password non corretti."],
+    [{ status: 401, code: "INVALID_EMAIL_OR_PASSWORD" }, "Email o password non corretti. Dopo 5 tentativi sbagliati l'accesso si blocca per 15 minuti."],
     [{ status: 500 }, "Accesso non riuscito. Riprova."],
   ])("%o → %s", (error, message) => {
     expect(authErrorMessage(error)).toBe(message);

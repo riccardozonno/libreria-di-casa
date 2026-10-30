@@ -71,6 +71,10 @@ services:
     volumes:
       - covers:/data/covers
     read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    mem_limit: 1g
+    pids_limit: 256
     tmpfs:
       - /tmp
       - /app/.next/cache

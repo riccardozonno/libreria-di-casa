@@ -16,7 +16,7 @@ test.describe("accesso", () => {
     await page.getByLabel("Email").fill(E2E_USERS.reader.email);
     await page.getByLabel("Password").fill("password-sbagliata-123");
     await page.getByRole("button", { name: "Accedi" }).click();
-    await expect(page.getByText("Email o password non corretti.")).toBeVisible();
+    await expect(page.getByText(/Email o password non corretti/)).toBeVisible();
   });
 
   test("le pagine hanno la CSP e non generano violazioni", async ({ page }) => {

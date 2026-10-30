@@ -3,7 +3,10 @@ import { readCover } from "@/server/covers/storage";
 
 // Copertine: solo per utenti con sessione valida. I nomi sono UUID immutabili → cache lunga ma privata.
 export async function GET(_request: Request, { params }: { params: Promise<{ file: string }> }): Promise<Response> {
-  if (!(await getCurrentUser())) return new Response(null, { status: 401 });
+  const user = await getCurrentUser();
+  if (!user) return new Response(null, { status: 401 });
+  // Stessa regola delle pagine: un admin senza 2FA in produzione vede solo il profilo.
+  if (user.mustEnable2fa) return new Response(null, { status: 403 });
   const { file } = await params;
   const bytes = await readCover(file);
   if (!bytes) return new Response(null, { status: 404 });

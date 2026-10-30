@@ -32,10 +32,10 @@ export async function registerFailedLogin(userId: string): Promise<boolean> {
     UPDATE "User"
     SET "failedLoginCount" = CASE WHEN "failedLoginCount" + 1 >= ${MAX_FAILED_LOGINS} THEN 0 ELSE "failedLoginCount" + 1 END,
         "lockedUntil" = CASE
-          WHEN "failedLoginCount" + 1 >= ${MAX_FAILED_LOGINS} THEN now() + make_interval(mins => ${LOCKOUT_MINUTES})
+          WHEN "failedLoginCount" + 1 >= ${MAX_FAILED_LOGINS} THEN timezone('UTC', now()) + make_interval(mins => ${LOCKOUT_MINUTES})
           ELSE "lockedUntil" END
     WHERE id = ${userId}::uuid
-    RETURNING ("lockedUntil" IS NOT NULL AND "lockedUntil" > now()) AS locked`;
+    RETURNING ("lockedUntil" IS NOT NULL AND "lockedUntil" > timezone('UTC', now())) AS locked`;
   return rows[0]?.locked ?? false;
 }
 

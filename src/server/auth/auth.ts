@@ -131,7 +131,9 @@ export const auth = betterAuth({
       const state = await findLoginState(email);
       if (!state) return;
       if (isLocked(state)) {
-        throw new APIError("TOO_MANY_REQUESTS", { code: "ACCOUNT_LOCKED", message: "Troppi tentativi. Riprova più tardi." });
+        // Stessa risposta di una password errata: il blocco non deve rivelare che l'email esiste.
+        console.warn(`[auth] tentativo su account bloccato (utente ${state.id})`);
+        throw invalidCredentials();
       }
       if (!state.active) throw invalidCredentials();
     }),

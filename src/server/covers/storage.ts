@@ -13,6 +13,8 @@ const MAX_EDGE_PX = 600;
 const MAX_INPUT_PIXELS = 40_000_000;
 const WEBP_QUALITY = 80;
 const COVER_FILE_PATTERN = /^[0-9a-f-]{36}\.webp$/;
+// Solo formati fotografici: niente SVG (XML con possibili riferimenti esterni) né formati esotici.
+const ALLOWED_INPUT_FORMATS = new Set(["jpeg", "png", "webp", "gif", "heif", "avif"]);
 
 function coversDir(): string {
   return path.resolve(env.COVERS_DIR);
@@ -31,6 +33,8 @@ function coverFilePath(fileName: string): string {
 export async function saveCover(input: Uint8Array): Promise<string> {
   let output: Buffer;
   try {
+    const { format } = await sharp(input, { limitInputPixels: MAX_INPUT_PIXELS }).metadata();
+    if (!format || !ALLOWED_INPUT_FORMATS.has(format)) throw new Error(`formato non ammesso: ${format}`);
     output = await sharp(input, { limitInputPixels: MAX_INPUT_PIXELS, failOn: "error" })
       .rotate()
       .resize({ width: MAX_EDGE_PX, height: MAX_EDGE_PX, fit: "inside", withoutEnlargement: true })

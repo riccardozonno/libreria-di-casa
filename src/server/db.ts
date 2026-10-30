@@ -7,7 +7,7 @@ import { env } from "./env";
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 
 function createClient(): PrismaClient {
-  const adapter = new PrismaPg({ connectionString: env.DATABASE_URL, max: 10 });
+  const adapter = new PrismaPg({ connectionString: env.DATABASE_URL, max: 5, connectionTimeoutMillis: 5_000, idleTimeoutMillis: 30_000 });
   return new PrismaClient({ adapter });
 }
 

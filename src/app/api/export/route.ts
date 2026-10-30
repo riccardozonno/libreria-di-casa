@@ -7,6 +7,7 @@ import { DomainError } from "@/server/errors";
 export async function GET(request: Request): Promise<Response> {
   const user = await getCurrentUser();
   if (!user) return new Response("Accesso richiesto", { status: 401 });
+  if (user.mustEnable2fa) return new Response("Attiva prima la verifica in due passaggi", { status: 403 });
 
   const sede = new URL(request.url).searchParams.get("sede");
   if (sede && !uuidSchema.safeParse(sede).success) return new Response("Sede non valida", { status: 400 });

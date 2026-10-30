@@ -21,6 +21,8 @@ const TIMEOUT_MS = 6_000;
 const MAX_ATTEMPTS = 2;
 const RETRY_DELAY_MS = 400;
 const GOOGLE_ROUNDS = 4;
+// Oltre questo tempo non si fanno altri giri su Google: si passa a Open Library.
+const GOOGLE_BUDGET_MS = 10_000;
 const GOOGLE_RETRY_DELAY_MS = 150;
 const CACHE_TTL_MS = 24 * 3_600_000;
 const CACHE_MAX_ENTRIES = 500;
@@ -126,7 +128,8 @@ async function findGoogleVolume(isbn13: string, fetchImpl: typeof fetch) {
     { query: isbn10 ?? isbn13 },
     { query: isbn13, extra: { country: "US" } },
   ];
-  for (let round = 0; round < GOOGLE_ROUNDS; round += 1) {
+  const deadline = Date.now() + GOOGLE_BUDGET_MS;
+  for (let round = 0; round < GOOGLE_ROUNDS && Date.now() < deadline; round += 1) {
     const results = await Promise.all(variants.map((variant) => googleVolume(variant.query, fetchImpl, variant.extra)));
     const info = results.find((result) => result?.title);
     if (info) return info;

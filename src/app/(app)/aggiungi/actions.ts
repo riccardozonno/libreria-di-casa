@@ -86,13 +86,17 @@ export async function createBookAction(_previous: ActionResult<{ bookId: string 
     const locationId = uuidSchema.parse(String(formData.get("locationId") ?? ""));
     const source = sourceSchema.catch("MANUAL").parse(String(formData.get("source") ?? ""));
 
+    // Permesso verificato prima del lavoro pesante sulla copertina (download, decodifica, disco).
+    const target = (await listLocationRefs()).find((location) => location.id === locationId);
+    if (!target || !can(user, { type: "copy.create", location: target })) throw forbidden();
+
     const coverPath = await resolveCover(formData);
     try {
       const created = await createBookWithCopy(user, { book, source, coverPath, locationId, copy });
       return { ok: true, data: created };
     } catch (error) {
       // Niente file orfani se il libro non viene creato (permessi, ISBN già presente, …).
-      if (coverPath) await removeCover(coverPath);
+      if (coverPath) await removeCover(coverPath).catch((cleanupError: unknown) => console.error("[copertine] pulizia non riuscita", cleanupError));
       throw error;
     }
   });
