@@ -19,6 +19,9 @@
     }
   ],
   "r2_buckets": [{ "binding": "COVERS", "bucket_name": "homelibrary-spike-covers" }],
-  // Riempiti quando configuriamo Access. Vuoti = l'API rifiuta tutto (fail closed).
-  "vars": { "ACCESS_TEAM_DOMAIN": "", "ACCESS_AUD": "" }
+  // Access: emittente e audience del JWT (non sono segreti). Vuoti = l'API rifiuta tutto (fail closed).
+  "vars": {
+    "ACCESS_TEAM_DOMAIN": "solitary-brook-795e.cloudflareaccess.com",
+    "ACCESS_AUD": "4c6304a3112f23f761625950f750e4f678dcaa495fe27f2959c1a17f3bafb825"
+  }
 }
