@@ -20,6 +20,7 @@ export interface BookListItem {
   title: string;
   authors: string[];
   isbn13: string | null;
+  publishedYear: number | null;
   coverKey: string | null;
   copyCount: number;
   locations: LocationTag[];
@@ -35,6 +36,7 @@ interface ListRow {
   title: string;
   authors: string;
   isbn13: string | null;
+  published_year: number | null;
   cover_key: string | null;
   copy_count: number;
   locations: string;
@@ -50,7 +52,7 @@ export async function listBooks(db: Db, options: { query?: string; locationId?: 
   const order = match ? sql`ORDER BY book_fts.rank, b.title COLLATE NOCASE` : sql`ORDER BY b.title COLLATE NOCASE, b.seq`;
 
   const rows = await db.all<ListRow>(sql`
-    SELECT b.id, b.title, b.authors, b.isbn13, b.cover_key,
+    SELECT b.id, b.title, b.authors, b.isbn13, b.published_year, b.cover_key,
       (SELECT count(*) FROM copy c WHERE c.book_id = b.id) AS copy_count,
       (SELECT json_group_array(json_object('id', t.id, 'name', t.name, 'color', t.color))
          FROM (SELECT DISTINCT l.id, l.name, l.color, l.name_key FROM copy c JOIN location l ON l.id = c.location_id
@@ -65,6 +67,7 @@ export async function listBooks(db: Db, options: { query?: string; locationId?: 
       title: row.title,
       authors: JSON.parse(row.authors) as string[],
       isbn13: row.isbn13,
+      publishedYear: row.published_year,
       coverKey: row.cover_key,
       copyCount: row.copy_count,
       locations: JSON.parse(row.locations) as LocationTag[],

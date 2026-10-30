@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { addCopySchema, bookDataSchema, copyDetailsSchema, moveCopySchema, newBookSchema } from "../../shared/schemas";
 import { createDb } from "../db/client";
 import type { AppEnv } from "../env";
-import { readBody, requester } from "../http";
+import { readBody, requester, validate } from "../http";
 import { downloadCover, isAllowedCoverUrl, upgradeToHttps } from "../covers/download";
 import { detectImageType, MAX_COVER_BYTES } from "../covers/images";
 import { removeCover, storeCover } from "../covers/storage";
@@ -10,6 +10,22 @@ import { DomainError } from "../errors";
 import { addCopy, assertCanCreateIn, createBookWithCopy, deleteCopy, moveCopy, setBookCover, updateBook, updateCopy } from "./mutations";
 import { getBookDetail, listBooks } from "./queries";
 import { setReading } from "./readings";
+
+function parseJsonField(value: FormDataEntryValue | null): unknown {
+  if (typeof value !== "string") throw new DomainError("VALIDATION", "Dati del libro mancanti.");
+  try {
+    return JSON.parse(value);
+  } catch {
+    throw new DomainError("VALIDATION", "Dati del libro non validi.");
+  }
+}
+
+async function readCoverFile(file: File): Promise<{ bytes: Uint8Array; type: NonNullable<ReturnType<typeof detectImageType>> } | null> {
+  if (file.size === 0 || file.size > MAX_COVER_BYTES) return null;
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  const type = detectImageType(bytes);
+  return type ? { bytes, type } : null;
+}
 
 export const bookRoutes = new Hono<AppEnv>()
   .get("/", async (c) => {
@@ -25,11 +41,20 @@ export const bookRoutes = new Hono<AppEnv>()
   .post("/", async (c) => {
     const db = createDb(c.env.DB);
     const who = requester(c);
-    const input = await readBody(c, newBookSchema);
+    // JSON, oppure multipart con "data" (JSON) e "cover" (foto della copertina scattata dal telefono).
+    const isMultipart = (c.req.header("Content-Type") ?? "").startsWith("multipart/form-data");
+    const form = isMultipart ? await c.req.formData() : null;
+    const input = form ? validate(newBookSchema, parseJsonField(form.get("data"))) : await readBody(c, newBookSchema);
     await assertCanCreateIn(db, who, input.locationId);
-    // Copertina dalla ricerca ISBN: solo da host consentiti; se manca o non va, il libro si crea lo stesso.
+
     let coverKey: string | null = null;
-    if (input.coverUrl && isAllowedCoverUrl(upgradeToHttps(input.coverUrl))) {
+    const photo = form?.get("cover");
+    if (photo instanceof File) {
+      const image = await readCoverFile(photo);
+      if (!image) return c.json({ error: "Il file non è un'immagine JPEG, PNG, WebP o GIF (massimo 2 MB)." }, 415);
+      coverKey = await storeCover(c.env.COVERS, image);
+    } else if (input.coverUrl && isAllowedCoverUrl(upgradeToHttps(input.coverUrl))) {
+      // Copertina dalla ricerca ISBN: solo da host consentiti; se manca o non va, il libro si crea lo stesso.
       const image = await downloadCover(input.coverUrl);
       if (image) coverKey = await storeCover(c.env.COVERS, image);
     }

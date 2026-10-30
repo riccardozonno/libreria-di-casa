@@ -10,6 +10,11 @@ export async function readBody<Schema extends z.ZodType>(c: Context<AppEnv>, sch
   const raw: unknown = await c.req.json().catch(() => {
     throw new DomainError("VALIDATION", "Il corpo della richiesta non è JSON valido.");
   });
+  return validate(schema, raw);
+}
+
+/** Dati già letti (es. il campo "data" di un modulo multipart) validati con lo stesso formato d'errore. */
+export function validate<Schema extends z.ZodType>(schema: Schema, raw: unknown): z.output<Schema> {
   const parsed = schema.safeParse(raw);
   if (parsed.success) return parsed.data;
   const fields: Record<string, string> = {};

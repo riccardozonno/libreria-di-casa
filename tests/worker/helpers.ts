@@ -51,6 +51,7 @@ export async function callApi(path: string, options: CallOptions = {}): Promise<
   if (options.secFetchSite) headers.set("Sec-Fetch-Site", options.secFetchSite);
   let body: BodyInit | undefined;
   if (options.body instanceof Uint8Array) body = new Uint8Array(options.body);
+  else if (options.body instanceof FormData) body = options.body;
   else if (options.body !== undefined) {
     headers.set("Content-Type", "application/json");
     body = JSON.stringify(options.body);

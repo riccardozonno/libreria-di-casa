@@ -106,6 +106,25 @@ describe("copertine", () => {
     expect(await env.COVERS.get(coverKey!)).not.toBeNull();
   });
 
+  it("chi crea il libro può allegare una foto della copertina nella stessa richiesta (multipart)", async () => {
+    const form = new FormData();
+    form.set("data", JSON.stringify({ book: { title: "Fotografato" }, source: "MANUAL", locationId: casa.id }));
+    form.set("cover", new File([JPEG], "copertina.jpg", { type: "image/jpeg" }));
+    const response = await editor.call("/books", { method: "POST", body: form });
+    expect(response.status).toBe(201);
+    const { bookId } = (await response.json()) as { bookId: string };
+    const coverKey = await coverKeyOf(bookId);
+    expect(await env.COVERS.get(coverKey!)).not.toBeNull();
+  });
+
+  it("foto allegata che non è un'immagine: 415 e nessun libro creato", async () => {
+    const form = new FormData();
+    form.set("data", JSON.stringify({ book: { title: "Falso" }, source: "MANUAL", locationId: casa.id }));
+    form.set("cover", new File(["<html>"], "x.jpg", { type: "image/jpeg" }));
+    expect((await editor.call("/books", { method: "POST", body: form })).status).toBe(415);
+    expect(await env.DB.prepare("SELECT count(*) AS n FROM book WHERE title = 'Falso'").first<{ n: number }>()).toEqual({ n: 0 });
+  });
+
   it("copertina inesistente o nome non valido: 404", async () => {
     expect((await reader.call("/covers/00000000-0000-4000-8000-000000000000")).status).toBe(404);
     expect((await reader.call("/covers/..%2Fsegreto")).status).toBe(404);
