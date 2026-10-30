@@ -43,7 +43,7 @@ Dalla matrice dei permessi spariscono cambio password, 2FA e link di invito/rese
 
 Ogni fase finisce con ⏸ (attesa del tuo OK) e push sul branch `cloudflare`.
 
-### Fase 0 — Preparazione (questa)
+### Fase 0 — Preparazione ✅ (approvata il 30/10/2026)
 Tag `v1-nextjs`, branch `cloudflare`, questo piano, ADR-0014 (proposto), domande aperte. ⏸
 
 ### Fase 1 — Prova di fattibilità (go/no-go)
