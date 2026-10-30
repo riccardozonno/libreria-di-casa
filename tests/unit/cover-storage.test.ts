@@ -27,6 +27,12 @@ describe("archivio copertine", () => {
     expect(await readCover(fileName)).toBeNull();
   });
 
+  it("accetta solo formati fotografici: niente SVG", async () => {
+    const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="40" height="60"><rect width="40" height="60" fill="red"/></svg>';
+
+    await expect(saveCover(new TextEncoder().encode(svg))).rejects.toMatchObject({ code: "VALIDATION" });
+  });
+
   it("rifiuta dati che non sono immagini", async () => {
     await expect(saveCover(new TextEncoder().encode("<svg onload=alert(1)>"))).rejects.toMatchObject({ code: "VALIDATION" });
   });

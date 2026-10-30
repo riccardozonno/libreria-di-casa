@@ -133,8 +133,11 @@ describe("blocco dopo tentativi falliti", () => {
       await signIn("anna@example.com", "password-sbagliata-123");
     }
     const blocked = await signIn("anna@example.com", GOOD_PASSWORD);
+    const unknown = await signIn("nessuno@example.com", GOOD_PASSWORD);
 
-    expect(blocked.status).toBe(429);
+    // Stessa risposta di una password errata: il blocco non rivela che l'email esiste.
+    expect(blocked.status).toBe(401);
+    expect(await blocked.json()).toEqual(await unknown.json());
     const user = await prisma.user.findUniqueOrThrow({ where: { email: "anna@example.com" } });
     expect(user.lockedUntil!.getTime()).toBeGreaterThan(Date.now() + 14 * 60_000);
   });

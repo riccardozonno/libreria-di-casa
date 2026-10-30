@@ -54,6 +54,19 @@ describe("2FA obbligatoria per gli admin", () => {
     expect((await requireUser({ allowPending2fa: true })).id).toBe(admin.id);
   });
 
+  it("un admin senza 2FA non scarica il CSV né le copertine", async () => {
+    const admin = await makeUser("ADMIN");
+    vi.spyOn(auth.api, "getSession").mockResolvedValue({ user: { id: admin.id } } as never);
+    const { GET: exportCsv } = await import("@/app/api/export/route");
+    const { GET: cover } = await import("@/app/api/covers/[file]/route");
+
+    expect((await exportCsv(new Request("http://localhost:3000/api/export"))).status).toBe(403);
+    const coverResponse = await cover(new Request("http://localhost:3000/api/covers/x"), {
+      params: Promise.resolve({ file: "00000000-0000-4000-8000-000000000000.webp" }),
+    });
+    expect(coverResponse.status).toBe(403);
+  });
+
   it("editor e lettori non sono obbligati", async () => {
     const reader = await makeUser("READER");
 
