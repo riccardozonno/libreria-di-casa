@@ -1,0 +1,25 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "homelibrary-spike",
+  "main": "worker/index.ts",
+  "compatibility_date": "2026-10-20",
+  // L'interfaccia è statica (gratis, nessuna CPU); il Worker gestisce solo /api/*.
+  "assets": {
+    "not_found_handling": "single-page-application",
+    "run_worker_first": ["/api/*"]
+  },
+  // Log delle invocazioni con il tempo di CPU di ogni richiesta: è la misura principale della fase 1.
+  "observability": { "enabled": true },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "homelibrary-spike",
+      // Sostituito con l'id vero dopo `wrangler d1 create` (in locale basta questo segnaposto).
+      "database_id": "00000000-0000-0000-0000-000000000000",
+      "migrations_dir": "migrations"
+    }
+  ],
+  "r2_buckets": [{ "binding": "COVERS", "bucket_name": "homelibrary-spike-covers" }],
+  // Riempiti quando configuriamo Access. Vuoti = l'API rifiuta tutto (fail closed).
+  "vars": { "ACCESS_TEAM_DOMAIN": "", "ACCESS_AUD": "" }
+}

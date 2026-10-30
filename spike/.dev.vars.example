@@ -1,0 +1,2 @@
+# Solo sviluppo locale: identità finta usata quando Access non è configurato.
+DEV_IDENTITY_EMAIL=admin@example.test

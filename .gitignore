@@ -30,3 +30,11 @@ next-env.d.ts
 
 # WASM copiato da scripts/copy-wasm.mjs
 /public/vendor/
+
+# v2 Cloudflare (spike/ e successivi)
+.wrangler/
+.dev.vars*
+!.dev.vars.example
+dist/
+worker-configuration.d.ts
+spike/public/vendor/

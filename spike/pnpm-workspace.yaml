@@ -1,0 +1,8 @@
+# Progetto separato dalla v1 (che ha il suo pnpm-workspace.yaml nella radice).
+allowBuilds:
+  esbuild: true
+  workerd: true
+  sharp: false
+minimumReleaseAgeExclude:
+  - miniflare@5.20261023.3-beta
+  - wrangler@4.156.0
