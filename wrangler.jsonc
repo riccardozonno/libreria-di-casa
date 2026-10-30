@@ -14,8 +14,7 @@
     {
       "binding": "DB",
       "database_name": "homelibrary",
-      // Segnaposto finché non creiamo il database online (fase 2, fine): in locale basta questo.
-      "database_id": "00000000-0000-0000-0000-000000000000",
+      "database_id": "575c54b5-fd86-45ca-a37f-02643bd30487",
       "migrations_dir": "migrations"
     }
   ],
