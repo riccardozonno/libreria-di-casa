@@ -8,7 +8,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "lint": "eslint .",
-    "typecheck": "wrangler types && tsc --noEmit",
+    "typecheck": "wrangler types --strict-vars=false && tsc --noEmit",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "e2e": "playwright test",

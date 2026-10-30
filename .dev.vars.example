@@ -1,0 +1,3 @@
+# Solo sviluppo locale (mai pubblicato): identità usata quando Access non è configurato.
+# Deve corrispondere a un utente creato con `pnpm admin:create --local`.
+DEV_IDENTITY_EMAIL=admin@example.test
