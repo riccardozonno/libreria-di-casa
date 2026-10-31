@@ -128,7 +128,8 @@ describe("catalogo", () => {
       expect.objectContaining({ location: expect.objectContaining({ name: "Casa", archived: false }), shelf: "Scaffale 2" }),
       expect.objectContaining({ id: copyId, location: expect.objectContaining({ name: "Casa" }) }),
     ]);
-    expect(detail.readings).toEqual([{ userId: reader.id, name: "lettore" }]);
+    expect(detail.readings).toEqual([{ userId: reader.id, name: "lettore", rating: null }]);
+    expect(detail).toMatchObject({ ratingAverage: null, ratingCount: 0 });
     expect(detail.movements).toEqual([expect.objectContaining({ from: "Mare", to: "Casa", movedBy: "mare" })]);
     expect((await reader.call("/books/inesistente")).status).toBe(404);
   });
@@ -216,5 +217,80 @@ describe("letto da", () => {
     expect((await reader.call(`/books/${bookId}/readings/${editorCasa.id}`, { method: "PUT" })).status).toBe(403);
     expect((await admin.call(`/books/${bookId}/readings/${editorCasa.id}`, { method: "PUT" })).status).toBe(204);
     expect((await admin.call(`/books/${bookId}/readings/utente-inesistente`, { method: "PUT" })).status).toBe(404);
+  });
+});
+
+describe("voto", () => {
+  let bookId: string;
+  const rate = (who: User, rating: number | null, userId = who.id) =>
+    who.call(`/books/${bookId}/readings/${userId}/rating`, { method: "PUT", body: { rating } });
+  const markRead = (who: User) => who.call(`/books/${bookId}/readings/${who.id}`, { method: "PUT" });
+  const detail = async (who: User = reader) => (await (await who.call(`/books/${bookId}`)).json()) as Record<string, unknown>;
+
+  beforeEach(async () => {
+    ({ bookId } = (await createBook(editorCasa)).body);
+  });
+
+  it("dopo «Letto» il lettore vota, cambia e toglie il voto; il registro solo quando cambia", async () => {
+    await markRead(reader);
+    expect((await rate(reader, 4)).status).toBe(204);
+    expect((await rate(reader, 4)).status).toBe(204);
+    expect((await rate(reader, 2)).status).toBe(204);
+    expect((await rate(reader, null)).status).toBe(204);
+    expect((await rate(reader, null)).status).toBe(204);
+
+    expect(await env.DB.prepare("SELECT rating FROM book_reading WHERE user_id = ? AND book_id = ?").bind(reader.id, bookId).first()).toEqual({ rating: null });
+    const audit = await env.DB.prepare("SELECT data FROM audit_log WHERE action = 'reading.rate' AND entity_id = ? ORDER BY created_at, rowid").bind(bookId).all<{ data: string }>();
+    expect(audit.results.map((row) => JSON.parse(row.data))).toEqual([
+      { userId: reader.id, rating: 4 },
+      { userId: reader.id, rating: 2 },
+      { userId: reader.id, rating: null },
+    ]);
+  });
+
+  it("senza «Letto» il voto è rifiutato (409); libro inesistente 404", async () => {
+    const response = await rate(reader, 5);
+    expect(response.status).toBe(409);
+    expect(await response.json()).toMatchObject({ error: "Segna prima il libro come letto." });
+    bookId = "inesistente";
+    expect((await rate(reader, 5)).status).toBe(404);
+  });
+
+  it("nessuno vota per un altro, nemmeno l'admin che ha segnato «Letto» per lui", async () => {
+    expect((await admin.call(`/books/${bookId}/readings/${reader.id}`, { method: "PUT" })).status).toBe(204);
+    expect((await rate(admin, 5, reader.id)).status).toBe(403);
+    expect((await rate(editorCasa, 5, reader.id)).status).toBe(403);
+    expect((await rate(reader, 5)).status).toBe(204);
+  });
+
+  it.each([0, 6, 3.5, "4"])("voto %s rifiutato (400)", async (rating) => {
+    await markRead(reader);
+    const response = await reader.call(`/books/${bookId}/readings/${reader.id}/rating`, { method: "PUT", body: { rating } });
+    expect(response.status).toBe(400);
+  });
+
+  it("togliere «Letto» toglie anche il voto", async () => {
+    await markRead(reader);
+    await rate(reader, 5);
+    await reader.call(`/books/${bookId}/readings/${reader.id}`, { method: "DELETE" });
+    await markRead(reader);
+    expect(await env.DB.prepare("SELECT rating FROM book_reading WHERE user_id = ? AND book_id = ?").bind(reader.id, bookId).first()).toEqual({ rating: null });
+  });
+
+  it("scheda: voto di ogni lettore, media con una cifra decimale e numero di voti", async () => {
+    for (const who of [reader, editorCasa, admin]) await markRead(who);
+    await rate(reader, 5);
+    await rate(editorCasa, 4);
+    await rate(admin, 4);
+    await admin.call(`/books/${bookId}/readings/${editorMare.id}`, { method: "PUT" }); // letto, senza voto
+
+    const book = await detail();
+    expect(book.readings).toEqual([
+      { userId: admin.id, name: "admin", rating: 4 },
+      { userId: editorCasa.id, name: "casa", rating: 4 },
+      { userId: reader.id, name: "lettore", rating: 5 },
+      { userId: editorMare.id, name: "mare", rating: null },
+    ]);
+    expect(book).toMatchObject({ ratingAverage: 4.3, ratingCount: 3 });
   });
 });

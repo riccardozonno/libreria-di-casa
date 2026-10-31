@@ -130,9 +130,15 @@ export const bookReading = sqliteTable(
     userId: text("user_id").notNull().references(() => user.id, { onDelete: "cascade" }),
     bookId: text("book_id").notNull().references(() => book.id, { onDelete: "cascade" }),
     markedById: text("marked_by_id").references(() => user.id, { onDelete: "set null" }),
+    // Voto del lettore, 1–5 stelle; null = non votato. Se si toglie «Letto», sparisce con la riga.
+    rating: integer("rating"),
     createdAt: createdAt(),
   },
-  (table) => [primaryKey({ columns: [table.userId, table.bookId] }), index("book_reading_book_idx").on(table.bookId)],
+  (table) => [
+    primaryKey({ columns: [table.userId, table.bookId] }),
+    index("book_reading_book_idx").on(table.bookId),
+    check("book_reading_rating_check", sql`${table.rating} IS NULL OR ${table.rating} BETWEEN 1 AND 5`),
+  ],
 );
 
 // Registro attività: in sola aggiunta (trigger nella migrazione). Mai segreti in `data`.

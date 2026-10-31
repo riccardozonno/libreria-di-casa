@@ -87,7 +87,10 @@ export interface BookDetail {
   createdBy: string | null;
   createdAt: string;
   copies: Array<{ id: string; shelf: string | null; notes: string | null; location: LocationTag & { archived: boolean } }>;
-  readings: Array<{ userId: string; name: string }>;
+  readings: Array<{ userId: string; name: string; rating: number | null }>;
+  /** Media dei voti con una cifra decimale; null se nessuno ha votato. */
+  ratingAverage: number | null;
+  ratingCount: number;
   movements: Array<{ id: string; from: string; to: string; movedBy: string | null; movedAt: string }>;
 }
 
@@ -99,13 +102,13 @@ export async function getBookDetail(db: Db, id: string): Promise<BookDetail> {
   if (!row) throw notFound("Libro");
 
   type CopyRow = { id: string; shelf: string | null; notes: string | null; location_id: string; name: string; color: LocationColorKey; archived_at: string | null };
-  type ReadingRow = { user_id: string; name: string };
+  type ReadingRow = { user_id: string; name: string; rating: number | null };
   type MovementRow = { id: string; from_name: string; to_name: string; moved_by: string | null; moved_at: string };
   // Tre letture in un solo viaggio verso D1.
   const [copyResult, readingResult, movementResult] = await runBatch(db, [
     sql`SELECT c.id, c.shelf, c.notes, l.id AS location_id, l.name, l.color, l.archived_at
         FROM copy c JOIN location l ON l.id = c.location_id WHERE c.book_id = ${id} ORDER BY c.rowid`,
-    sql`SELECT r.user_id, u.name FROM book_reading r JOIN user u ON u.id = r.user_id WHERE r.book_id = ${id} ORDER BY u.name`,
+    sql`SELECT r.user_id, u.name, r.rating FROM book_reading r JOIN user u ON u.id = r.user_id WHERE r.book_id = ${id} ORDER BY u.name`,
     sql`SELECT m.id, f.name AS from_name, t.name AS to_name, u.name AS moved_by, m.moved_at
         FROM copy_movement m JOIN location f ON f.id = m.from_location_id JOIN location t ON t.id = m.to_location_id
         LEFT JOIN user u ON u.id = m.moved_by_id WHERE m.book_id = ${id} ORDER BY m.moved_at DESC`,
@@ -131,7 +134,15 @@ export async function getBookDetail(db: Db, id: string): Promise<BookDetail> {
       notes: copy.notes,
       location: { id: copy.location_id, name: copy.name, color: copy.color, archived: copy.archived_at !== null },
     })),
-    readings: readings.map((reading) => ({ userId: reading.user_id, name: reading.name })),
+    readings: readings.map((reading) => ({ userId: reading.user_id, name: reading.name, rating: reading.rating })),
+    ...ratingSummary(readings.map((reading) => reading.rating)),
     movements: movements.map((movement) => ({ id: movement.id, from: movement.from_name, to: movement.to_name, movedBy: movement.moved_by, movedAt: movement.moved_at })),
   };
+}
+
+function ratingSummary(ratings: ReadonlyArray<number | null>): { ratingAverage: number | null; ratingCount: number } {
+  const given = ratings.filter((rating): rating is number => rating !== null);
+  if (given.length === 0) return { ratingAverage: null, ratingCount: 0 };
+  const average = given.reduce((sum, rating) => sum + rating, 0) / given.length;
+  return { ratingAverage: Math.round(average * 10) / 10, ratingCount: given.length };
 }

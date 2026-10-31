@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { addCopySchema, bookDataSchema, copyDetailsSchema, moveCopySchema, newBookSchema } from "../../shared/schemas";
+import { addCopySchema, bookDataSchema, copyDetailsSchema, moveCopySchema, newBookSchema, ratingSchema } from "../../shared/schemas";
 import { createDb } from "../db/client";
 import type { AppEnv } from "../env";
 import { readBody, requester, validate } from "../http";
@@ -10,7 +10,7 @@ import { can } from "../../shared/policy";
 import { DomainError, forbidden } from "../errors";
 import { addCopy, assertCanCreateIn, createBookWithCopy, deleteCopy, moveCopy, setBookCover, updateBook, updateCopy } from "./mutations";
 import { getBookDetail, listBooks } from "./queries";
-import { setReading } from "./readings";
+import { setRating, setReading } from "./readings";
 
 function parseJsonField(value: FormDataEntryValue | null): unknown {
   if (typeof value !== "string") throw new DomainError("VALIDATION", "Dati del libro mancanti.");
@@ -99,6 +99,11 @@ export const bookRoutes = new Hono<AppEnv>()
   })
   .delete("/:id/readings/:userId", async (c) => {
     await setReading(createDb(c.env.DB), requester(c), c.req.param("id"), c.req.param("userId"), false);
+    return c.body(null, 204);
+  })
+  .put("/:id/readings/:userId/rating", async (c) => {
+    const { rating } = await readBody(c, ratingSchema);
+    await setRating(createDb(c.env.DB), requester(c), c.req.param("id"), c.req.param("userId"), rating);
     return c.body(null, 204);
   });
 
