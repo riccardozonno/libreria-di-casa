@@ -10,6 +10,8 @@ Legenda: ✅ sì · ❌ no · **S** = sede della copia · **S→T** = da sede S 
 | Cercare e filtrare | ✅ | ✅ | ✅ |
 | Segnare/togliere **sé stesso** in "Letto da" | ✅ | ✅ | ✅ |
 | Segnare/togliere **altri utenti** in "Letto da" | ✅ | ❌ | ❌ |
+| Dare, cambiare o togliere il **proprio** voto (1–5 stelle) a un libro che ha segnato come letto | ✅ | ✅ | ✅ |
+| Votare **al posto di un altro** utente | ❌ | ❌ | ❌ |
 | Lookup ISBN (Google Books / Open Library) | ✅ | ✅ se editor di almeno una sede attiva | ❌ |
 | Creare libro + prima copia in S (dati compilabili in creazione) | ✅ | ✅ se editor(S) | ❌ |
 | Aggiungere una copia di un libro esistente in S | ✅ | ✅ se editor(S) | ❌ |
@@ -45,7 +47,7 @@ Ogni operazione di scrittura qui sopra produce una riga di audit **nello stesso 
 completa), `copy.create`, `copy.update`, `copy.move`, `copy.delete`,
 `location.create|update|archive|restore`,
 `user.create|role_change|locations_change|deactivate|reactivate|sign_out_everywhere`,
-`csv.import|export`, `reading.mark|unmark`.
+`csv.import|export`, `reading.mark|unmark|rate`.
 
 Gli accessi (codici inviati, login riusciti o falliti) li registra Cloudflare Access nei suoi log
 (Zero Trust → Logs → Access), non l'app.

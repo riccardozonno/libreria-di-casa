@@ -16,7 +16,7 @@ const unique = () => `${Date.now().toString(36)}${Math.random().toString(36).sli
 test.describe("amministratore", () => {
   test.use(asUser("admin"));
 
-  test("crea una sede, aggiunge un libro a mano, lo trova nel catalogo e lo segna come letto", async ({ page }) => {
+  test("crea una sede, aggiunge un libro a mano, lo segna come letto, lo vota e lo trova nel catalogo", async ({ page }) => {
     const violations = failOnCspViolation(page);
     const sede = `Sede ${unique()}`;
     const titolo = `Perché la città ${unique()}`;
@@ -37,6 +37,20 @@ test.describe("amministratore", () => {
     await expect(page.getByRole("heading", { name: titolo })).toBeVisible();
     await page.getByRole("button", { name: "Segna come letto" }).click();
     await expect(page.getByRole("button", { name: "✓ L'ho letto" })).toBeVisible();
+
+    // Voto: compare solo dopo «Letto»; ritoccare la stessa stella lo toglie.
+    const votes = page.getByRole("group", { name: "Il tuo voto" });
+    await votes.getByRole("button", { name: "4 stelle" }).click();
+    await expect(page.getByText("Il tuo voto: 4 stelle su 5.", { exact: false })).toBeVisible();
+    await expect(page.getByText("· 1 voto")).toBeVisible();
+    await votes.getByRole("button", { name: "4 stelle" }).click();
+    await expect(page.getByText("Tocca le stelle per votarlo.")).toBeVisible();
+    await expect(page.getByText("· 1 voto")).toBeHidden();
+    await votes.getByRole("button", { name: "5 stelle" }).click();
+    await expect(page.getByText("· 1 voto")).toBeVisible();
+    await page.getByRole("button", { name: "✓ L'ho letto" }).click();
+    await expect(page.getByRole("group", { name: "Il tuo voto" })).toBeHidden();
+    await expect(page.getByText("· 1 voto")).toBeHidden();
 
     await page.getByRole("link", { name: "← Catalogo" }).click();
     await page.getByLabel("Cerca per titolo, autore o ISBN").fill("perche la citta");

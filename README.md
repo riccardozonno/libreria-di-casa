@@ -30,7 +30,7 @@ Le istruzioni sono anche nell'app, in **Profilo → Installa l'app**.
 
 | Scheda | Cosa trovi |
 |---|---|
-| **Catalogo** | Tutti i libri di casa. Cerca per titolo, autore o ISBN (gli accenti non contano), filtra per sede. Tocca un libro per la scheda: copie e sedi, «Letto da», spostamenti. |
+| **Catalogo** | Tutti i libri di casa. Cerca per titolo, autore o ISBN (gli accenti non contano), filtra per sede. Tocca un libro per la scheda: copie e sedi, «Letto da» con i voti, spostamenti. Dopo «Segna come letto» puoi dare da 1 a 5 stelle (tocca di nuovo la stessa per toglierle): la scheda mostra la media e il voto di ognuno. |
 | **Aggiungi** (editor e admin) | Inquadra il codice a barre sul retro del libro, oppure scrivi l'ISBN: i dati arrivano da Google Books o Open Library. Controlla, scegli la sede e salva. Se non li trova, compili a mano e puoi fotografare la copertina. Se il libro c'è già, aggiungi una copia. |
 | **Sedi** | Le case con il loro colore. L'admin le crea, rinomina, archivia e riattiva. |
 | **Admin** (solo admin) | **Utenti**: aggiungi una persona (email, nome, ruolo, sedi) e mandale il testo d'invito; cambia ruolo o sedi, disattiva, fai uscire da tutti i dispositivi. **Registro attività**: chi ha fatto cosa e quando. **Import ed export CSV**: scarica il catalogo o carica molti libri insieme (prima la prova, poi l'import). |
@@ -40,7 +40,9 @@ Le istruzioni sono anche nell'app, in **Profilo → Installa l'app**.
 
 - **Admin**: tutto, su tutte le sedi.
 - **Editor**: aggiunge, modifica, sposta ed elimina copie nelle sue sedi; i dati del libro dopo la creazione e l'eliminazione dell'ultima copia restano all'admin.
-- **Lettore**: consulta tutto e segna i libri che ha letto.
+- **Lettore**: consulta tutto, segna i libri che ha letto e li vota.
+
+Il voto lo dà solo chi ha letto il libro, per sé: nemmeno l'admin vota al posto di un altro.
 
 Dettagli in [docs/permissions.md](docs/permissions.md).
 

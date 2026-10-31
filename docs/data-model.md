@@ -23,7 +23,7 @@ erDiagram
 | `book` | dati bibliografici, `cover_key` in R2, origine (Google Books, Open Library, a mano, CSV) | ISBN-13 unico se presente; autori come array JSON; `seq` numerico stabile per la ricerca |
 | `copy` | copia fisica in una sede, scaffale e note | una sede non si cancella se ha copie (`restrict`) |
 | `copy_movement` | storico degli spostamenti | resta anche se la copia viene eliminata |
-| `book_reading` | chi ha letto il libro e chi l'ha segnato | chiave utente + libro |
+| `book_reading` | chi ha letto il libro, chi l'ha segnato e quando, voto 1–5 del lettore | chiave utente + libro; voto nullo o tra 1 e 5; se si toglie «Letto» il voto sparisce con la riga |
 | `audit_log` | registro attività: chi, cosa, quando, dati prima/dopo | in sola aggiunta: trigger che vietano UPDATE e DELETE; mai segreti |
 | `isbn_cache` | risposte positive di Google Books / Open Library | evita chiamate ripetute |
 | `book_fts` | indice FTS5 su titolo, autori, ISBN, senza accenti | riempito dai trigger su `book` (si ricostruisce da solo in un ripristino) |

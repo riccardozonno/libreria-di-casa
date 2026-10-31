@@ -38,6 +38,7 @@ const ACTION_LABELS: Record<string, string> = {
   "user.sign_out_everywhere": "ha chiuso le sessioni su tutti i dispositivi",
   "reading.mark": "ha segnato un libro come letto",
   "reading.unmark": "ha tolto un \"letto\"",
+  "reading.rate": "ha votato un libro",
   "csv.import": "ha importato un CSV",
   "csv.export": "ha esportato un CSV",
 };

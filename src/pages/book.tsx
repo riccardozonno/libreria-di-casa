@@ -10,6 +10,7 @@ import { AddCopyForm } from "./book/add-copy-form";
 import { CopyRow, type CopyView } from "./book/copy-row";
 import { EditBookForm } from "./book/edit-book-form";
 import { ReadingToggle } from "./book/reading-toggle";
+import { StarIcon, StarRating, starLabel } from "./book/star-rating";
 import { NotFoundPage } from "./not-found";
 
 interface BookDetail {
@@ -24,11 +25,14 @@ interface BookDetail {
   createdBy: string | null;
   createdAt: string;
   copies: CopyView[];
-  readings: Array<{ userId: string; name: string }>;
+  readings: Array<{ userId: string; name: string; rating: number | null }>;
+  ratingAverage: number | null;
+  ratingCount: number;
   movements: Array<{ id: string; from: string; to: string; movedBy: string | null; movedAt: string }>;
 }
 
 const SOURCE_LABELS: Record<BookDetail["source"], string> = { GOOGLE_BOOKS: "Google Books", OPEN_LIBRARY: "Open Library", MANUAL: "inserimento manuale", CSV: "importazione CSV" };
+const averageFormat = new Intl.NumberFormat("it-IT", { maximumFractionDigits: 1 });
 const dateFormat = new Intl.DateTimeFormat("it-IT", { day: "numeric", month: "long", year: "numeric" });
 
 export function BookPage() {
@@ -43,7 +47,8 @@ export function BookPage() {
   if (!book) return <p className="px-1 py-6 text-center text-ink-soft">Caricamento…</p>;
 
   const copyCount = book.copies.length;
-  const hasRead = book.readings.some((reading) => reading.userId === me.id);
+  const myReading = book.readings.find((reading) => reading.userId === me.id);
+  const hasRead = myReading !== undefined;
   const refs = locations.map((location) => ({ id: location.id, archived: location.archived, name: location.name }));
   const addable = refs.filter((location) => can({ type: "copy.create", location }));
 
@@ -126,16 +131,34 @@ export function BookPage() {
       </Section>
 
       <Section title="Letto da">
+        {book.ratingAverage !== null && (
+          <p className="mb-2 flex items-center gap-1.5 px-1 text-[16px] font-semibold">
+            <StarIcon filled className="size-5 text-star" />
+            {averageFormat.format(book.ratingAverage)}
+            <span className="font-normal text-ink-soft">· {book.ratingCount === 1 ? "1 voto" : `${book.ratingCount} voti`}</span>
+          </p>
+        )}
         {book.readings.length === 0 ? (
           <p className="px-1 text-[15px] text-ink-faint">Nessuno l&apos;ha ancora segnato come letto.</p>
         ) : (
           <ul className="flex flex-wrap gap-2 px-1">
             {book.readings.map((reading) => (
-              <li key={reading.userId} className="rounded-full bg-success-soft px-3 py-1.5 text-[14px] font-medium text-success">
+              <li key={reading.userId} className="flex items-center gap-1 rounded-full bg-success-soft px-3 py-1.5 text-[14px] font-medium text-success">
                 {reading.name}
+                {reading.rating !== null && (
+                  <span className="flex items-center gap-0.5 text-ink-soft" aria-label={starLabel(reading.rating)}>
+                    · {reading.rating}
+                    <StarIcon filled className="size-3.5 text-star" />
+                  </span>
+                )}
               </li>
             ))}
           </ul>
+        )}
+        {myReading && (
+          <div className="mt-3">
+            <StarRating bookId={book.id} userId={me.id} rating={myReading.rating} onChanged={reload} />
+          </div>
         )}
       </Section>
 
