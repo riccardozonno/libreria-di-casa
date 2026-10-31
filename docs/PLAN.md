@@ -75,7 +75,7 @@ CSV (export e import con anteprima, prova a secco, duplicati, report errori, a b
 ### Fase 5 — Revisione ✅ (approvata il 31/10/2026) — [resoconto](fase5-resoconto.md)
 Security, database, TypeScript, React, accessibilità. In più: misura della CPU di ogni endpoint sotto i 10 ms, verifica che l'indirizzo non sia raggiungibile senza Access. ⏸
 
-### Fase 6 — Backup e ripristino — fatta il 31/10/2026, [resoconto](backup-restore.md) (⏸)
+### Fase 6 — Backup e ripristino ✅ (approvata il 31/10/2026) — [resoconto](backup-restore.md)
 GitHub Actions notturno (più un controllo settimanale delle richieste rifiutate per limite di CPU): export D1 **dei soli dati, tabella per tabella** (`--no-schema --table …`: l'export completo non funziona con FTS5; al ripristino migrazioni + dati, l'indice si ricostruisce) + copia di R2 → restic su B2 (7/4/6, `check` settimanale), segreti solo nei GitHub Secrets con token in sola lettura. Script di ripristino guidato su un D1 e un bucket nuovi, **prova di ripristino reale** documentata. ⏸
 
 ### Fase 7 — Produzione
