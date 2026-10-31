@@ -4,7 +4,7 @@ I libri di famiglia, in ogni sede. Web app installabile sul telefono (PWA) per c
 in più case, con ruoli (amministratore, editor per sede, lettore).
 
 > **Versione 2 in costruzione** sul branch `cloudflare`: tutta sul piano gratuito di Cloudflare
-> (Workers, D1, R2, Access), senza server e senza dominio. Stato: **fase 6 (backup e ripristino) completata**.
+> (Workers, D1, R2, Access), senza server e senza dominio. Stato: **fase 7 (produzione) in corso**.
 > La versione 1 (Next.js + Postgres + Docker) resta su `main` e nel tag `v1-nextjs`.
 > Piano e decisioni: [docs/PLAN.md](docs/PLAN.md) · [ADR-0014](docs/adr/0014-riscrittura-cloudflare.md) · [permessi](docs/permissions.md) · [backup e ripristino](docs/backup-restore.md).
 
@@ -44,11 +44,8 @@ pnpm e2e                  # Playwright sulla build vera: iPhone (WebKit) e Andro
 
 ## Pubblicazione (solo l'amministratore del progetto)
 
-```bash
-pnpm exec wrangler d1 migrations apply DB --remote
-pnpm build && pnpm exec wrangler deploy
-pnpm admin:create --email tu@example.com --name "Nome" --remote   # primo amministratore
-```
+Da GitHub: **Actions → Deploy → Run workflow**. Prima rifà tutti i controlli, poi applica le migrazioni
+e pubblica. Accesso, ripristino di una versione precedente e Time Travel: [docs/produzione.md](docs/produzione.md).
 
-L'app è su `https://homelibrary.r-z030600.workers.dev`, dietro Cloudflare Access (metodo One-time PIN,
-regola per email). La guida completa arriva con le fasi 7 e 8.
+L'app è su `https://homelibrary.r-z030600.workers.dev`, dietro Cloudflare Access (codice via email,
+sessione di un mese).

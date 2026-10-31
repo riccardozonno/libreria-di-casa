@@ -78,7 +78,7 @@ Security, database, TypeScript, React, accessibilità. In più: misura della CPU
 ### Fase 6 — Backup e ripristino ✅ (approvata il 31/10/2026) — [resoconto](backup-restore.md)
 GitHub Actions notturno (più un controllo settimanale delle richieste rifiutate per limite di CPU): export D1 **dei soli dati, tabella per tabella** (`--no-schema --table …`: l'export completo non funziona con FTS5; al ripristino migrazioni + dati, l'indice si ricostruisce) + copia di R2 → restic su B2 (7/4/6, `check` settimanale), segreti solo nei GitHub Secrets con token in sola lettura. Script di ripristino guidato su un D1 e un bucket nuovi, **prova di ripristino reale** documentata. ⏸
 
-### Fase 7 — Produzione
+### Fase 7 — Produzione — in corso, [resoconto](produzione.md)
 Access definitivo (lista email, durata della sessione), deploy da GitHub Actions su comando manuale, primo admin, verifica dei ruoli online, primo backup notturno riuscito. ⏸
 
 ### Fase 8 — Verifica finale e passaggio a `main`
