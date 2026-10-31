@@ -1,157 +1,32 @@
-# Modello dati
+# Modello dati (v2, D1)
 
-PostgreSQL 18 + Prisma 7. Nomi in inglese nel codice, interfaccia in italiano.
+SQLite su D1, schema in `worker/db/schema.ts` (Drizzle) e migrazioni in `migrations/`. Id UUID come
+testo, date ISO 8601 UTC come testo. Nomi in inglese nel codice, interfaccia in italiano. Il modello
+della v1 (Postgres + Prisma) è nel tag `v1-nextjs`.
 
 ```mermaid
 erDiagram
-  User ||--o{ Session : ha
-  User ||--o{ Account : ha
-  User ||--o{ LocationEditor : "è editor di"
-  Location ||--o{ LocationEditor : ""
-  Location ||--o{ Copy : contiene
-  Book ||--|{ Copy : "ha almeno una"
-  Book ||--o{ BookReading : "letto da"
-  User ||--o{ BookReading : ""
-  Book ||--o{ CopyMovement : storico
-  User ||--o{ AuditLog : autore
+  user ||--o{ location_editor : "edita"
+  location ||--o{ location_editor : ""
+  book ||--o{ copy : "ha"
+  location ||--o{ copy : "contiene"
+  book ||--o{ copy_movement : ""
+  book ||--o{ book_reading : "letto da"
+  user ||--o{ book_reading : ""
 ```
 
-## Schema (bozza)
+| Tabella | Contenuto | Regole principali |
+|---|---|---|
+| `user` | email (identità di Access), nome, ruolo, attivo, `sessions_not_before` | email unica e minuscola; ruolo ADMIN/EDITOR/READER |
+| `location` | sede: nome, colore, archiviazione | nome unico senza maiuscole/accenti (`name_key`); un colore per sede |
+| `location_editor` | quali sedi può modificare un editor | chiave utente + sede |
+| `book` | dati bibliografici, `cover_key` in R2, origine (Google Books, Open Library, a mano, CSV) | ISBN-13 unico se presente; autori come array JSON; `seq` numerico stabile per la ricerca |
+| `copy` | copia fisica in una sede, scaffale e note | una sede non si cancella se ha copie (`restrict`) |
+| `copy_movement` | storico degli spostamenti | resta anche se la copia viene eliminata |
+| `book_reading` | chi ha letto il libro e chi l'ha segnato | chiave utente + libro |
+| `audit_log` | registro attività: chi, cosa, quando, dati prima/dopo | in sola aggiunta: trigger che vietano UPDATE e DELETE; mai segreti |
+| `isbn_cache` | risposte positive di Google Books / Open Library | evita chiamate ripetute |
+| `book_fts` | indice FTS5 su titolo, autori, ISBN, senza accenti | riempito dai trigger su `book` (si ricostruisce da solo in un ripristino) |
 
-```prisma
-enum Role { ADMIN EDITOR READER }
-enum BookSource { GOOGLE_BOOKS OPEN_LIBRARY MANUAL CSV }
-
-// --- Tabelle di Better Auth (user/session/account/verification/twoFactor) ---
-model User {
-  id                String    @id @db.Uuid      // Better Auth con advanced.database.generateId: "uuid"
-  name              String
-  email             String    @unique           // salvata in minuscolo
-  emailVerified     Boolean   @default(false)
-  image             String?
-  // i 4 campi seguenti sono additionalFields di Better Auth con input: false (mai dal client)
-  role              Role      @default(READER)
-  active            Boolean   @default(true)    // disattivato = niente login, sessioni revocate
-  failedLoginCount  Int       @default(0)
-  lockedUntil       DateTime?
-  twoFactorEnabled  Boolean   @default(false)
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-  editorOf          LocationEditor[]
-  readings          BookReading[]
-  // + relazioni Better Auth: sessions, accounts, twoFactor
-}
-// Session, Account (hash argon2id della password nel campo password), Verification
-// (token di invito/reset; con storeIdentifier "hashed" nel DB c'è solo l'hash), TwoFactor:
-// schema generato da Better Auth. Rate limit in memoria: nessuna tabella.
-
-model Location {
-  id          String    @id @default(uuid(7)) @db.Uuid
-  name        String
-  nameKey     String    @unique                // nome normalizzato (minuscolo, senza accenti/spazi doppi)
-  color       LocationColor @unique             // colore scelto dall'admin (palette di 10), mai ripetuto
-  archivedAt  DateTime?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  copies      Copy[]
-  editors     LocationEditor[]
-}
-
-model LocationEditor {
-  userId      String   @db.Uuid                // FK User, Cascade
-  locationId  String   @db.Uuid                // FK Location, Cascade
-  createdAt   DateTime @default(now())
-  @@id([userId, locationId])
-  @@index([locationId])
-}
-
-model Book {
-  id            String     @id @default(uuid(7)) @db.Uuid
-  isbn13        String?    @unique                // normalizzato (ISBN-10 convertito); null = senza ISBN
-  title         String
-  authors       String[]                          // in ordine
-  publishedYear Int?
-  description   String?
-  coverPath     String?                           // file WebP nel volume covers/
-  source        BookSource
-  searchText    String                            // titolo+autori+isbn, minuscolo, senza accenti
-  createdById   String?                           // SetNull: l'utente non viene mai cancellato, solo disattivato
-  createdAt     DateTime   @default(now())
-  updatedAt     DateTime   @updatedAt
-  copies        Copy[]
-  readings      BookReading[]
-  movements     CopyMovement[]
-  @@index([searchText(ops: raw("gin_trgm_ops"))], type: Gin)   // richiede l'estensione pg_trgm
-  @@index([title])
-}
-
-model Copy {
-  id          String    @id @default(uuid(7)) @db.Uuid
-  bookId      String    @db.Uuid                 // onDelete: Cascade
-  locationId  String    @db.Uuid                 // onDelete: Restrict (le sedi si archiviano, non si cancellano)
-  shelf       String?                            // collocazione: "Scaffale 3, ripiano 2"
-  notes       String?
-  createdById String?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  @@index([locationId])
-  @@index([bookId])
-}
-
-model CopyMovement {
-  id              String   @id @default(uuid(7)) @db.Uuid
-  bookId          String   @db.Uuid               // Cascade; lo storico resta sul libro anche se la copia viene eliminata
-  copyId          String?  @db.Uuid               // SetNull alla cancellazione della copia
-  fromLocationId  String   @db.Uuid               // Restrict
-  toLocationId    String   @db.Uuid               // Restrict
-  movedById       String?  @db.Uuid               // SetNull
-  movedAt         DateTime @default(now())
-  @@index([bookId, movedAt])
-}
-
-model BookReading {
-  userId    String
-  bookId    String   @db.Uuid                   // onDelete: Cascade
-  markedById String   @db.Uuid                   // FK User: chi l'ha segnato (l'utente stesso o un admin)
-  createdAt DateTime @default(now())
-  @@id([userId, bookId])
-  @@index([bookId])
-}
-
-model AuditLog {
-  id          String   @id @default(uuid(7)) @db.Uuid
-  actorId     String?                            // null = sistema (import CLI, migrazioni)
-  actorEmail  String?                            // copia per leggibilità storica
-  action      String                             // es. "copy.move", "user.role_change"
-  entityType  String                             // "book" | "copy" | "location" | "user" | "import"
-  entityId    String?
-  data        Json                               // { before, after } o dettagli; mai password/token
-  ip          String?
-  createdAt   DateTime @default(now())
-  @@index([createdAt(sort: Desc)])
-  @@index([entityType, entityId])
-  @@index([actorId, createdAt])
-}
-```
-
-## Regole di integrità
-
-| Regola | Dove è applicata |
-|---|---|
-| ISBN sempre ISBN-13 valido (checksum) o null | zod + funzione `normalizeIsbn` |
-| Un libro ha sempre ≥ 1 copia | Servizio: creazione libro+copia nella stessa transazione; aggiunta/eliminazione/spostamento bloccano la riga del libro (`FOR UPDATE`) prima di contare le copie; eliminare l'ultima copia (= eliminare il libro) è riservato all'admin (file copertina rimosso dopo il commit, istantanea completa nell'audit) |
-| ISBN creato in contemporanea da due persone | L'errore di unicità P2002 diventa la proposta "aggiungi una copia" |
-| Niente copie nuove o in arrivo in sedi archiviate | Servizio + policy |
-| Nome sede unico ignorando maiuscole e accenti | Colonna `nameKey @unique` calcolata dall'app |
-| Colore della sede unico (anche tra sedi archiviate) | Enum `LocationColor` + `@unique`; il servizio indica quale sede usa già il colore |
-| Sempre almeno un admin attivo | Servizio utenti: `pg_advisory_xact_lock` dedicato, poi conteggio degli admin attivi, nella stessa transazione della modifica |
-| Audit non modificabile | Ruolo DB `app` senza `UPDATE`/`DELETE` su `AuditLog`; le migrazioni usano il ruolo `migrator` |
-| Ogni modifica genera una riga di `AuditLog` nella stessa transazione | Helper `withAudit(tx, …)` usato da tutti i servizi |
-| Utenti mai cancellati fisicamente | Solo `active = false` (preserva audit e storico) |
-
-## Ricerca
-`searchText` è calcolato dall'app (NFD → rimozione diacritici → minuscolo) a ogni scrittura. La query normalizza l'input allo stesso modo e usa `ILIKE '%…%'` accelerato da un indice GIN `pg_trgm` dichiarato nello schema (estensione creata nella prima migrazione). Per qualche migliaio di libri è immediato e non richiede l'estensione `unaccent`. Paginazione a offset (24 per pagina), ordinamento per titolo.
-
-## Volumi di dati
-- Database: pochi MB.
-- Copertine WebP ricodificate (max 600 px di lato lungo): ~30–60 KB ciascuna → ~100–200 MB per 3000 libri.
+Indici per il catalogo: titolo senza maiuscole + `seq` (paginazione), copie per libro e sede, copie per
+sede. Ordine delle tabelle nel backup (dipendenze): `scripts/backup/lib.mjs`.

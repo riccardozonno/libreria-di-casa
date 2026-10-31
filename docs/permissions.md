@@ -1,6 +1,6 @@
 # Matrice dei permessi
 
-Applicata **solo lato server** dal modulo `src/server/policy.ts` (funzioni pure, testate una per una), chiamato da ogni Server Action e Route Handler prima di qualsiasi lettura o scrittura. L'interfaccia nasconde i pulsanti non permessi, ma è solo una comodità.
+Applicata **solo lato server** dalla funzione `can()` di `shared/policy.ts` (funzioni pure, testate una per una), chiamata dalle API del Worker (`worker/`) prima di qualsiasi lettura o scrittura. L'interfaccia nasconde i pulsanti non permessi, ma è solo una comodità.
 
 Legenda: ✅ sì · ❌ no · **S** = sede della copia · **S→T** = da sede S a sede T · "editor(S)" = editor assegnato alla sede S.
 
@@ -21,27 +21,37 @@ Legenda: ✅ sì · ❌ no · **S** = sede della copia · **S→T** = da sede S 
 | Creare sedi, cambiarne nome e colore, archiviarle, riattivarle | ✅ | ❌ | ❌ |
 | Export CSV (totale o per sede) | ✅ | ❌ | ❌ |
 | Import CSV (anche prova a secco) | ✅ | ❌ | ❌ |
-| Gestire utenti: crea, ruolo, sedi, disattiva, link invito/reset | ✅ | ❌ | ❌ |
+| Gestire utenti: crea, ruolo, sedi, disattiva/riattiva, esci da tutti i dispositivi per un altro utente, testo d'invito | ✅ | ❌ | ❌ |
 | Consultare il registro attività | ✅ | ❌ | ❌ |
-| Proprio profilo: cambio password, esci da tutti i dispositivi, 2FA | ✅ | ✅ | ✅ |
+| Proprio profilo: esci da tutti i dispositivi | ✅ | ✅ | ✅ |
 
 ## Regole aggiuntive
 
 | Regola | Effetto |
 |---|---|
 | Sede archiviata | Nessuno aggiunge copie o sposta copie **verso** di essa. Le copie che si trovano lì le modifica, elimina o sposta **fuori** solo l'admin; per gli editor sono in sola lettura. |
-| Utente disattivato | Login rifiutato, tutte le sessioni revocate subito. |
+| Utente disattivato | Tolto dal gruppo di Access (non riceve più il codice) e l'API lo rifiuta subito, anche con una sessione ancora aperta. |
 | Ultimo admin attivo | Non può essere disattivato né declassato (neanche da sé stesso). |
-| Cambio di ruolo o di sedi | Ha effetto alla richiesta successiva: ruolo e sedi si leggono dal DB a ogni richiesta, non dalla sessione. |
+| Cambio di ruolo o di sedi | Ha effetto alla richiesta successiva: ruolo e sedi si leggono da D1 a ogni richiesta, non dal token di Access. |
 | Editor senza sedi | Si comporta come lettore. |
 | Admin e sedi | L'admin non ha bisogno di assegnazioni: vale per tutte le sedi. |
-| 2FA (produzione) | Con `REQUIRE_ADMIN_2FA=true` un admin senza TOTP attivo può solo andare al profilo e attivarlo. |
+| Esci da tutti i dispositivi | Il Worker rifiuta i token di Access emessi prima di quel momento: serve un codice nuovo. |
+| Accesso | Nessuna password: Cloudflare Access manda un codice all'email; chi non è nel gruppo «Utenti HOME LIBRARY» non arriva all'app. |
 
 ## Registro attività
 
-Ogni operazione di scrittura qui sopra produce una riga di audit **nella stessa transazione**: `book.create`, `book.update`, `book.delete` (con istantanea completa), `copy.create`, `copy.update`, `copy.move`, `copy.delete`, `location.create|update|archive|restore`, `user.create|role_change|locations_change|deactivate|reactivate|invite_link|reset_link|2fa_reset`, `csv.import|export`, `reading.mark|unmark`.
+Ogni operazione di scrittura qui sopra produce una riga di audit **nello stesso batch D1** della modifica
+(scritta prima, con la stessa condizione): `book.create`, `book.update`, `book.delete` (con istantanea
+completa), `copy.create`, `copy.update`, `copy.move`, `copy.delete`,
+`location.create|update|archive|restore`,
+`user.create|role_change|locations_change|deactivate|reactivate|sign_out_everywhere`,
+`csv.import|export`, `reading.mark|unmark`.
 
-Gli eventi di autenticazione avvengono dentro Better Auth e si registrano nei suoi hook `after`, in una transazione separata: `auth.login`, `auth.login_failed`, `auth.lockout`, `auth.password_reset`, `auth.password_change`, `auth.logout_all`, `auth.2fa_enable|2fa_disable`.
+Gli accessi (codici inviati, login riusciti o falliti) li registra Cloudflare Access nei suoi log
+(Zero Trust → Logs → Access), non l'app.
 
 ## Test
-Una test-suite tabellare percorre **ogni riga × ogni ruolo × ogni caso di sede** (editor della sede giusta / sbagliata / di entrambe / sede archiviata) sia sulle funzioni della policy (unit) sia sulle Server Action reali contro un Postgres di test (integration). Gli E2E Playwright verificano i tre ruoli dall'interfaccia.
+Una test-suite tabellare percorre **ogni riga × ogni ruolo × ogni caso di sede** (editor della sede
+giusta / sbagliata / di entrambe / sede archiviata) sia sulla policy (`tests/unit/policy.test.ts`) sia
+sulle API reali nel runtime Workers con D1 (`tests/worker/`). Gli E2E Playwright verificano i tre ruoli
+dall'interfaccia (`tests/e2e/`).
