@@ -10,7 +10,7 @@ import { csvRoutes } from "./csv/routes";
 import { isbnRoutes } from "./isbn/routes";
 import { locationRoutes } from "./locations/routes";
 import { requester } from "./http";
-import { apiHeaders, sameOriginWrites } from "./security";
+import { apiHeaders, requestSizeLimit, sameOriginWrites } from "./security";
 import { userRoutes } from "./users/routes";
 import { signOutEverywhere } from "./users/service";
 
@@ -18,7 +18,7 @@ import { signOutEverywhere } from "./users/service";
 
 const app = new Hono<AppEnv>().basePath("/api");
 
-app.use("*", apiHeaders, sameOriginWrites, requireUser);
+app.use("*", apiHeaders, sameOriginWrites, requestSizeLimit, requireUser);
 
 app.get("/me", (c) => c.json(c.get("user")));
 app.post("/me/sign-out", async (c) => {

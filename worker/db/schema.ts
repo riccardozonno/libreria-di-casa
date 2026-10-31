@@ -86,7 +86,8 @@ export const book = sqliteTable(
   (table) => [
     uniqueIndex("book_id_unique").on(table.id),
     uniqueIndex("book_isbn13_unique").on(table.isbn13),
-    index("book_title_idx").on(table.title),
+    // Ordine del catalogo (titolo senza maiuscole/minuscole): con LIMIT il database legge solo la pagina.
+    index("book_title_nocase_idx").on(sql`${table.title} COLLATE NOCASE`, table.seq),
     check("book_source_check", inList("source", BOOK_SOURCES)),
     check("book_isbn13_check", sql`${table.isbn13} IS NULL OR (length(${table.isbn13}) = 13 AND ${table.isbn13} NOT GLOB '*[^0-9]*')`),
     check("book_authors_json", sql`json_valid(${table.authors}) AND json_type(${table.authors}) = 'array'`),
@@ -105,7 +106,8 @@ export const copy = sqliteTable(
     createdAt: createdAt(),
     updatedAt: updatedAt(),
   },
-  (table) => [index("copy_book_idx").on(table.bookId), index("copy_location_idx").on(table.locationId)],
+  // libro + sede: copie di un libro e filtro "libri con una copia in questa sede" con una sola ricerca.
+  (table) => [index("copy_book_location_idx").on(table.bookId, table.locationId), index("copy_location_idx").on(table.locationId)],
 );
 
 export const copyMovement = sqliteTable(

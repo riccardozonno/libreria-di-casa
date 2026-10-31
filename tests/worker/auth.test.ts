@@ -124,6 +124,28 @@ describe("difese dell'API", () => {
     expect((await callApi("/qualcosa", { method: "POST", origin: null, secFetchSite: "same-origin", token })).status).toBe(404);
   });
 
+  it("dati JSON troppo grandi: 413 prima di leggerli (proteggono il limite di CPU)", async () => {
+    await seedUser({ email: "admin@example.com", role: "ADMIN" });
+    const token = await tokenFor("admin@example.com");
+    const huge = { name: "x".repeat(300 * 1024), color: "ROSSO" };
+    const response = await callApi("/locations", { method: "POST", body: huge, token });
+    expect(response.status).toBe(413);
+    expect(await response.json()).toEqual({ error: "Richiesta troppo grande." });
+  });
+
+  it("formato della richiesta non previsto (es. testo semplice): 415", async () => {
+    await seedUser({ email: "admin@example.com", role: "ADMIN" });
+    const response = await callApi("/locations", { method: "POST", body: new TextEncoder().encode("ciao"), headers: { "Content-Type": "text/plain" }, token: await tokenFor("admin@example.com") });
+    expect(response.status).toBe(415);
+  });
+
+  it("file (foto) oltre i 3 MB: 413", async () => {
+    await seedUser({ email: "admin@example.com", role: "ADMIN" });
+    const token = await tokenFor("admin@example.com");
+    const response = await callApi("/books/qualsiasi/cover", { method: "PUT", body: new Uint8Array(3 * 1024 * 1024 + 1), token });
+    expect(response.status).toBe(413);
+  });
+
   it("rotta inesistente: 404 in JSON", async () => {
     await seedUser({ email: "anna@example.com" });
     const response = await callApi("/non-esiste", { token: await tokenFor("anna@example.com") });

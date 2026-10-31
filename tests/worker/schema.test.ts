@@ -80,3 +80,19 @@ describe("registro attività", () => {
     expect(await auditRows()).toBe(before);
   });
 });
+
+describe("piani di esecuzione (righe lette e CPU)", () => {
+  const plan = async (query: string) =>
+    (await env.DB.prepare(`EXPLAIN QUERY PLAN ${query}`).all<{ detail: string }>()).results.map((row) => row.detail).join(" | ");
+
+  it("il catalogo in ordine alfabetico usa un indice: legge solo i libri della pagina, senza ordinarli tutti", async () => {
+    const detail = await plan("SELECT b.id FROM book b ORDER BY b.title COLLATE NOCASE, b.seq LIMIT 25 OFFSET 0");
+    expect(detail).toContain("USING INDEX book_title_nocase_idx");
+    expect(detail).not.toContain("TEMP B-TREE FOR ORDER BY");
+  });
+
+  it("il filtro per sede controlla ogni libro con l'indice libro + sede", async () => {
+    const detail = await plan("SELECT b.id FROM book b WHERE EXISTS (SELECT 1 FROM copy c WHERE c.book_id = b.id AND c.location_id = 'x') ORDER BY b.title COLLATE NOCASE, b.seq LIMIT 25");
+    expect(detail).toContain("copy_book_location_idx");
+  });
+});
