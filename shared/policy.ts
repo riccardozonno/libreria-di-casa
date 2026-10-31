@@ -20,6 +20,7 @@ export type Action =
   | { type: "catalog.view" }
   | { type: "profile.manage" }
   | { type: "reading.mark"; targetUserId: string }
+  | { type: "reading.rate"; targetUserId: string }
   | { type: "isbn.lookup"; locations: readonly LocationRef[] }
   | { type: "copy.create"; location: LocationRef }
   | { type: "copy.update"; location: LocationRef }
@@ -51,6 +52,9 @@ export function can(actor: Actor, action: Action): boolean {
       return true;
     case "reading.mark":
       return action.targetUserId === actor.id || isAdmin(actor);
+    // Il voto è un'opinione: lo dà solo chi ha letto, anche se l'admin ha segnato «Letto» per lui.
+    case "reading.rate":
+      return action.targetUserId === actor.id;
     case "isbn.lookup":
       return isAdmin(actor) || action.locations.some((location) => edits(actor, location));
     case "copy.create":

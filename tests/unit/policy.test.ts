@@ -47,6 +47,22 @@ describe("letto da", () => {
   });
 });
 
+describe("voto", () => {
+  it.each([admin, editorCasa, reader])("$role può votare per sé", (a) => {
+    expect(can(a, { type: "reading.rate", targetUserId: a.id })).toBe(true);
+  });
+
+  it("nessuno vota al posto di un altro, nemmeno l'admin", () => {
+    expect(can(admin, { type: "reading.rate", targetUserId: "altro" })).toBe(false);
+    expect(can(editorCasa, { type: "reading.rate", targetUserId: "altro" })).toBe(false);
+    expect(can(reader, { type: "reading.rate", targetUserId: "altro" })).toBe(false);
+  });
+
+  it("un utente disattivato non vota", () => {
+    expect(can(inactiveAdmin, { type: "reading.rate", targetUserId: inactiveAdmin.id })).toBe(false);
+  });
+});
+
 describe("lookup ISBN", () => {
   it("admin sì", () => {
     expect(can(admin, { type: "isbn.lookup", locations: allLocations })).toBe(true);

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { bookDataSchema, copyDetailsSchema, isbnSchema, locationNameSchema, optionalIsbnSchema, parseAuthors } from "../../shared/schemas";
+import { bookDataSchema, copyDetailsSchema, isbnSchema, locationNameSchema, optionalIsbnSchema, parseAuthors, ratingSchema } from "../../shared/schemas";
 
 describe("schemi di validazione", () => {
   it("isbnSchema normalizza e rifiuta ISBN non validi", () => {
@@ -64,5 +64,19 @@ describe("anno di pubblicazione", () => {
     expect(bookDataSchema.parse({ title: "X", publishedYear: null }).publishedYear).toBeNull();
     expect(bookDataSchema.parse({ title: "X", publishedYear: "" }).publishedYear).toBeNull();
     expect(bookDataSchema.parse({ title: "X" }).publishedYear).toBeNull();
+  });
+});
+
+describe("voto", () => {
+  it.each([1, 2, 3, 4, 5])("accetta %i stelle", (rating) => {
+    expect(ratingSchema.parse({ rating })).toEqual({ rating });
+  });
+
+  it("null toglie il voto", () => {
+    expect(ratingSchema.parse({ rating: null })).toEqual({ rating: null });
+  });
+
+  it.each([0, 6, 2.5, "4", undefined])("rifiuta %s", (rating) => {
+    expect(ratingSchema.safeParse({ rating }).success).toBe(false);
   });
 });

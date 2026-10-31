@@ -125,6 +125,13 @@ export const moveCopySchema = z.object({ toLocationId: idSchema });
 export type NewBookInput = z.infer<typeof newBookSchema>;
 export type AddCopyInput = z.infer<typeof addCopySchema>;
 
+/** Voto di chi ha letto: da 1 a 5 stelle, `null` lo toglie. */
+export const ratingSchema = z.object({
+  rating: z.number({ error: "Voto non valido" }).int("Voto non valido").min(1, "Voto non valido").max(5, "Voto non valido").nullable(),
+});
+
+export type RatingInput = z.infer<typeof ratingSchema>;
+
 export const ROLES = ["ADMIN", "EDITOR", "READER"] as const;
 
 export const userInputSchema = z.object({
