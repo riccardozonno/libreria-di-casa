@@ -23,3 +23,6 @@ Tutte le richieste sono andate a buon fine. Il costo del primo avvio è il lavor
 
 ## Pulizia
 Risorse della prova di fase 1 cancellate (Worker, D1, bucket) e cartella `spike/` rimossa. Resta da togliere a mano l'applicazione Access `homelibrary-spike`.
+
+## Ricontrollo in fase 5 (31/10/2026, app completa, 30 richieste da iPhone)
+Tutte le richieste riuscite. A regime 1–5 ms per ogni operazione (catalogo 2–4, scheda 2–3, copertine 1–3, export CSV 5, ricerca ISBN 5). Sopra i 10 ms solo le richieste che hanno avviato un'istanza nuova (`/api/me` 12–13 ms, scheda 11 ms) e un salvataggio di libro con download della copertina (17 ms). Con poco traffico Cloudflare chiude le istanze dopo circa mezzo minuto di pausa, quindi i primi avvii sono frequenti. Il pacchetto del Worker è dominato da zod (≈ 360 KB di sorgente su ≈ 710), seguito da drizzle (≈ 175 KB).
