@@ -8,7 +8,7 @@ export type CsvColumn = (typeof CSV_HEADER)[number];
 const REQUIRED_COLUMNS: readonly CsvColumn[] = ["titolo", "sede"];
 const AUTHORS_SEPARATOR = " | ";
 export const MAX_IMPORT_ROWS = 10_000;
-const BOM = "﻿";
+const BOM = "\uFEFF";
 
 export interface ExportRow {
   isbn13: string | null;
@@ -51,11 +51,11 @@ export function splitAuthors(raw: string): string[] {
 }
 
 function normalizeHeader(header: string): string {
-  return header.replace(/^﻿/, "").trim().toLowerCase();
+  return header.replace(/^\uFEFF/, "").trim().toLowerCase();
 }
 
 export function parseCsv(text: string): { rows: CsvRow[]; errors: CsvError[] } {
-  const parsed = Papa.parse<string[]>(text.replace(/^﻿/, ""), {
+  const parsed = Papa.parse<string[]>(text.replace(/^\uFEFF/, ""), {
     delimitersToGuess: [";", ","],
     skipEmptyLines: "greedy",
   });

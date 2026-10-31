@@ -60,6 +60,41 @@ test.describe("amministratore", () => {
     await expect(page.getByText(/ha creato una sede/).first()).toBeVisible();
   });
 
+  test("CSV: scarica il catalogo, controlla un file con errori, poi lo importa corretto", async ({ page }) => {
+    const titolo = `Importato ${unique()}`;
+    await page.goto("/admin/csv");
+
+    const download = page.waitForEvent("download");
+    await page.getByRole("button", { name: "Scarica catalogo completo" }).click();
+    expect((await download).suggestedFilename()).toMatch(/^catalogo-completo-\d{4}-\d{2}-\d{2}\.csv$/);
+
+    const header = "isbn;titolo;autori;anno;descrizione;sede;collocazione;note";
+    const withError = `${header}\n;${titolo};Autrice A | Autore B;1999;;Sede che non esiste;;\n`;
+    await page.getByLabel("File CSV").setInputFiles({ name: "libri.csv", mimeType: "text/csv", buffer: Buffer.from(withError) });
+    await page.getByRole("button", { name: "Controlla il file" }).click();
+    await expect(page.getByText('Riga 2: Sede "Sede che non esiste" inesistente')).toBeVisible();
+    await expect(page.getByRole("button", { name: "Importa" })).toBeDisabled();
+
+    const fixed = `${header}\n;${titolo};Autrice A | Autore B;1999;;${EDITOR_LOCATION.name};Scaffale 3;\n`;
+    await page.getByLabel("File CSV").setInputFiles({ name: "libri.csv", mimeType: "text/csv", buffer: Buffer.from(fixed) });
+    await page.getByRole("button", { name: "Controlla il file" }).click();
+    await expect(page.getByText(/1 righe · 1 libri nuovi · 1 copie/)).toBeVisible();
+    await page.getByRole("button", { name: "Importa" }).click();
+    await expect(page.getByText("Import completato: 1 libri nuovi · 1 copie")).toBeVisible();
+
+    await page.goto(`/?q=${encodeURIComponent(titolo)}`);
+    await expect(page.getByRole("link", { name: new RegExp(titolo) })).toBeVisible();
+  });
+
+  test("nessuna pagina scorre di lato sul telefono", async ({ page }) => {
+    for (const path of ["/", "/aggiungi", "/sedi", "/profilo", "/admin", "/admin/utenti", "/admin/registro", "/admin/csv"]) {
+      await page.goto(path);
+      await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+      const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+      expect(overflow, `pagina ${path}`).toBeLessThanOrEqual(0);
+    }
+  });
+
   test("aggiunge una persona e riceve il messaggio d'invito da mandarle (l'app non spedisce email)", async ({ page }) => {
     const email = `nuova-${unique()}@e2e.test`;
     await page.goto("/admin/utenti");

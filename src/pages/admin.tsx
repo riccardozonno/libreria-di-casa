@@ -8,6 +8,7 @@ import { NotFoundPage } from "./not-found";
 const SECTIONS = [
   { to: "/admin/utenti", title: "Utenti", description: "Chi può entrare, ruoli e sedi" },
   { to: "/admin/registro", title: "Registro attività", description: "Chi ha fatto cosa, e quando" },
+  { to: "/admin/csv", title: "Import ed export CSV", description: "Scarica il catalogo o carica molti libri insieme" },
 ];
 
 export function AdminPage() {
