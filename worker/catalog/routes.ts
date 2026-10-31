@@ -6,7 +6,8 @@ import { readBody, requester, validate } from "../http";
 import { downloadCover, isAllowedCoverUrl, upgradeToHttps } from "../covers/download";
 import { detectImageType, MAX_COVER_BYTES } from "../covers/images";
 import { removeCover, storeCover } from "../covers/storage";
-import { DomainError } from "../errors";
+import { can } from "../../shared/policy";
+import { DomainError, forbidden } from "../errors";
 import { addCopy, assertCanCreateIn, createBookWithCopy, deleteCopy, moveCopy, setBookCover, updateBook, updateCopy } from "./mutations";
 import { getBookDetail, listBooks } from "./queries";
 import { setReading } from "./readings";
@@ -66,6 +67,8 @@ export const bookRoutes = new Hono<AppEnv>()
     }
   })
   .put("/:id/cover", async (c) => {
+    // Permesso prima di leggere o salvare qualunque byte (la copertina è un dato bibliografico: solo admin).
+    if (!can(requester(c).actor, { type: "book.update" })) throw forbidden();
     const declared = Number(c.req.header("Content-Length") ?? "0");
     if (declared > MAX_COVER_BYTES) throw new DomainError("VALIDATION", "La foto è troppo grande (massimo 2 MB).");
     const bytes = new Uint8Array(await c.req.arrayBuffer());

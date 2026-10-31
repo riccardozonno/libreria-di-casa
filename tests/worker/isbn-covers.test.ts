@@ -148,6 +148,22 @@ describe("copertine", () => {
     expect(await env.DB.prepare("SELECT count(*) AS n FROM book WHERE title = 'Falso'").first<{ n: number }>()).toEqual({ n: 0 });
   });
 
+  it("chi non può cambiare la copertina viene fermato prima che la foto venga scritta su R2", async () => {
+    const { bookId } = (await (await editor.call("/books", { method: "POST", body: { book: { title: "X" }, source: "MANUAL", locationId: casa.id } })).json()) as { bookId: string };
+    const writes: string[] = [];
+    const realPut = env.COVERS.put.bind(env.COVERS);
+    env.COVERS.put = (async (...args: Parameters<R2Bucket["put"]>) => {
+      writes.push(String(args[0]));
+      return realPut(...args);
+    }) as R2Bucket["put"];
+    try {
+      expect((await editor.call(`/books/${bookId}/cover`, { method: "PUT", body: JPEG })).status).toBe(403);
+    } finally {
+      env.COVERS.put = realPut;
+    }
+    expect(writes).toEqual([]);
+  });
+
   it("copertina inesistente o nome non valido: 404", async () => {
     expect((await reader.call("/covers/00000000-0000-4000-8000-000000000000")).status).toBe(404);
     expect((await reader.call("/covers/..%2Fsegreto")).status).toBe(404);
