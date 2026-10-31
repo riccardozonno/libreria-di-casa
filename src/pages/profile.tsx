@@ -1,5 +1,6 @@
 import { useState } from "react";
-import { Button, Notice, PageHeader, Section } from "../components/ui";
+import { Link } from "react-router";
+import { Button, buttonClasses, Notice, PageHeader, Section } from "../components/ui";
 import { errorMessage, send } from "../lib/api";
 import { leaveAccess, useSession } from "../lib/session";
 
@@ -32,6 +33,12 @@ export function ProfilePage() {
         <p className="mt-1 text-[15px] text-ink-soft">{me.email}</p>
         <p className="mt-1 text-[15px] text-ink-soft">{ROLE_LABELS[me.role]}</p>
       </div>
+
+      <Section title="App">
+        <Link to="/installa" className={buttonClasses("secondary", "w-full")}>
+          Installa l&apos;app sulla schermata Home
+        </Link>
+      </Section>
 
       <Section title="Accesso">
         <div className="space-y-3 rounded-[var(--radius-lg)] bg-surface px-4 py-4 shadow-[var(--shadow-card)]">

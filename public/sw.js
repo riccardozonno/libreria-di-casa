@@ -1,12 +1,13 @@
 /* global self, caches, fetch, URL */
 // Service worker di HOME LIBRARY (docs/architecture.md).
-// Mette in cache SOLO asset statici immutabili (JS/CSS con hash, icone, WASM dello scanner).
-// Mai pagine HTML, dati, copertine o API: i dati restano sempre online e protetti dalla sessione.
-// Senza rete, le navigazioni mostrano /offline.html.
+// Mette in cache SOLO asset statici immutabili (JS/CSS di Vite con hash in /assets, icone, WASM dello scanner).
+// Mai pagine HTML, dati, copertine o API: i dati restano sempre online e dietro Cloudflare Access.
+// Senza rete, le navigazioni mostrano la pagina offline (public/offline.html, servita come /offline:
+// Workers Assets toglie ".html" con un rinvio, e una risposta rinviata non si può dare a una navigazione).
 
-const CACHE = "home-library-static-v1";
-const OFFLINE_URL = "/offline.html";
-const PRECACHE = [OFFLINE_URL, "/icons/icon-192.png"];
+const CACHE = "home-library-static-v2";
+const OFFLINE_URL = "/offline";
+const PRECACHE = [OFFLINE_URL, "/offline.css", "/icons/icon-192.png"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(PRECACHE)).then(() => self.skipWaiting()));
@@ -22,7 +23,7 @@ self.addEventListener("activate", (event) => {
 });
 
 function isImmutableAsset(url) {
-  return url.origin === self.location.origin && (url.pathname.startsWith("/_next/static/") || url.pathname.startsWith("/icons/") || url.pathname.startsWith("/vendor/"));
+  return url.origin === self.location.origin && ["/assets/", "/icons/", "/vendor/"].some((prefix) => url.pathname.startsWith(prefix));
 }
 
 self.addEventListener("fetch", (event) => {

@@ -1,0 +1,9 @@
+/* Pagina offline (servita dal service worker): stile minimo, nessun file esterno. */
+:root { color-scheme: light dark; --paper: #f7f4ee; --ink: #1b2236; --soft: #4a5268; --accent: #22305a; --accent-ink: #fff; }
+@media (prefers-color-scheme: dark) { :root { --paper: #0f1424; --ink: #eef0f6; --soft: #b9bfd0; --accent: #a9bcf5; --accent-ink: #0f1424; } }
+body { margin: 0; min-height: 100dvh; display: grid; place-items: center; background: var(--paper); color: var(--ink); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+main { max-width: 22rem; padding: 2rem 1.25rem; text-align: center; }
+img { border-radius: 16px; }
+h1 { font-family: ui-serif, "New York", Georgia, serif; font-size: 1.75rem; margin: 1rem 0 0.5rem; }
+p { color: var(--soft); line-height: 1.5; }
+a { display: inline-block; margin-top: 0.5rem; padding: 0.7rem 1.4rem; border-radius: 14px; background: var(--accent); color: var(--accent-ink); font-weight: 600; text-decoration: none; }

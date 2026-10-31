@@ -87,7 +87,7 @@ test.describe("amministratore", () => {
   });
 
   test("nessuna pagina scorre di lato sul telefono", async ({ page }) => {
-    for (const path of ["/", "/aggiungi", "/sedi", "/profilo", "/admin", "/admin/utenti", "/admin/registro", "/admin/csv"]) {
+    for (const path of ["/", "/aggiungi", "/sedi", "/profilo", "/installa", "/admin", "/admin/utenti", "/admin/registro", "/admin/csv"]) {
       await page.goto(path);
       await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
@@ -146,4 +146,28 @@ test("i file statici hanno le intestazioni di sicurezza", async ({ request }) =>
   const response = await request.get("/");
   expect(response.headers()["content-security-policy"]).toContain("frame-ancestors 'none'");
   expect(response.headers()["x-content-type-options"]).toBe("nosniff");
+});
+
+test.describe("app installabile", () => {
+  test.use(asUser("reader"));
+
+  test("il service worker si registra e, senza rete, si vede la pagina offline", async ({ page, context, browserName }) => {
+    test.skip(browserName === "webkit", "Playwright non gestisce i service worker su WebKit");
+    await page.goto("/");
+    await page.evaluate(async () => {
+      await navigator.serviceWorker.ready;
+    });
+    await page.reload();
+    await context.setOffline(true);
+    await page.goto("/sedi").catch(() => undefined);
+    await expect(page.getByRole("heading", { name: "Sei offline" })).toBeVisible();
+    await context.setOffline(false);
+  });
+
+  test("dal profilo si arriva alle istruzioni d'installazione", async ({ page }) => {
+    await page.goto("/profilo");
+    await page.getByRole("link", { name: "Installa l'app sulla schermata Home" }).click();
+    await expect(page.getByRole("heading", { name: "Installa l'app" })).toBeVisible();
+    await expect(page.getByText("Aggiungi alla schermata Home").first()).toBeVisible();
+  });
 });

@@ -8,6 +8,7 @@ import { AuditPage } from "./pages/audit";
 import { BookPage } from "./pages/book";
 import { CatalogPage } from "./pages/catalog";
 import { CsvPage } from "./pages/csv";
+import { InstallPage } from "./pages/install";
 import { LocationsPage } from "./pages/locations";
 import { NotFoundPage } from "./pages/not-found";
 import { ProfilePage } from "./pages/profile";
@@ -33,6 +34,7 @@ const router = createBrowserRouter([
       { path: "/admin/registro", element: <AdminOnly><AuditPage /></AdminOnly> },
       { path: "/admin/csv", element: <AdminOnly><CsvPage /></AdminOnly> },
       { path: "/profilo", element: <ProfilePage /> },
+      { path: "/installa", element: <InstallPage /> },
       { path: "*", element: <NotFoundPage /> },
     ],
   },
