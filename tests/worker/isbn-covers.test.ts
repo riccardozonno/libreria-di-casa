@@ -68,6 +68,29 @@ describe("ricerca ISBN", () => {
   });
 });
 
+describe("anteprima della copertina trovata", () => {
+  const preview = (url: string) => `/isbn/cover?url=${encodeURIComponent(url)}`;
+
+  it("chi può aggiungere libri la vede passando dall'app (immagine verificata, nosniff)", async () => {
+    const response = await editor.call(preview("http://books.google.com/books/content?id=x&zoom=1"));
+    expect(response.status).toBe(200);
+    expect(response.headers.get("Content-Type")).toBe("image/jpeg");
+    expect(response.headers.get("X-Content-Type-Options")).toBe("nosniff");
+    expect(new Uint8Array(await response.arrayBuffer())).toEqual(JPEG);
+  });
+
+  it("host non consentiti: 400 senza scaricare nulla; il lettore: 403", async () => {
+    expect((await editor.call(preview("https://sito-malevolo.example/x.jpg"))).status).toBe(400);
+    expect(externalCalls.some((url) => url.includes("sito-malevolo"))).toBe(false);
+    expect((await reader.call(preview("http://books.google.com/books/content?id=x"))).status).toBe(403);
+  });
+
+  it("se l'immagine non c'è o non è valida: 404", async () => {
+    mockExternal(() => new Response("<html>", { headers: { "content-type": "image/jpeg" } }));
+    expect((await editor.call(preview("https://covers.openlibrary.org/b/id/1-L.jpg"))).status).toBe(404);
+  });
+});
+
 describe("copertine", () => {
   const coverKeyOf = async (bookId: string) => (await env.DB.prepare("SELECT cover_key FROM book WHERE id = ?").bind(bookId).first<{ cover_key: string | null }>())?.cover_key;
 

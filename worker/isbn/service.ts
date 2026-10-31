@@ -15,10 +15,15 @@ export interface IsbnLookupResult {
   existingBookId: string | null;
 }
 
-export async function findIsbn(db: Db, who: Requester, rawIsbn: string, deps: LookupDeps): Promise<IsbnLookupResult> {
+/** Ricerca ISBN e anteprima della copertina: chi può aggiungere libri in almeno una sede attiva. */
+export async function assertCanLookup(db: Db, who: Requester): Promise<void> {
   const locations = await db.all<{ id: string; archived_at: string | null }>(sql`SELECT id, archived_at FROM location`);
   const refs = locations.map((row) => ({ id: row.id, archived: row.archived_at !== null }));
   if (!can(who.actor, { type: "isbn.lookup", locations: refs })) throw forbidden();
+}
+
+export async function findIsbn(db: Db, who: Requester, rawIsbn: string, deps: LookupDeps): Promise<IsbnLookupResult> {
+  await assertCanLookup(db, who);
   const isbn13 = normalizeIsbn(rawIsbn);
   if (!isbn13) throw new DomainError("VALIDATION", "ISBN non valido.");
 

@@ -82,12 +82,16 @@ export function BookForm({ initial, locations, onCancel, onExisting }: BookFormP
   return (
     <form action={action} className="flex flex-col gap-4" noValidate>
       <div className="flex items-center gap-4">
-        {photo ? (
-          <img src={photo.previewUrl} alt="Anteprima della copertina" width={80} height={120} className="h-[120px] w-20 rounded-[8px] object-cover shadow-[var(--shadow-card)]" />
+        {photo || initial.coverUrl ? (
+          <img
+            src={photo ? photo.previewUrl : `/api/isbn/cover?url=${encodeURIComponent(initial.coverUrl ?? "")}`}
+            alt="Anteprima della copertina"
+            width={80}
+            height={120}
+            className="h-[120px] w-20 rounded-[8px] bg-sunken object-cover shadow-[var(--shadow-card)]"
+          />
         ) : (
-          <div className="flex h-[120px] w-20 items-center justify-center rounded-[8px] bg-sunken px-1 text-center text-[12px] text-ink-faint">
-            {initial.coverUrl ? "Copertina trovata" : "Senza copertina"}
-          </div>
+          <div className="flex h-[120px] w-20 items-center justify-center rounded-[8px] bg-sunken px-1 text-center text-[12px] text-ink-faint">Senza copertina</div>
         )}
         <label className="inline-flex min-h-11 cursor-pointer items-center rounded-[var(--radius-md)] border border-line bg-surface px-4 text-[15px] font-semibold has-[:focus-visible]:outline has-[:focus-visible]:outline-3 has-[:focus-visible]:outline-[var(--focus)]">
           {photo ? "Cambia foto" : "Fotografa la copertina"}
