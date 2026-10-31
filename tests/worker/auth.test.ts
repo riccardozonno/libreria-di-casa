@@ -146,6 +146,27 @@ describe("difese dell'API", () => {
     expect(response.status).toBe(413);
   });
 
+  it("limite di frequenza per persona: oltre il limite 429, separato per scritture e ricerche ISBN", async () => {
+    await seedUser({ email: "admin@example.com", role: "ADMIN" });
+    const token = await tokenFor("admin@example.com");
+    const keys: Record<string, string[]> = { WRITE_LIMITER: [], LOOKUP_LIMITER: [], CSV_LIMITER: [] };
+    const limiter = (name: string, success: boolean) => ({ limit: async ({ key }: { key: string }) => (keys[name]?.push(key), { success }) });
+    const env = { WRITE_LIMITER: limiter("WRITE_LIMITER", false), LOOKUP_LIMITER: limiter("LOOKUP_LIMITER", false), CSV_LIMITER: limiter("CSV_LIMITER", true) } as never;
+
+    const write = await callApi("/locations", { method: "POST", body: { name: "X", color: "ROSSO" }, token, env });
+    expect(write.status).toBe(429);
+    expect(await write.json()).toEqual({ error: "Troppe richieste: aspetta un minuto e riprova." });
+    expect((await callApi("/isbn/9788804668237", { token, env })).status).toBe(429);
+    expect((await callApi("/me", { token, env })).status).toBe(200);
+    expect(keys.WRITE_LIMITER).toEqual([expect.any(String)]);
+    expect(keys.LOOKUP_LIMITER).toHaveLength(1);
+
+    // L'import CSV ha un suo limite, più alto: un import grande non si ferma per il limite delle scritture.
+    const csv = await callApi("/csv/existing", { method: "POST", body: { isbns: [] }, token, env });
+    expect(csv.status).toBe(200);
+    expect(keys.CSV_LIMITER).toHaveLength(1);
+  });
+
   it("rotta inesistente: 404 in JSON", async () => {
     await seedUser({ email: "anna@example.com" });
     const response = await callApi("/non-esiste", { token: await tokenFor("anna@example.com") });

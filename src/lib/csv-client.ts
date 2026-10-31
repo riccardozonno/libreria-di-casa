@@ -3,7 +3,7 @@ import { type DuplicateMode, type ImportPlan, planImport } from "../../shared/cs
 import { EXISTING_MAX_ISBNS, IMPORT_CHUNK_SIZE, type ImportChunkResult } from "../../shared/csv/transport";
 import { normalizeIsbn } from "../../shared/isbn";
 import { locationNameKey } from "../../shared/text";
-import { api, send } from "./api";
+import { ApiError, api, send } from "./api";
 import type { LocationSummary } from "./locations";
 
 // Il CSV si legge e si scrive sul telefono; il server riceve solo dati già controllati, a blocchi.
@@ -54,6 +54,21 @@ export interface ImportTotals {
   missing: number[];
 }
 
+const RATE_LIMIT_WAIT_MS = 15_000;
+const MAX_RATE_LIMIT_RETRIES = 4;
+
+/** Un blocco: se si raggiunge il limite di frequenza (429) aspetta e riprova lo stesso blocco. */
+async function sendChunk(operations: unknown[]): Promise<ImportChunkResult> {
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      return await send<ImportChunkResult>("/csv/import", "POST", { operations });
+    } catch (error) {
+      if (!(error instanceof ApiError) || error.status !== 429 || attempt >= MAX_RATE_LIMIT_RETRIES) throw error;
+      await new Promise((resolve) => setTimeout(resolve, RATE_LIMIT_WAIT_MS));
+    }
+  }
+}
+
 /** Import vero, a blocchi in sequenza; `onProgress` riceve le righe completate. */
 export async function applyImport(plan: ImportPlan, onProgress: (done: number) => void): Promise<ImportTotals> {
   const totals: ImportTotals = { newBooks: 0, newCopies: 0, missing: [] };
@@ -63,7 +78,7 @@ export async function applyImport(plan: ImportPlan, onProgress: (done: number) =
         ? { line: operation.line, kind: operation.kind, book: operation.book, locationId: operation.locationId, copy: operation.copy }
         : { line: operation.line, kind: operation.kind, isbn13: operation.isbn13, locationId: operation.locationId, copy: operation.copy },
     );
-    const result = await send<ImportChunkResult>("/csv/import", "POST", { operations });
+    const result = await sendChunk(operations);
     totals.newBooks += result.newBooks;
     totals.newCopies += result.newCopies;
     totals.missing.push(...result.missing);

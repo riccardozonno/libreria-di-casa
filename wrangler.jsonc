@@ -19,6 +19,12 @@
     }
   ],
   "r2_buckets": [{ "binding": "COVERS", "bucket_name": "homelibrary-covers" }],
+  // Limiti di frequenza per persona (worker/rate-limit.ts). namespace_id: numeri scelti da noi, unici nell'account.
+  "ratelimits": [
+    { "name": "WRITE_LIMITER", "namespace_id": "4101", "simple": { "limit": 60, "period": 60 } },
+    { "name": "LOOKUP_LIMITER", "namespace_id": "4102", "simple": { "limit": 30, "period": 60 } },
+    { "name": "CSV_LIMITER", "namespace_id": "4103", "simple": { "limit": 600, "period": 60 } }
+  ],
   // Non segreti. Access vuoto = l'API rifiuta tutto (fail closed).
   // I segreti (chiave Google Books, token Access) si impostano con `wrangler secret put`.
   "vars": {
