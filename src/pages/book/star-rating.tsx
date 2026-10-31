@@ -1,8 +1,9 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Notice } from "../../components/ui";
 import { errorMessage, send } from "../../lib/api";
 
 // Voto del lettore: 5 pulsanti grandi (44 px). Toccare la stella già scelta toglie il voto.
+// Durante l'invio aria-disabled e non disabled: un pulsante disattivato perde il focus.
 
 const STARS = [1, 2, 3, 4, 5] as const;
 
@@ -27,8 +28,12 @@ export function starLabel(rating: number): string {
 export function StarRating({ bookId, userId, rating, onChanged }: { bookId: string; userId: string; rating: number | null; onChanged: () => void }) {
   const [isBusy, setIsBusy] = useState(false);
   const [error, setError] = useState("");
+  // Blocca il doppio tocco prima che React aggiorni lo stato.
+  const sending = useRef(false);
 
   async function choose(star: number) {
+    if (sending.current) return;
+    sending.current = true;
     setIsBusy(true);
     setError("");
     try {
@@ -37,6 +42,7 @@ export function StarRating({ bookId, userId, rating, onChanged }: { bookId: stri
     } catch (caught) {
       setError(errorMessage(caught));
     } finally {
+      sending.current = false;
       setIsBusy(false);
     }
   }
@@ -50,9 +56,9 @@ export function StarRating({ bookId, userId, rating, onChanged }: { bookId: stri
             type="button"
             aria-label={starLabel(star)}
             aria-pressed={star === rating}
-            disabled={isBusy}
+            aria-disabled={isBusy}
             onClick={() => void choose(star)}
-            className="-mx-0.5 flex size-11 items-center justify-center rounded-full text-star disabled:opacity-60 active:scale-95"
+            className="-mx-0.5 flex size-11 items-center justify-center rounded-full text-star aria-disabled:opacity-60 active:scale-95"
           >
             <StarIcon filled={rating !== null && star <= rating} className="size-7" />
           </button>

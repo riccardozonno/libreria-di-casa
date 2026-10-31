@@ -146,9 +146,10 @@ export function BookPage() {
               <li key={reading.userId} className="flex items-center gap-1 rounded-full bg-success-soft px-3 py-1.5 text-[14px] font-medium text-success">
                 {reading.name}
                 {reading.rating !== null && (
-                  <span className="flex items-center gap-0.5 text-ink-soft" aria-label={starLabel(reading.rating)}>
-                    · {reading.rating}
+                  <span className="flex items-center gap-0.5 text-ink-soft">
+                    <span aria-hidden="true">· {reading.rating}</span>
                     <StarIcon filled className="size-3.5 text-star" />
+                    <span className="sr-only">, {starLabel(reading.rating)}</span>
                   </span>
                 )}
               </li>
