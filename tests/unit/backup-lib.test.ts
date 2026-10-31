@@ -1,6 +1,6 @@
 import { getTableConfig, type SQLiteTable } from "drizzle-orm/sqlite-core";
 import { describe, expect, it } from "vitest";
-import { BACKUP_TABLES, compareCounts, countsQuery, evaluateHealth, exportArgs, isWeeklyCheckDay, RETENTION_ARGS } from "../../scripts/backup/lib.mjs";
+import { BACKUP_TABLES, compareCounts, countsQuery, dataFileName, evaluateHealth, isWeeklyCheckDay, RETENTION_ARGS, tableExportArgs } from "../../scripts/backup/lib.mjs";
 import * as schema from "../../worker/db/schema";
 
 // Regole del backup (ADR-0014, fase 6): cosa si salva, in che ordine, quanto si conserva, come si verifica.
@@ -26,14 +26,18 @@ describe("tabelle salvate", () => {
 });
 
 describe("comandi", () => {
-  it("export dei soli dati, tabella per tabella (l'export completo non funziona con FTS5)", () => {
-    expect(exportArgs({ remote: true, output: "/tmp/dati.sql" })).toEqual([
-      "d1", "export", "DB", "--remote", "--no-schema",
-      ...BACKUP_TABLES.flatMap((table: string) => ["--table", table]),
-      "--output", "/tmp/dati.sql",
+  it("export dei soli dati, una tabella alla volta: wrangler le scriverebbe in ordine alfabetico", () => {
+    expect(tableExportArgs({ remote: true, table: "copy", output: "/tmp/04-copy.sql" })).toEqual([
+      "d1", "export", "DB", "--remote", "--no-schema", "--table", "copy", "--output", "/tmp/04-copy.sql",
     ]);
     // In locale wrangler esporta solo dal database di sviluppo standard (.wrangler/state).
-    expect(exportArgs({ remote: false, output: "x.sql" })).toContain("--local");
+    expect(tableExportArgs({ remote: false, table: "user", output: "x.sql" })).toContain("--local");
+  });
+
+  it("i file dei dati sono numerati nell'ordine delle dipendenze, così il ripristino li carica in quell'ordine", () => {
+    expect(dataFileName("user")).toBe("01-user.sql");
+    expect(dataFileName("isbn_cache")).toBe("09-isbn_cache.sql");
+    expect(BACKUP_TABLES.map(dataFileName)).toEqual([...BACKUP_TABLES.map(dataFileName)].sort());
   });
 
   it("conservazione 7 giornalieri, 4 settimanali, 6 mensili", () => {

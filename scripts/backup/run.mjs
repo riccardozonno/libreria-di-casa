@@ -10,10 +10,13 @@ import { cpSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } fr
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { parseArgs } from "node:util";
-import { countsQuery, exportArgs, isWeeklyCheckDay, RETENTION_ARGS } from "./lib.mjs";
+import { BACKUP_TABLES, countsQuery, dataFileName, isWeeklyCheckDay, RETENTION_ARGS, tableExportArgs } from "./lib.mjs";
 import { d1Query, log, restic, run, wrangler } from "./shell.mjs";
 
 const COVERS_BUCKET = "homelibrary-covers";
+
+// Sempre dalla radice del progetto (migrations/, wrangler.jsonc), da qualunque cartella si lanci.
+process.chdir(path.resolve(import.meta.dirname, "../.."));
 
 const { values } = parseArgs({ options: { remote: { type: "boolean", default: false }, local: { type: "boolean", default: false } } });
 if (values.remote === values.local) throw new Error("Indica --remote oppure --local.");
@@ -23,9 +26,14 @@ const target = { database: "DB", remote: values.remote };
 const work = process.env.BACKUP_WORK_DIR ?? mkdtempSync(path.join(tmpdir(), "homelibrary-backup-"));
 rmSync(work, { recursive: true, force: true });
 mkdirSync(path.join(work, "covers"), { recursive: true });
+mkdirSync(path.join(work, "data"), { recursive: true });
+// I dati estratti sono in chiaro: si cancellano anche se qualcosa va storto a metà.
+process.on("exit", () => rmSync(work, { recursive: true, force: true }));
 
-log("1/5 Export dei dati D1, tabella per tabella");
-wrangler(exportArgs({ remote: target.remote, output: path.join(work, "data.sql") }));
+log("1/5 Export dei dati D1, una tabella alla volta nell'ordine delle dipendenze");
+for (const table of BACKUP_TABLES) {
+  wrangler(tableExportArgs({ remote: target.remote, table, output: path.join(work, "data", dataFileName(table)) }));
+}
 
 log("2/5 Conteggi per la verifica del ripristino");
 const counts = d1Query(countsQuery(), target)[0];

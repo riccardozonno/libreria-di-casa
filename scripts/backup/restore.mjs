@@ -13,6 +13,9 @@ import { parseArgs } from "node:util";
 import { compareCounts, countsQuery } from "./lib.mjs";
 import { d1Query, log, restic, run, wrangler } from "./shell.mjs";
 
+// Sempre dalla radice del progetto, da qualunque cartella si lanci.
+process.chdir(path.resolve(import.meta.dirname, "../.."));
+
 const { values } = parseArgs({
   options: {
     remote: { type: "boolean", default: false },
@@ -75,6 +78,8 @@ function writeTargetConfig(migrationsDir) {
 log(`1/6 Estraggo lo snapshot "${values.snapshot}" (nessuna modifica ai dati)`);
 rmSync(work, { recursive: true, force: true });
 mkdirSync(work, { recursive: true });
+// I dati estratti sono in chiaro: si cancellano anche se qualcosa va storto a metà.
+process.on("exit", () => rmSync(work, { recursive: true, force: true }));
 restic(["restore", values.snapshot, "--target", work]);
 const manifestFile = findFile(work, "manifest.json");
 if (!manifestFile) throw new Error("Lo snapshot non contiene manifest.json: non è un backup di HOME LIBRARY.");
@@ -100,7 +105,13 @@ if (!values.yes) {
 
 log("4/6 Schema (migrazioni del backup) e dati");
 wrangler(["d1", "migrations", "apply", "DB", ...where, "--config", config]);
-wrangler(["d1", "execute", "DB", ...where, "--config", config, "--file", path.join(root, "data.sql"), "--yes"]);
+// Una tabella alla volta, nell'ordine dei file (dipendenze): online D1 importa a pezzi.
+const dataDir = path.join(root, "data");
+if (!existsSync(dataDir)) throw new Error("Backup senza la cartella data/ (formato precedente al 31/10/2026): rifai il backup.");
+for (const file of readdirSync(dataDir).filter((name) => name.endsWith(".sql")).sort()) {
+  log(`   ${file}`);
+  wrangler(["d1", "execute", "DB", ...where, "--config", config, "--file", path.join(dataDir, file), "--yes"]);
+}
 
 log("5/6 Copertine");
 const coversDir = path.join(root, "covers");

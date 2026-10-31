@@ -10,6 +10,8 @@ DATABASE="${1:?Indica il database D1 di destinazione (vuoto)}"
 BUCKET="${2:?Indica il bucket R2 di destinazione (vuoto)}"
 SNAPSHOT="${3:-latest}"
 PATH="$HOME/.orbstack/bin:$PATH"
+# Dalla radice del progetto, da qualunque cartella si lanci.
+cd "$(dirname "$0")/../.."
 
 printf "Nome del bucket B2 (es. homelibrary-backup): "; read -r B2_BUCKET
 printf "B2 keyID: "; stty -echo; read -r B2_ACCOUNT_ID; stty echo; echo
@@ -18,5 +20,5 @@ printf "Password del backup (restic): "; stty -echo; read -r RESTIC_PASSWORD; st
 
 export B2_ACCOUNT_ID B2_ACCOUNT_KEY RESTIC_PASSWORD
 export RESTIC_REPOSITORY="b2:$B2_BUCKET:homelibrary"
-export RESTIC_BIN="$(cd "$(dirname "$0")" && pwd)/restic-docker.sh"
-exec node "$(dirname "$0")/restore.mjs" --remote --database "$DATABASE" --bucket "$BUCKET" --snapshot "$SNAPSHOT"
+export RESTIC_BIN="$PWD/scripts/backup/restic-docker.sh"
+exec node scripts/backup/restore.mjs --remote --database "$DATABASE" --bucket "$BUCKET" --snapshot "$SNAPSHOT"

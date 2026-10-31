@@ -7,20 +7,20 @@ export const BACKUP_TABLES = ["user", "location", "location_editor", "book", "co
 export const RETENTION_ARGS = ["--keep-daily", "7", "--keep-weekly", "4", "--keep-monthly", "6", "--prune"];
 
 /**
- * Argomenti di `wrangler` per l'export dei soli dati, tabella per tabella: l'export completo di D1
- * rifiuta i database con tabelle virtuali (FTS5); l'indice di ricerca si ricostruisce dai trigger.
+ * Argomenti di `wrangler` per l'export dei soli dati di UNA tabella. Una alla volta perché wrangler
+ * scrive le tabelle in ordine alfabetico, e online D1 importa a pezzi: una riga che rimanda a una
+ * tabella non ancora caricata verrebbe rifiutata. L'export completo invece rifiuta le tabelle FTS5.
  * In locale wrangler esporta solo dal database di sviluppo standard (.wrangler/state).
- * @param {{ remote: boolean, output: string, database?: string }} options
+ * @param {{ remote: boolean, table: string, output: string, database?: string }} options
  * @returns {string[]}
  */
-export function exportArgs({ remote, output, database = "DB" }) {
-  return [
-    "d1", "export", database,
-    remote ? "--remote" : "--local",
-    "--no-schema",
-    ...BACKUP_TABLES.flatMap((table) => ["--table", table]),
-    "--output", output,
-  ];
+export function tableExportArgs({ remote, table, output, database = "DB" }) {
+  return ["d1", "export", database, remote ? "--remote" : "--local", "--no-schema", "--table", table, "--output", output];
+}
+
+/** "01-user.sql", "02-location.sql"…: il numero è la posizione nell'ordine delle dipendenze. */
+export function dataFileName(table) {
+  return `${String(BACKUP_TABLES.indexOf(table) + 1).padStart(2, "0")}-${table}.sql`;
 }
 
 /** Domenica: controllo di integrità più approfondito dell'archivio. */
