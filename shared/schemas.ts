@@ -31,6 +31,7 @@ export const isbnSchema = z
 export const optionalIsbnSchema = z
   .string()
   .trim()
+  .nullable()
   .optional()
   .transform((value, ctx) => {
     if (!value) return null;

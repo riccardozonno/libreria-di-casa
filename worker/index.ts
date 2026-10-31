@@ -6,6 +6,7 @@ import type { AppEnv } from "./env";
 import { DomainError } from "./errors";
 import { bookRoutes, copyRoutes } from "./catalog/routes";
 import { coverRoutes } from "./covers/routes";
+import { csvRoutes } from "./csv/routes";
 import { isbnRoutes } from "./isbn/routes";
 import { locationRoutes } from "./locations/routes";
 import { requester } from "./http";
@@ -31,6 +32,7 @@ app.route("/isbn", isbnRoutes);
 app.route("/covers", coverRoutes);
 app.route("/users", userRoutes);
 app.route("/audit", auditRoutes);
+app.route("/csv", csvRoutes);
 
 app.notFound((c) => c.json({ error: "Non trovato." }, 404));
 
