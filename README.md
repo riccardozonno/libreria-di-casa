@@ -4,9 +4,9 @@ I libri di famiglia, in ogni sede. Web app installabile sul telefono (PWA) per c
 in più case, con ruoli (amministratore, editor per sede, lettore).
 
 > **Versione 2 in costruzione** sul branch `cloudflare`: tutta sul piano gratuito di Cloudflare
-> (Workers, D1, R2, Access), senza server e senza dominio. Stato: **fase 2 completata**.
+> (Workers, D1, R2, Access), senza server e senza dominio. Stato: **fase 6 (backup e ripristino) completata**.
 > La versione 1 (Next.js + Postgres + Docker) resta su `main` e nel tag `v1-nextjs`.
-> Piano e decisioni: [docs/PLAN.md](docs/PLAN.md) · [ADR-0014](docs/adr/0014-riscrittura-cloudflare.md) · [permessi](docs/permissions.md).
+> Piano e decisioni: [docs/PLAN.md](docs/PLAN.md) · [ADR-0014](docs/adr/0014-riscrittura-cloudflare.md) · [permessi](docs/permissions.md) · [backup e ripristino](docs/backup-restore.md).
 
 ## Com'è fatta
 

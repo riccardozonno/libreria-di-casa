@@ -1,45 +1,56 @@
-# Backup e ripristino
+# Backup e ripristino (v2, Cloudflare)
 
-Decisione: [ADR-0010](adr/0010-backup-restic.md). Servizio `backup` in `compose.yaml`, script in `ops/backup/` e `ops/restore.sh`.
+Decisione: [ADR-0014](adr/0014-riscrittura-cloudflare.md), fase 6 del [piano](PLAN.md). Script in `scripts/backup/`, automazione in `.github/workflows/backup.yml`.
 
 ## Cosa viene salvato
-Ogni notte alle **03:30** (supercronic, fuso Europe/Rome) uno snapshot restic cifrato con:
+Ogni notte (GitHub Actions, 02:30 in inverno / 03:30 in estate, ora italiana) uno snapshot **restic cifrato** su **Backblaze B2** (bucket privato, chiave limitata a quel bucket) con:
 
 | Contenuto | Origine |
 |---|---|
-| `database.dump` | `pg_dump -Fc` come proprietario dello schema (verificato con `pg_restore --list`) |
-| copertine | volume `covers` (sola lettura) |
-| `.env`, `compose.yaml` | configurazione completa per ricostruire il sito |
-| `VERSION` | tag/commit dell'app, data, versione di `pg_dump` |
+| `data/01-user.sql` … `data/09-isbn_cache.sql` | dati D1, **una tabella alla volta nell'ordine delle dipendenze** (l'export completo rifiuta FTS5; wrangler scriverebbe le tabelle in ordine alfabetico e online D1 importa a pezzi) |
+| `covers/` | copertine da R2 (rclone, token R2 in sola lettura) |
+| `migrations/` | lo schema con cui sono stati salvati i dati |
+| `manifest.json` | data, commit, righe per tabella, numero di copertine (per verificare il ripristino) |
 
-Repository: **disco USB** (obbligatorio, riconosciuto dal file marcatore `.home-library-backup-disk`) e **Backblaze B2** (se `RESTIC_REPOSITORY_B2` è impostato). Conservazione **7 giornalieri / 4 settimanali / 6 mensili**; la domenica `restic check --read-data-subset=5%` su ogni repository. Esito in `/status/last-backup.json` (volume `backup-status`) e, se configurato, ping a `BACKUP_HEARTBEAT_URL`.
+Conservazione **7 giornalieri / 4 settimanali / 6 mensili**; ogni notte `restic check`, la domenica anche la lettura del 5% dei dati. L'indice di ricerca non si salva: lo ricostruiscono i trigger mentre si reinseriscono i libri.
 
-**Fuori dal backup, da conservare nel password manager:** `RESTIC_PASSWORD` e le credenziali B2. Senza la password i backup sono illeggibili.
+## Controllo settimanale (l'avviso automatico)
+Ogni lunedì il job `controllo` legge dalle statistiche di Cloudflare gli esiti delle richieste degli ultimi 7 giorni e i dati di D1. **Fallisce, e GitHub manda un'email**, se trova: richieste rifiutate per limite di CPU o finite in errore, un database oltre 1 GB, più di metà del limite gratuito giornaliero di righe lette (2,5 milioni) o scritte (50 mila).
+
+## Segreti (GitHub → Settings → Secrets and variables → Actions)
+| Segreto | Cosa |
+|---|---|
+| `RESTIC_PASSWORD` | password dei backup — **anche nel password manager: senza, i backup sono illeggibili** |
+| `B2_BUCKET`, `B2_ACCOUNT_ID`, `B2_ACCOUNT_KEY` | bucket e chiave Backblaze (solo quel bucket, lettura e scrittura) |
+| `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN` | account e token "HOME LIBRARY – backup GitHub" (D1 Edit, Account Analytics Read) |
+| `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` | token R2 "HOME LIBRARY – backup copertine" (Object Read only, solo `homelibrary-covers`) |
 
 ## Comandi
 ```bash
-# backup manuale (stesso script della notte)
-docker compose run --rm backup backup.sh
-# elenco degli snapshot
-docker compose run --rm --entrypoint restic backup -r /backup/usb snapshots
-# ripristino guidato (chiede di scrivere RIPRISTINA prima di sovrascrivere)
-ops/restore.sh usb latest        # oppure: ops/restore.sh b2 <id-snapshot>
+# backup o controllo a mano (anche da GitHub → Actions → Backup → Run workflow)
+gh workflow run backup.yml -f job=backup
+gh workflow run backup.yml -f job=controllo
+
+# ripristino da B2 (sul Mac, con OrbStack): chiede bucket, chiavi e password senza mostrarli
+scripts/backup/restore-from-b2.sh <database D1 vuoto> <bucket R2 vuoto> [snapshot]
+
+# seconda copia dei backup sul Mac (meglio un disco esterno), solo quando la lanci
+scripts/backup/copy-to-mac.sh "/Volumes/Disco esterno/home-library-backup"
 ```
 
-`ops/restore.sh`: 1) estrae e verifica lo snapshot (nessuna modifica); 2) conferma; 3) ferma l'app; 4) `pg_restore --clean --no-owner` e riapplica `ops/db/harden-app-role.sql`; 5) ripristina le copertine; 6) riavvia l'app e attende il controllo di salute.
+`restore.mjs`: 1) estrae lo snapshot; 2) **rifiuta un database che contiene già dei libri**; 3) chiede di scrivere `RIPRISTINA`; 4) applica le migrazioni del backup e carica le tabelle in ordine; 5) ricarica le copertine; 6) verifica righe, indice di ricerca e ogni copertina byte per byte. I dati estratti (in chiaro) si cancellano anche se qualcosa va storto.
 
-**Su un Raspberry Pi nuovo:** installa Docker e la repo, recupera `.env` (dal password manager o dallo snapshot: `restic restore latest --include /config/.env`), monta il disco USB, `docker compose up -d db`, poi `ops/restore.sh usb latest`.
+**Disastro (database o copertine persi):** crea un database e un bucket nuovi (`pnpm exec wrangler d1 create …`, `pnpm exec wrangler r2 bucket create …`), lancia il ripristino su quelli, poi metti i nuovi nomi/id in `wrangler.jsonc` e ripubblica (`pnpm build && pnpm exec wrangler deploy`). D1 ha anche Time Travel per tornare a un momento degli ultimi giorni senza backup.
 
-## Prova di ripristino — Mac, 30/10/2026
-Repository locale di prova `./backups/usb-test` al posto del disco USB. Ripristino in un progetto Docker **separato e vuoto** (`homelibrary-restoretest`: database, copertine e app nuovi), senza toccare i dati di sviluppo.
+## Prova di ripristino reale — 31/10/2026
+Snapshot su B2 del 31/10/2026 13:02 (backup notturno lanciato a mano), ripristinato da Riccardo sul Mac in un database e un bucket **nuovi e separati** (`homelibrary-restore-test`, `homelibrary-restore-test-covers`); produzione mai toccata. Confronto indipendente fatto dopo:
 
-| Verifica | Originale | Ripristinato | Esito |
+| Verifica | Produzione | Ripristino | Esito |
 |---|---|---|---|
-| libri / copie / utenti / sedi / eventi di audit | 3 / 3 / 4 / 2 / 43 | 3 / 3 / 4 / 2 / 43 | ✅ |
-| copertine (numero, impronta sha256 dell'insieme) | 3, `905c23f461ae6110` | 3, `905c23f461ae6110` | ✅ |
-| hash password dell'admin di prova | `7119c00889e3…` | `7119c00889e3…` | ✅ |
-| app: `/api/health` | 200 | 200 | ✅ |
-| ruolo `app`: UPDATE su AuditLog / DELETE su User / INSERT su Book | no / no / sì | no / no / sì | ✅ (dopo la correzione sotto) |
-| backup con disco USB non montato | — | rifiutato, nulla scritto, stato `ok:false` | ✅ |
+| utenti / sedi / libri / copie / registro | 3 / 3 / 5 / 7 / 32 | 3 / 3 / 5 / 7 / 32 | ✅ |
+| impronta dei contenuti (libri, copie, utenti, registro) | `0df95e543a84b398` | `0df95e543a84b398` | ✅ |
+| indice di ricerca (voci e risultato di una ricerca) | 5, stesso risultato | 5, stesso risultato | ✅ |
+| copertine (sha256, 10.215 e 10.779 byte) | `cf9cadbc…`, `95e020c2…` | `cf9cadbc…`, `95e020c2…` | ✅ |
+| destinazione non vuota | — | ripristino rifiutato | ✅ (prova locale) |
 
-**Problema trovato dalla prova e corretto:** al primo ripristino il ruolo `app` poteva di nuovo modificare il registro attività, perché su un database nuovo i privilegi predefiniti di `init-roles.sh` si sommano ai GRANT del dump. Ora `restore.sh` riapplica `harden-app-role.sql` e verifica il risultato.
+**Problema trovato dalla prova e corretto:** il primo tentativo online è fallito con `FOREIGN KEY constraint failed`: l'export metteva le tabelle in ordine alfabetico e D1 online importa a pezzi (le letture arrivavano prima degli utenti). In locale non si vedeva perché l'import è una sola transazione. Ora export e import vanno una tabella alla volta, in ordine; il database di prova era rimasto vuoto (D1 annulla l'import fallito). Il tentativo fallito aveva lasciato i dati estratti in chiaro in una cartella del progetto (esclusa da git): cancellati, e ora la cartella di lavoro si cancella sempre.
