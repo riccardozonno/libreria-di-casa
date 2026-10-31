@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { auditRoutes } from "./audit-log/routes";
 import { requireUser } from "./auth/identity";
 import { createDb } from "./db/client";
 import type { AppEnv } from "./env";
@@ -29,6 +30,7 @@ app.route("/copies", copyRoutes);
 app.route("/isbn", isbnRoutes);
 app.route("/covers", coverRoutes);
 app.route("/users", userRoutes);
+app.route("/audit", auditRoutes);
 
 app.notFound((c) => c.json({ error: "Non trovato." }, 404));
 

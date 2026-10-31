@@ -4,6 +4,7 @@ import { LocationsProvider } from "./lib/locations";
 import { SessionProvider, useSession } from "./lib/session";
 import { AddBookPage } from "./pages/add-book";
 import { AdminPage } from "./pages/admin";
+import { AuditPage } from "./pages/audit";
 import { BookPage } from "./pages/book";
 import { CatalogPage } from "./pages/catalog";
 import { LocationsPage } from "./pages/locations";
@@ -28,6 +29,7 @@ const router = createBrowserRouter([
       { path: "/sedi", element: <LocationsPage /> },
       { path: "/admin", element: <AdminPage /> },
       { path: "/admin/utenti", element: <AdminOnly><UsersPage /></AdminOnly> },
+      { path: "/admin/registro", element: <AdminOnly><AuditPage /></AdminOnly> },
       { path: "/profilo", element: <ProfilePage /> },
       { path: "*", element: <NotFoundPage /> },
     ],

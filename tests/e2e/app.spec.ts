@@ -52,6 +52,14 @@ test.describe("amministratore", () => {
     await expect(page.getByText(USERS.reader.email)).toBeVisible();
   });
 
+  test("consulta il registro attività filtrato per categoria", async ({ page }) => {
+    await page.goto("/admin");
+    await page.getByRole("link", { name: /Registro attività/ }).click();
+    await page.getByRole("button", { name: "Sedi" }).click();
+    await expect(page).toHaveURL(/category=location/);
+    await expect(page.getByText(/ha creato una sede/).first()).toBeVisible();
+  });
+
   test("aggiunge una persona e riceve il messaggio d'invito da mandarle (l'app non spedisce email)", async ({ page }) => {
     const email = `nuova-${unique()}@e2e.test`;
     await page.goto("/admin/utenti");

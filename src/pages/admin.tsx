@@ -3,9 +3,12 @@ import { PageHeader } from "../components/ui";
 import { useSession } from "../lib/session";
 import { NotFoundPage } from "./not-found";
 
-// Area amministratore. Fase 4: registro attività e import/export CSV.
+// Area amministratore: utenti, registro attività, import/export CSV.
 
-const SECTIONS = [{ to: "/admin/utenti", title: "Utenti", description: "Chi può entrare, ruoli e sedi" }];
+const SECTIONS = [
+  { to: "/admin/utenti", title: "Utenti", description: "Chi può entrare, ruoli e sedi" },
+  { to: "/admin/registro", title: "Registro attività", description: "Chi ha fatto cosa, e quando" },
+];
 
 export function AdminPage() {
   const { me } = useSession();
