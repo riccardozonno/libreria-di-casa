@@ -3,6 +3,9 @@
   "name": "homelibrary",
   "main": "worker/index.ts",
   "compatibility_date": "2026-10-20",
+  // Solo l'indirizzo principale: niente indirizzi di anteprima per ogni versione (meno porte da proteggere).
+  "workers_dev": true,
+  "preview_urls": false,
   // L'interfaccia è statica (nessuna CPU); il Worker gestisce solo /api/*.
   "assets": {
     "not_found_handling": "single-page-application",
