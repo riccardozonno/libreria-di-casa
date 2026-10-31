@@ -12,6 +12,7 @@ import { InstallPage } from "./pages/install";
 import { LocationsPage } from "./pages/locations";
 import { NotFoundPage } from "./pages/not-found";
 import { ProfilePage } from "./pages/profile";
+import { RouteErrorPage } from "./pages/route-error";
 import { UsersPage } from "./pages/users";
 
 // Pagine dell'app (navigazione nel browser, nessun rendering sul server). Ogni dato arriva da /api.
@@ -24,6 +25,7 @@ function AdminOnly({ children }: { children: React.ReactNode }) {
 const router = createBrowserRouter([
   {
     element: <Layout />,
+    errorElement: <RouteErrorPage />,
     children: [
       { path: "/", element: <CatalogPage /> },
       { path: "/libri/:id", element: <BookPage /> },
