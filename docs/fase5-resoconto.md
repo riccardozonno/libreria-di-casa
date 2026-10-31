@@ -15,9 +15,14 @@
 - Nessuno stile inline (CSP `style-src 'self'`), nessun `console.log`, file sotto le 260 righe.
 - CPU con l'app completa: vedi [fase 2](fase2-resoconto.md#ricontrollo-in-fase-5-31102026-app-completa-30-richieste-da-iphone).
 
-## Rimasto (basso, consapevole)
-- **Primo avvio di un'istanza 11–17 ms** (accettato da Cloudflare): controllo settimanale in fase 6, decisione del 31/10/2026.
-- **Dipendenze di sviluppo**: due vulnerabilità "moderate" solo negli strumenti sul Mac (esbuild dentro drizzle-kit, minimatch dentro ESLint), mai pubblicate.
-- **Nessun limite di frequenza** sulle richieste: davanti c'è Access e gli utenti sono pochi e conosciuti; la ricerca ISBN usa la quota Google.
-- **Registro attività** senza pulizia automatica: pochi KB al giorno, D1 ha 5 GB.
-- **Export CSV**: la riga di registro si scrive alla prima pagina, anche se poi il download non va a buon fine.
+## Rischi medi e bassi: risolti su richiesta (31/10/2026)
+| Rischio | Soluzione | Prova |
+|---|---|---|
+| Primo avvio di un'istanza 11–17 ms | Worker **minificato** (459 → 223 KB, 13.672 → 124 righe): meno codice da leggere all'avvio. Resta il controllo settimanale della fase 6 (decisione del 31/10/2026) | 253 test + 65 E2E; nuova misura dall'iPhone |
+| Vulnerabilità "moderate" negli strumenti di sviluppo (esbuild dentro drizzle-kit, minimatch dentro ESLint) | `overrides` di pnpm alle versioni corrette | `pnpm audit`: nessuna vulnerabilità; lint e drizzle-kit funzionano |
+| Nessun limite di frequenza | Limiti per persona con il Rate Limiting di Cloudflare: scritture 60/min, ricerche ISBN 30/min, import CSV 600 blocchi/min; oltre: 429 in italiano; l'import CSV aspetta e riprova lo stesso blocco | 1 test |
+| Export CSV registrato anche se interrotto | La riga di registro si scrive all'ultima pagina (export completato) | 1 test |
+| Registro attività senza pulizia | **Misurato**: 29 righe, 131 byte medi di dati (massimo 602, istantanea di un libro eliminato), database intero 197 KB. Stima larga: ~10 MB l'anno contro 5 GB gratuiti. Nessuna pulizia, che romperebbe la garanzia "in sola aggiunta"; il controllo settimanale della fase 6 avvisa se il database supera 1 GB | Misura sul database online |
+
+## Rimasto
+Nessun rischio medio o basso aperto. Da fare in fase 6: controllo settimanale (richieste rifiutate per CPU, dimensione del database).

@@ -24,4 +24,6 @@ function inlineAppleTouchIcon(): Plugin {
 export default defineConfig({
   plugins: [react(), tailwindcss(), inlineAppleTouchIcon(), cloudflare({ persistState: process.env.E2E_STATE ? { path: process.env.E2E_STATE } : true })],
   build: { sourcemap: false },
+  // Worker minificato: meno codice da leggere al primo avvio di un'istanza (limite di 10 ms di CPU).
+  environments: { homelibrary: { build: { minify: true } } },
 });
