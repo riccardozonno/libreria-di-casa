@@ -26,7 +26,7 @@ export async function downloadCatalog(location: LocationSummary | null): Promise
   link.href = URL.createObjectURL(blob);
   link.download = `catalogo-${slug}-${new Date().toISOString().slice(0, 10)}.csv`;
   // Nel documento durante il clic: alcuni browser ignorano i download da link non inseriti nella pagina.
-  document.body.append(link);
+  document.body.appendChild(link);
   link.click();
   link.remove();
   setTimeout(() => URL.revokeObjectURL(link.href), 10_000);
