@@ -142,6 +142,11 @@ test.describe("lettore", () => {
   });
 });
 
+test("l'icona per la schermata Home è incorporata nella pagina (iOS la cerca senza i cookie di Access)", async ({ request }) => {
+  const html = await (await request.get("/")).text();
+  expect(html).toMatch(/<link rel="apple-touch-icon" href="data:image\/png;base64,[A-Za-z0-9+/=]{100,}"/);
+});
+
 test("i file statici hanno le intestazioni di sicurezza", async ({ request }) => {
   const response = await request.get("/");
   expect(response.headers()["content-security-policy"]).toContain("frame-ancestors 'none'");
