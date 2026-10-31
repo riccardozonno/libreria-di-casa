@@ -2,7 +2,7 @@
 
 Obiettivo: la stessa app, interamente sul **piano gratuito di Cloudflare** (0 €, nessun dominio, nessun server da mantenere), con un "portiere" Cloudflare Access davanti a tutto. Decisione: [ADR-0014](adr/0014-riscrittura-cloudflare.md).
 
-La versione 1 (Next.js + Postgres + Docker Compose, fasi 0–5 approvate) resta intatta su `main` e nel tag **`v1-nextjs`**. Questo lavoro vive sul branch **`cloudflare`**; diventa `main` solo a fine progetto e con il tuo OK.
+La versione 1 (Next.js + Postgres + Docker Compose, fasi 0–5 approvate) resta intatta su `main` e nel tag **`v1-nextjs`**. Questo lavoro è nato sul branch **`cloudflare`** ed è stato unito in `main` il 31/10/2026 con il tuo OK (il branch `cloudflare` resta).
 
 ## Cosa resta uguale
 

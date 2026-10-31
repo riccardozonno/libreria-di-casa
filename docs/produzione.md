@@ -22,7 +22,7 @@ Utenti al 31/10/2026: Riccardo (ADMIN), Filiberto Canino (EDITOR, 3 sedi), Giuli
 
 ## Pubblicare una nuova versione
 
-Solo a mano, da GitHub: **Actions → Deploy → Run workflow** (branch `cloudflare`). Il workflow
+Solo a mano, da GitHub: **Actions → Deploy → Run workflow** (branch `main`). Il workflow
 (`.github/workflows/deploy.yml`):
 
 1. esegue gli stessi controlli della CI (lint, tipi, test con copertura, E2E iPhone/Android);

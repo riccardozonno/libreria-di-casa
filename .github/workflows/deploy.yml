@@ -1,7 +1,7 @@
 name: Deploy
 
 # Pubblicazione in produzione, solo a mano (Actions → Deploy → Run workflow) e solo dal branch
-# `cloudflare`. Prima gli stessi controlli della CI, poi migrazioni D1 e Worker. I segreti del Worker
+# `main`. Prima gli stessi controlli della CI, poi migrazioni D1 e Worker. I segreti del Worker
 # (GOOGLE_BOOKS_API_KEY, CF_API_TOKEN) restano su Cloudflare: la pubblicazione non li tocca.
 
 on:
@@ -16,7 +16,7 @@ concurrency:
 
 jobs:
   verify:
-    if: github.ref == 'refs/heads/cloudflare'
+    if: github.ref == 'refs/heads/main'
     uses: ./.github/workflows/ci.yml
 
   deploy:
