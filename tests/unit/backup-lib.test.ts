@@ -1,6 +1,6 @@
 import { getTableConfig, type SQLiteTable } from "drizzle-orm/sqlite-core";
 import { describe, expect, it } from "vitest";
-import { BACKUP_TABLES, compareCounts, countsQuery, exportArgs, isWeeklyCheckDay, RETENTION_ARGS } from "../../scripts/backup/lib.mjs";
+import { BACKUP_TABLES, compareCounts, countsQuery, evaluateHealth, exportArgs, isWeeklyCheckDay, RETENTION_ARGS } from "../../scripts/backup/lib.mjs";
 import * as schema from "../../worker/db/schema";
 
 // Regole del backup (ADR-0014, fase 6): cosa si salva, in che ordine, quanto si conserva, come si verifica.
@@ -57,5 +57,33 @@ describe("verifica del ripristino", () => {
     expect(compareCounts({ book: 10, copy: 12 }, { book: 10, copy: 12 })).toEqual([]);
     expect(compareCounts({ book: 10, copy: 12 }, { book: 9, copy: 12 })).toEqual(["book: attese 10, trovate 9"]);
     expect(compareCounts({ book: 10 }, {})).toEqual(["book: attese 10, trovate 0"]);
+  });
+});
+
+describe("controllo settimanale", () => {
+  const healthy = {
+    statuses: { success: 1200, clientDisconnected: 3 },
+    cpuP99Ms: 6,
+    database: { database_size: 200_000, rows_read_24h: 4_000, rows_written_24h: 400 },
+  };
+
+  it("tutto in ordine: nessun problema", () => {
+    expect(evaluateHealth(healthy)).toEqual([]);
+  });
+
+  it("segnala richieste rifiutate per il limite di CPU o finite in errore", () => {
+    expect(evaluateHealth({ ...healthy, statuses: { success: 10, exceededResources: 2, scriptThrewException: 1 } })).toEqual([
+      "2 richieste con esito exceededResources",
+      "1 richieste con esito scriptThrewException",
+    ]);
+  });
+
+  it("segnala un database oltre 1 GB e un consumo giornaliero oltre metà dei limiti gratuiti di D1", () => {
+    const problems = evaluateHealth({ ...healthy, database: { database_size: 1.2e9, rows_read_24h: 3_000_000, rows_written_24h: 60_000 } });
+    expect(problems).toEqual([
+      "database di 1200 MB (soglia 1 GB, limite gratuito 5 GB)",
+      "3000000 righe lette nelle ultime 24 ore (metà del limite gratuito: 2500000)",
+      "60000 righe scritte nelle ultime 24 ore (metà del limite gratuito: 50000)",
+    ]);
   });
 });

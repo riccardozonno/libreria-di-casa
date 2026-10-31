@@ -44,3 +44,24 @@ export function compareCounts(expected, actual) {
 export function countsQuery() {
   return `SELECT ${BACKUP_TABLES.map((table) => `(SELECT count(*) FROM "${table}") AS "${table}"`).join(", ")}`;
 }
+
+/** Esiti delle richieste che non indicano un problema dell'app. */
+const HARMLESS_STATUSES = new Set(["success", "clientDisconnected"]);
+const MAX_DATABASE_BYTES = 1e9;
+const MAX_ROWS_READ_24H = 2_500_000; // metà del limite gratuito di D1 (5 milioni al giorno)
+const MAX_ROWS_WRITTEN_24H = 50_000; // metà del limite gratuito di D1 (100 mila al giorno)
+
+/**
+ * Problemi da segnalare nel controllo settimanale (lista vuota = tutto in ordine).
+ * @param {{ statuses: Record<string, number>, cpuP99Ms: number, database: { database_size: number, rows_read_24h: number, rows_written_24h: number } }} health
+ * @returns {string[]}
+ */
+export function evaluateHealth({ statuses, database }) {
+  const problems = Object.entries(statuses)
+    .filter(([status, count]) => !HARMLESS_STATUSES.has(status) && count > 0)
+    .map(([status, count]) => `${count} richieste con esito ${status}`);
+  if (database.database_size > MAX_DATABASE_BYTES) problems.push(`database di ${Math.round(database.database_size / 1e6)} MB (soglia 1 GB, limite gratuito 5 GB)`);
+  if (database.rows_read_24h > MAX_ROWS_READ_24H) problems.push(`${database.rows_read_24h} righe lette nelle ultime 24 ore (metà del limite gratuito: ${MAX_ROWS_READ_24H})`);
+  if (database.rows_written_24h > MAX_ROWS_WRITTEN_24H) problems.push(`${database.rows_written_24h} righe scritte nelle ultime 24 ore (metà del limite gratuito: ${MAX_ROWS_WRITTEN_24H})`);
+  return problems;
+}
