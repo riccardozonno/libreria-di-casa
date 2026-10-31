@@ -55,3 +55,9 @@ Dal Mac resta possibile: `pnpm exec wrangler d1 migrations apply DB --remote && 
 | Vecchio indirizzo di anteprima | 404 |
 | Ruoli online | tre utenti attivi con i ruoli attesi (Giulia promossa a EDITOR dall'admin) |
 | Primo backup notturno automatico | da controllare dopo le 02:30 del 01/11/2026 |
+
+## Verifica finale (fase 8, 31/10/2026)
+
+Prove fatte dall'admin sull'app online: login con codice da una finestra anonima, editor che aggiunge un
+libro nella sua sede senza vedere la scheda Admin, scansione del codice a barre dall'app installata su
+iPhone, export CSV del catalogo completo. Tutte riuscite.
