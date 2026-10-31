@@ -72,7 +72,7 @@ Catalogo con ricerca e filtro per sede, scheda libro, "Letto da", aggiunta con s
 Correzioni dalla prova: icona della schermata Home incorporata nella pagina (iOS la scarica senza il cookie di Access). Trovati dagli E2E: pagina CSV che scorreva di lato, download non avviato su alcuni browser, pagina offline servita con un rinvio.
 CSV (export e import con anteprima, prova a secco, duplicati, report errori, a blocchi), registro attività consultabile con filtri, PWA (service worker, pagina offline, "Installa l'app"), anteprima della copertina trovata dalla ricerca ISBN. ⏸
 
-### Fase 5 — Revisione — fatta il 31/10/2026, [resoconto](fase5-resoconto.md) (⏸)
+### Fase 5 — Revisione ✅ (approvata il 31/10/2026) — [resoconto](fase5-resoconto.md)
 Security, database, TypeScript, React, accessibilità. In più: misura della CPU di ogni endpoint sotto i 10 ms, verifica che l'indirizzo non sia raggiungibile senza Access. ⏸
 
 ### Fase 6 — Backup e ripristino
