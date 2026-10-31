@@ -26,3 +26,5 @@ Risorse della prova di fase 1 cancellate (Worker, D1, bucket) e cartella `spike/
 
 ## Ricontrollo in fase 5 (31/10/2026, app completa, 30 richieste da iPhone)
 Tutte le richieste riuscite. A regime 1–5 ms per ogni operazione (catalogo 2–4, scheda 2–3, copertine 1–3, export CSV 5, ricerca ISBN 5). Sopra i 10 ms solo le richieste che hanno avviato un'istanza nuova (`/api/me` 12–13 ms, scheda 11 ms) e un salvataggio di libro con download della copertina (17 ms). Con poco traffico Cloudflare chiude le istanze dopo circa mezzo minuto di pausa, quindi i primi avvii sono frequenti. Il pacchetto del Worker è dominato da zod (≈ 360 KB di sorgente su ≈ 710), seguito da drizzle (≈ 175 KB).
+
+**Decisione (Riccardo, 31/10/2026): teniamo così e controlliamo.** Nessuna modifica ora; nella fase 6 un controllo settimanale automatico (GitHub Actions) conta le richieste rifiutate per limite di CPU e avvisa se ce ne sono. Se succede: prima alleggerire l'avvio (zod "mini", caricamento del codice per pagina), in ultima istanza Workers Paid.
