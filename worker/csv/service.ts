@@ -34,13 +34,15 @@ export async function exportPage(db: Db, who: Requester, options: { locationId?:
     FROM copy c JOIN book b ON b.id = c.book_id JOIN location l ON l.id = c.location_id
     ${where} ORDER BY c.rowid LIMIT ${EXPORT_PAGE_SIZE + 1}`);
 
-  // Una riga di registro per export (alla prima pagina), non una per pagina.
-  if (!options.after) {
+  const page = rows.slice(0, EXPORT_PAGE_SIZE);
+  const isLastPage = rows.length <= EXPORT_PAGE_SIZE;
+
+  // Una riga di registro per export, quando arriva all'ultima pagina (export completato), non una per pagina.
+  if (isLastPage) {
     const location = options.locationId ? await db.get<{ name: string } | undefined>(sql`SELECT name FROM location WHERE id = ${options.locationId}`) : undefined;
     await runBatch(db, [auditInsert(db, who.audit, { action: "csv.export", entityType: "export", data: { location: location?.name ?? "tutte le sedi" }, ip: who.audit.ip })]);
   }
 
-  const page = rows.slice(0, EXPORT_PAGE_SIZE);
   return {
     rows: page.map((row) => ({
       isbn13: row.isbn13,
@@ -52,7 +54,7 @@ export async function exportPage(db: Db, who: Requester, options: { locationId?:
       shelf: row.shelf,
       notes: row.notes,
     })),
-    nextAfter: rows.length > EXPORT_PAGE_SIZE ? (page.at(-1)?.seq ?? null) : null,
+    nextAfter: isLastPage ? null : (page.at(-1)?.seq ?? null),
   };
 }
 

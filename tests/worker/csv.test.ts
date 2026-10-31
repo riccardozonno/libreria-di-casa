@@ -55,6 +55,27 @@ describe("export", () => {
   });
 });
 
+describe("export su più pagine", () => {
+  it("la riga di registro si scrive solo quando l'export arriva all'ultima pagina", async () => {
+    await env.DB.batch(
+      Array.from({ length: 501 }, (_, index) => [
+        env.DB.prepare("INSERT INTO book (id, title, source) VALUES (?, ?, 'MANUAL')").bind(`b${index}`, `Libro ${index}`),
+        env.DB.prepare("INSERT INTO copy (id, book_id, location_id) VALUES (?, ?, ?)").bind(`c${index}`, `b${index}`, casa.id),
+      ]).flat(),
+    );
+    const exportsLogged = async () => (await env.DB.prepare("SELECT count(*) AS n FROM audit_log WHERE action = 'csv.export'").first<{ n: number }>())?.n;
+    const before = await exportsLogged();
+
+    const first = (await (await admin.call("/csv/export")).json()) as ExportPage;
+    expect(first.rows).toHaveLength(500);
+    expect(await exportsLogged()).toBe(before);
+
+    const last = (await (await admin.call(`/csv/export?after=${first.nextAfter}`)).json()) as ExportPage;
+    expect(last.nextAfter).toBeNull();
+    expect(await exportsLogged()).toBe((before ?? 0) + 1);
+  });
+});
+
 describe("ISBN già in catalogo", () => {
   it("restituisce l'id del libro per gli ISBN che esistono", async () => {
     const { bookId } = (await (await createBook("Il barone rampante", "9788804668237", casa.id)).json()) as { bookId: string };
