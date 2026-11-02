@@ -161,10 +161,21 @@ test.describe("editor", () => {
     await expect(page.getByRole("heading", { name: titolo })).toBeVisible();
     await expect(page.getByRole("button", { name: "Modifica dati" })).toHaveCount(0);
     await page.getByRole("button", { name: "Indica il genere" }).click();
+    await expect(page.getByLabel("Genere")).toBeFocused();
+    await page.getByRole("button", { name: "Annulla" }).click();
+    await expect(page.getByRole("button", { name: "Indica il genere" })).toBeFocused();
+    await page.getByRole("button", { name: "Indica il genere" }).click();
     await page.getByLabel("Genere").selectOption({ label: "Storia" });
     await page.getByRole("button", { name: "Salva il genere" }).click();
     await expect(page.getByText("Genere aggiornato.")).toBeVisible();
     await expect(page.getByText("Storia", { exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Cambia genere" })).toBeFocused();
+
+    // Un filtro di genere sconosciuto nell'indirizzo si ignora (niente errore).
+    await page.goto("/?genere=ROSA");
+    await expect(page.getByLabel("Genere")).toHaveValue("");
+    await expect(page.getByRole("alert")).toHaveCount(0);
+    await expect(page.getByRole("link", { name: new RegExp(titolo) })).toBeVisible();
     await page.goto("/admin/utenti");
     await expect(page.getByRole("heading", { name: "Pagina non trovata" })).toBeVisible();
   });

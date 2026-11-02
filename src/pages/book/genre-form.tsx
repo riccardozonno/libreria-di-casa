@@ -25,7 +25,8 @@ export function GenreForm({ bookId, genre, onDone }: { bookId: string; genre: Ge
 
   return (
     <div className="mt-3 space-y-3 rounded-[var(--radius-md)] bg-surface p-4 shadow-[var(--shadow-card)]">
-      <SelectField label="Genere" name="genre" value={value} onChange={(event) => setValue(event.target.value)}>
+      {/* Il focus va sul menu appena il modulo si apre (tastiera e VoiceOver non ripartono dall'inizio). */}
+      <SelectField label="Genere" name="genre" value={value} onChange={(event) => setValue(event.target.value)} autoFocus>
         <option value="">Nessun genere</option>
         <GenreOptions />
       </SelectField>

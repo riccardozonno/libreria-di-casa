@@ -1,4 +1,4 @@
-import { useId, type ComponentPropsWithoutRef, type ReactNode } from "react";
+import { useId, type ComponentPropsWithoutRef, type ComponentPropsWithRef, type ReactNode } from "react";
 import { locationColorClass, type LocationColorKey } from "../../shared/location-colors";
 
 // Componenti di base condivisi (niente stato; TextField e TextArea usano useId per id univoci).
@@ -21,7 +21,8 @@ export function buttonClasses(variant: ButtonVariant = "primary", extra = ""): s
   ].join(" ");
 }
 
-type ButtonProps = ComponentPropsWithoutRef<"button"> & { variant?: ButtonVariant };
+// Con ref (React 19 la passa come prop): serve a riportare il focus sul pulsante che ha aperto un modulo.
+type ButtonProps = ComponentPropsWithRef<"button"> & { variant?: ButtonVariant };
 
 export function Button({ variant = "primary", className = "", type = "button", ...rest }: ButtonProps) {
   return <button type={type} className={buttonClasses(variant, className)} {...rest} />;

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useParams } from "react-router";
 import { type GenreKey, genreLabel } from "../../shared/genres";
 import { formatIsbn13 } from "../../shared/isbn";
@@ -49,6 +49,15 @@ export function BookPage() {
   const [saved, setSaved] = useState(false);
   const [isEditingGenre, setIsEditingGenre] = useState(false);
   const [genreSaved, setGenreSaved] = useState(false);
+  // Chiuso un modulo, il focus torna sul pulsante che l'aveva aperto (che React ha appena ricreato).
+  const genreButton = useRef<HTMLButtonElement>(null);
+  const editButton = useRef<HTMLButtonElement>(null);
+  const returnFocusTo = useRef<"genre" | "edit" | null>(null);
+  useEffect(() => {
+    if (!returnFocusTo.current) return;
+    (returnFocusTo.current === "genre" ? genreButton : editButton).current?.focus();
+    returnFocusTo.current = null;
+  });
 
   if (error && !book) return error.includes("non trovato") ? <NotFoundPage what="Libro" /> : <Notice tone="error">{error}</Notice>;
   if (!book) return <p className="px-1 py-6 text-center text-ink-soft">Caricamento…</p>;
@@ -98,12 +107,12 @@ export function BookPage() {
         <ReadingToggle bookId={book.id} userId={me.id} hasRead={hasRead} onChanged={reload} />
         {!hasRead && <CurrentReadingToggle bookId={book.id} userId={me.id} isReading={isReading} onChanged={reload} />}
         {canSetGenre && !isEditingGenre && (
-          <Button variant="ghost" onClick={() => { setIsEditingGenre(true); setGenreSaved(false); }}>
+          <Button ref={genreButton} variant="ghost" onClick={() => { setIsEditingGenre(true); setGenreSaved(false); }}>
             {book.genre ? "Cambia genere" : "Indica il genere"}
           </Button>
         )}
         {can({ type: "book.update" }) && !isEditing && (
-          <Button variant="ghost" onClick={() => { setIsEditing(true); setSaved(false); }}>
+          <Button ref={editButton} variant="ghost" onClick={() => { setIsEditing(true); setSaved(false); }}>
             Modifica dati
           </Button>
         )}
@@ -118,6 +127,7 @@ export function BookPage() {
           bookId={book.id}
           genre={book.genre}
           onDone={(didSave) => {
+            returnFocusTo.current = "genre";
             setIsEditingGenre(false);
             setGenreSaved(didSave);
             if (didSave) reload();
@@ -133,6 +143,7 @@ export function BookPage() {
         <EditBookForm
           book={book}
           onDone={(didSave) => {
+            returnFocusTo.current = "edit";
             setIsEditing(false);
             setSaved(didSave);
             if (didSave) reload();

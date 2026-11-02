@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation, useSearchParams } from "react-router";
 import { locationColorClass } from "../../shared/location-colors";
+import { genreFilterSchema } from "../../shared/schemas";
 import { BookCover } from "../components/book-cover";
 import { GenreOptions } from "../components/genre-options";
 import { LocationTag, Notice, PageHeader, SelectInput } from "../components/ui";
@@ -29,7 +30,9 @@ export function CatalogPage() {
   const query = params.get("q") ?? "";
   const locationId = params.get("sede") ?? "";
   // "NONE" = libri ancora senza genere (per completarli).
-  const genre = params.get("genere") ?? "";
+  const rawGenre = params.get("genere") ?? "";
+  // Un valore sconosciuto (indirizzo scritto a mano o vecchio) si ignora invece di dare errore.
+  const genre = genreFilterSchema.safeParse(rawGenre).success ? rawGenre : "";
   const page = Math.max(0, Number(params.get("pagina") ?? 1) - 1) || 0;
   const [draft, setDraft] = useState(query);
 

@@ -35,7 +35,7 @@ export function EditBookForm({ book, onDone }: { book: EditableBook; onDone: (sa
 
   return (
     <form action={action} className="mt-4 flex flex-col gap-3 rounded-[var(--radius-lg)] bg-surface px-4 py-4 shadow-[var(--shadow-card)]">
-      <TextField label="Titolo" name="title" defaultValue={book.title} required maxLength={300} error={state.fields?.title} />
+      <TextField label="Titolo" name="title" defaultValue={book.title} required maxLength={300} error={state.fields?.title} autoFocus />
       <TextArea label="Autori (uno per riga)" name="authors" defaultValue={book.authors.join("\n")} error={state.fields?.authors} />
       <TextField label="Anno" name="publishedYear" inputMode="numeric" defaultValue={book.publishedYear ?? ""} error={state.fields?.publishedYear} />
       <TextField label="ISBN" name="isbn13" inputMode="numeric" defaultValue={book.isbn13 ?? ""} error={state.fields?.isbn13} />
