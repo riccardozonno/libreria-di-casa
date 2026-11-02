@@ -26,8 +26,8 @@ export function run(command, args, options = {}) {
 
 export const wrangler = (args, options) => run("pnpm", ["exec", "wrangler", ...args], options);
 
-/** restic, oppure un sostituto (es. scripts/backup/restic-docker.sh) indicato in RESTIC_BIN. */
-export const restic = (args, options) => run(process.env.RESTIC_BIN ?? "restic", args, { timeout: RESTIC_TIMEOUT_MS, ...options });
+/** restic, oppure un sostituto (es. scripts/backup/restic-docker.sh) indicato in RESTIC_BIN, con tempo massimo; `timeout: 0` lo toglie (ripristino, che può durare a lungo). */
+export const restic = (args, options = {}) => run(process.env.RESTIC_BIN ?? "restic", args, { ...options, timeout: options.timeout ?? RESTIC_TIMEOUT_MS });
 
 /** Risultato JSON di `wrangler d1 execute --json` (prima istruzione). */
 export function d1Query(sql, target) {

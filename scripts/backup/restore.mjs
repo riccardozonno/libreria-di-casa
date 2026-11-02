@@ -80,7 +80,8 @@ rmSync(work, { recursive: true, force: true });
 mkdirSync(work, { recursive: true });
 // I dati estratti sono in chiaro: si cancellano anche se qualcosa va storto a metà.
 process.on("exit", () => rmSync(work, { recursive: true, force: true }));
-restic(["restore", values.snapshot, "--target", work]);
+// Senza tempo massimo: un ripristino grande può durare a lungo.
+restic(["restore", values.snapshot, "--target", work], { timeout: 0 });
 const manifestFile = findFile(work, "manifest.json");
 if (!manifestFile) throw new Error("Lo snapshot non contiene manifest.json: non è un backup di HOME LIBRARY.");
 const root = path.dirname(manifestFile);

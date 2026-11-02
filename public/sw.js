@@ -43,7 +43,8 @@ self.addEventListener("fetch", (event) => {
         (cached) =>
           cached ??
           fetch(request).then((response) => {
-            if (response.ok) {
+            // Un file mancante (vecchio hash dopo una pubblicazione) torna come pagina HTML: mai in cache.
+            if (response.ok && !response.headers.get("content-type")?.includes("text/html")) {
               const copy = response.clone();
               caches.open(CACHE).then((cache) => cache.put(request, copy));
             }
