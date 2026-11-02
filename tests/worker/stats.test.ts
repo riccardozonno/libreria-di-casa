@@ -28,7 +28,7 @@ interface Stats {
   topRated: Array<{ bookId: string; title: string; average: number; votes: number }>;
   topAuthors: Array<{ name: string; count: number }>;
   genres: Array<{ genre: string | null; count: number }>;
-  pairs: Array<{ names: [string, string]; count: number }>;
+  pairs: Array<{ userIds: [string, string]; names: [string, string]; count: number }>;
 }
 
 const stats = async (who: User) => {
@@ -132,11 +132,37 @@ describe("statistiche", () => {
 
     it("letture in comune: coppie di persone attive con i libri letti da entrambe", async () => {
       expect((await stats(anna)).pairs).toEqual([
-        { names: ["anna", "bruno"], count: 2 },
-        { names: ["anna", "carla"], count: 1 },
-        { names: ["bruno", "carla"], count: 1 },
+        { userIds: [anna.id, bruno.id], names: ["anna", "bruno"], count: 2 },
+        { userIds: [anna.id, carla.id], names: ["anna", "carla"], count: 1 },
+        { userIds: [bruno.id, carla.id], names: ["bruno", "carla"], count: 1 },
       ]);
     });
+  });
+
+  it("una data di lettura non valida (import, ripristino) non blocca la pagina: conta nel totale, non nei mesi", async () => {
+    await seedBook("b1", "Il nome della rosa", ["Umberto Eco"]);
+    await seedBook("b2", "Il pendolo di Foucault", ["Umberto Eco"]);
+    await seedReading(anna.id, "b1", "non è una data");
+    await seedReading(anna.id, "b2", now);
+    const result = await stats(anna);
+    expect(result.totalReadings).toBe(2);
+    expect(result.months.reduce((sum, month) => sum + month.count, 0)).toBe(1);
+    expect(result.years).toEqual([{ year: romeMonthKey(now).slice(0, 4), count: 1 }]);
+  });
+
+  it("molte letture nella stessa ora contano tutte", async () => {
+    for (const id of ["b1", "b2", "b3"]) await seedBook(id, `Libro ${id}`, []);
+    const sameHour = new Date().toISOString().slice(0, 13);
+    await seedReading(anna.id, "b1", `${sameHour}:00:00.000Z`);
+    await seedReading(anna.id, "b2", `${sameHour}:30:00.000Z`);
+    await seedReading(bruno.id, "b3", `${sameHour}:59:59.999Z`);
+    expect((await stats(anna)).months.at(-1)?.count).toBe(3);
+  });
+
+  it("un autore ripetuto nello stesso libro conta una volta per lettura", async () => {
+    await seedBook("b1", "Doppio", ["Umberto Eco", " umberto eco "]);
+    await seedReading(anna.id, "b1", now);
+    expect((await stats(anna)).topAuthors).toEqual([{ name: "Umberto Eco", count: 1 }]);
   });
 
   it("senza accesso non si vedono", async () => {

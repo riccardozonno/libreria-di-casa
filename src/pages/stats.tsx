@@ -17,7 +17,7 @@ interface ReadingStats {
   topRated: Array<{ bookId: string; title: string; average: number; votes: number }>;
   topAuthors: Array<{ name: string; count: number }>;
   genres: Array<{ genre: GenreKey | null; count: number }>;
-  pairs: Array<{ names: [string, string]; count: number }>;
+  pairs: Array<{ userIds: [string, string]; names: [string, string]; count: number }>;
 }
 
 const monthFormat = new Intl.DateTimeFormat("it-IT", { month: "short", year: "numeric", timeZone: "UTC" });
@@ -90,12 +90,12 @@ function StatsSections({ stats }: { stats: ReadingStats }) {
       <Section title="Sta leggendo">
         <Card>
           {stats.currentReadings.length > 0 ? (
-            <ul className="space-y-2 text-[15px]">
+            <ul className="text-[15px]">
               {stats.currentReadings.map((reading) => (
                 <li key={`${reading.userId}-${reading.bookId}`}>
                   <span aria-hidden>📖 </span>
                   {reading.name}:{" "}
-                  <Link to={`/libri/${reading.bookId}`} className="font-semibold text-accent underline-offset-2 hover:underline">
+                  <Link to={`/libri/${reading.bookId}`} className="inline-flex min-h-11 items-center font-semibold text-accent underline-offset-2 hover:underline">
                     {reading.title}
                   </Link>
                 </li>
@@ -127,10 +127,10 @@ function StatsSections({ stats }: { stats: ReadingStats }) {
       <Section title="I più apprezzati">
         <Card>
           {stats.topRated.length > 0 ? (
-            <ol className="space-y-2 text-[15px]">
+            <ol className="text-[15px]">
               {stats.topRated.map((book) => (
-                <li key={book.bookId} className="flex items-baseline justify-between gap-3">
-                  <Link to={`/libri/${book.bookId}`} className="min-w-0 font-semibold text-accent underline-offset-2 [overflow-wrap:anywhere] hover:underline">
+                <li key={book.bookId} className="flex items-center justify-between gap-3">
+                  <Link to={`/libri/${book.bookId}`} className="inline-flex min-h-11 min-w-0 items-center font-semibold text-accent underline-offset-2 [overflow-wrap:anywhere] hover:underline">
                     {book.title}
                   </Link>
                   <span className="shrink-0 tabular-nums text-ink-soft">
@@ -175,7 +175,7 @@ function StatsSections({ stats }: { stats: ReadingStats }) {
           {stats.pairs.length > 0 ? (
             <BarList
               label="Letture in comune"
-              items={stats.pairs.map((pair) => ({ key: pair.names.join("|"), label: `${pair.names[0]} e ${pair.names[1]}`, value: pair.count, valueLabel: plural(pair.count, "libro", "libri") }))}
+              items={stats.pairs.map((pair) => ({ key: pair.userIds.join("|"), label: `${pair.names[0]} e ${pair.names[1]}`, value: pair.count, valueLabel: plural(pair.count, "libro", "libri") }))}
             />
           ) : (
             <Empty>Ancora nessun libro letto da due persone.</Empty>
