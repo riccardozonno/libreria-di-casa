@@ -44,7 +44,7 @@ describe("export", () => {
       ["Il barone rampante", "Casa"],
       ["Perché la città", "Mare"],
     ]);
-    expect(all.rows[0]).toMatchObject({ isbn13: "9788804668237", authors: ["Autore"], shelf: "Studio" });
+    expect(all.rows[0]).toMatchObject({ isbn13: "9788804668237", authors: ["Autore"], shelf: "Studio", genre: null });
     expect(all.nextAfter).toBeNull();
 
     const onlyMare = (await (await admin.call(`/csv/export?location=${mare.id}`)).json()) as ExportPage;
@@ -94,7 +94,7 @@ describe("import a blocchi", () => {
       method: "POST",
       body: {
         operations: [
-          { line: 2, kind: "new-book", book: { isbn13: "9788807900389", title: "Il Gattopardo", authors: ["Tomasi di Lampedusa"], publishedYear: 1958, description: null }, locationId: casa.id, copy },
+          { line: 2, kind: "new-book", book: { isbn13: "9788807900389", title: "Il Gattopardo", authors: ["Tomasi di Lampedusa"], publishedYear: 1958, description: null }, genre: "CLASSICI", locationId: casa.id, copy },
           { line: 3, kind: "add-copy", isbn13: "9788807900389", locationId: mare.id, copy },
           { line: 4, kind: "add-copy", isbn13: "9788804668237", locationId: mare.id, copy },
           { line: 5, kind: "new-book", book: { isbn13: null, title: "Quaderno senza ISBN", authors: [], publishedYear: null, description: null }, locationId: casa.id, copy },
@@ -104,8 +104,10 @@ describe("import a blocchi", () => {
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ newBooks: 2, newCopies: 4, missing: [] });
 
-    const gattopardo = await env.DB.prepare("SELECT source, (SELECT count(*) FROM copy WHERE book_id = book.id) AS copies FROM book WHERE isbn13 = '9788807900389'").first();
-    expect(gattopardo).toEqual({ source: "CSV", copies: 2 });
+    const gattopardo = await env.DB.prepare("SELECT source, genre, (SELECT count(*) FROM copy WHERE book_id = book.id) AS copies FROM book WHERE isbn13 = '9788807900389'").first();
+    expect(gattopardo).toEqual({ source: "CSV", genre: "CLASSICI", copies: 2 });
+    const quaderno = await env.DB.prepare("SELECT genre FROM book WHERE title = 'Quaderno senza ISBN'").first();
+    expect(quaderno).toEqual({ genre: null });
     const audit = await env.DB.prepare("SELECT data FROM audit_log WHERE action = 'csv.import'").first<{ data: string }>();
     expect(JSON.parse(audit!.data)).toMatchObject({ newBooks: 2, newCopies: 4, lines: [2, 3, 4, 5] });
   });

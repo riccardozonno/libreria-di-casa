@@ -1,3 +1,4 @@
+import { genreFromText, type GenreKey } from "../genres";
 import { normalizeIsbn } from "../isbn";
 import { bookDataSchema, copyDetailsSchema, type BookData, type CopyDetails } from "../schemas";
 import { locationNameKey } from "../text";
@@ -16,7 +17,7 @@ export interface ImportContext {
 }
 
 export type ImportOperation =
-  | { line: number; kind: "new-book"; book: BookData; locationId: string; copy: CopyDetails }
+  | { line: number; kind: "new-book"; book: BookData; genre: GenreKey | null; locationId: string; copy: CopyDetails }
   | { line: number; kind: "add-copy"; isbn13: string; existingBookId: string | null; locationId: string; copy: CopyDetails };
 
 export interface ImportPlan {
@@ -41,6 +42,13 @@ function parseYear(raw: string): number | null {
   if (!raw) return null;
   if (!/^\d{4}$/.test(raw)) throw new RowError("anno: Anno non valido");
   return Number(raw);
+}
+
+function parseGenre(raw: string): GenreKey | null {
+  if (!raw) return null;
+  const genre = genreFromText(raw);
+  if (!genre) throw new RowError(`genere: «${raw}» non è nell'elenco dei generi`);
+  return genre;
 }
 
 function parseWith<T>(schema: { safeParse: (input: unknown) => { success: true; data: T } | { success: false; error: { issues: { path: PropertyKey[]; message: string }[] } } }, input: unknown): T {
@@ -90,8 +98,9 @@ export function planImport(rows: readonly CsvRow[], context: ImportContext, mode
         publishedYear: parseYear(row.anno),
         description: row.descrizione,
       });
+      const genre = parseGenre(row.genere);
       if (isbn13) createdInFile.add(isbn13);
-      operations.push({ line: row.line, kind: "new-book", book, locationId: location.id, copy });
+      operations.push({ line: row.line, kind: "new-book", book, genre, locationId: location.id, copy });
     } catch (error) {
       if (!(error instanceof RowError)) throw error;
       errors.push({ line: row.line, message: error.message });

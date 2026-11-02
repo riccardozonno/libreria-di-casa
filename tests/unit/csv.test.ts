@@ -9,6 +9,7 @@ const exportRow = (overrides: Partial<ExportRow> = {}): ExportRow => ({
   title: "Il barone rampante",
   authors: ["Italo Calvino"],
   publishedYear: 1957,
+  genre: null,
   description: null,
   location: "Casa",
   shelf: "Studio",
@@ -23,7 +24,13 @@ describe("export CSV", () => {
     expect(csv.startsWith(BOM)).toBe(true);
     const [header, line] = csv.slice(1).split("\r\n");
     expect(header).toBe(CSV_HEADER.join(";"));
-    expect(line).toBe("9788804668237;Il barone rampante;Italo Calvino;1957;;Casa;Studio;");
+    expect(header).toBe("isbn;titolo;autori;anno;genere;descrizione;sede;collocazione;note");
+    expect(line).toBe("9788804668237;Il barone rampante;Italo Calvino;1957;;;Casa;Studio;");
+  });
+
+  it("scrive il genere con l'etichetta italiana", () => {
+    const [, line] = toCsv([exportRow({ genre: "GIALLI" })]).slice(1).split("\r\n");
+    expect(line).toBe("9788804668237;Il barone rampante;Italo Calvino;1957;Gialli e thriller;;Casa;Studio;");
   });
 
   it("unisce gli autori con | e mette tra virgolette i campi con ; virgolette o a capo", () => {
@@ -46,13 +53,13 @@ describe("export CSV", () => {
 
 describe("lettura CSV", () => {
   it("rilegge quello che esporta (andata e ritorno)", () => {
-    const csv = toCsv([exportRow({ authors: ["A", "B"], notes: "x; y" })]);
+    const csv = toCsv([exportRow({ authors: ["A", "B"], notes: "x; y", genre: "RELIGIONE" })]);
 
     const { rows, errors } = parseCsv(csv);
 
     expect(errors).toEqual([]);
     expect(rows).toEqual([
-      { line: 2, isbn: "9788804668237", titolo: "Il barone rampante", autori: "A | B", anno: "1957", descrizione: "", sede: "Casa", collocazione: "Studio", note: "x; y" },
+      { line: 2, isbn: "9788804668237", titolo: "Il barone rampante", autori: "A | B", anno: "1957", genere: "Religione e spiritualità", descrizione: "", sede: "Casa", collocazione: "Studio", note: "x; y" },
     ]);
   });
 
@@ -93,6 +100,7 @@ describe("pianificazione dell'import", () => {
     titolo: "",
     autori: "",
     anno: "",
+    genere: "",
     descrizione: "",
     sede: "Casa",
     collocazione: "",
@@ -109,11 +117,29 @@ describe("pianificazione dell'import", () => {
         line: 2,
         kind: "new-book",
         book: { isbn13: "9780306406157", title: "Libro", authors: ["A", "B"], publishedYear: 1999, description: null },
+        genre: null,
         locationId: "loc-mare",
         copy: { shelf: null, notes: null },
       },
     ]);
     expect(plan.summary).toEqual({ rows: 1, newBooks: 1, newCopies: 1, skipped: 0, errors: 0 });
+  });
+
+  it("genere per etichetta o chiave; sconosciuto = errore di riga; ignorato per le copie di libri esistenti", () => {
+    const plan = planImport(
+      [
+        row(2, { titolo: "Uno", genere: "gialli e thriller" }),
+        row(3, { titolo: "Due", genere: "STORIA" }),
+        row(4, { isbn: "978-88-04-66823-7", genere: "Inventato" }),
+      ],
+      context,
+      "add-copy",
+    );
+    expect(plan.errors).toEqual([]);
+    expect(plan.operations.map((operation) => (operation.kind === "new-book" ? operation.genre : "copia"))).toEqual(["GIALLI", "STORIA", "copia"]);
+
+    const wrong = planImport([row(2, { titolo: "Tre", genere: "Romanzi rosa" })], context, "add-copy");
+    expect(wrong.errors).toEqual([{ line: 2, message: "genere: «Romanzi rosa» non è nell'elenco dei generi" }]);
   });
 
   it("un ISBN già in catalogo diventa una copia, senza toccare i dati del libro", () => {

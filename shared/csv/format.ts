@@ -1,8 +1,10 @@
 import Papa from "papaparse";
+import { genreLabel, type GenreKey } from "../genres";
 
 // Formato CSV di HOME LIBRARY: una riga per copia, separatore ";", UTF-8 con BOM (Excel in italiano).
 
-export const CSV_HEADER = ["isbn", "titolo", "autori", "anno", "descrizione", "sede", "collocazione", "note"] as const;
+// «genere» dal 02/11/2026: facoltativa, i file senza questa colonna si importano come prima.
+export const CSV_HEADER = ["isbn", "titolo", "autori", "anno", "genere", "descrizione", "sede", "collocazione", "note"] as const;
 export type CsvColumn = (typeof CSV_HEADER)[number];
 
 const REQUIRED_COLUMNS: readonly CsvColumn[] = ["titolo", "sede"];
@@ -15,6 +17,7 @@ export interface ExportRow {
   title: string;
   authors: readonly string[];
   publishedYear: number | null;
+  genre: GenreKey | null;
   description: string | null;
   location: string;
   shelf: string | null;
@@ -34,6 +37,7 @@ export function toCsv(rows: readonly ExportRow[]): string {
     row.title,
     row.authors.join(AUTHORS_SEPARATOR),
     row.publishedYear?.toString() ?? "",
+    row.genre ? genreLabel(row.genre) : "",
     row.description ?? "",
     row.location,
     row.shelf ?? "",

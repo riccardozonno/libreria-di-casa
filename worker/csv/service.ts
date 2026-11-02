@@ -1,5 +1,6 @@
 import { type SQL, sql } from "drizzle-orm";
 import type { ExportRow } from "../../shared/csv/format";
+import type { GenreKey } from "../../shared/genres";
 import { EXPORT_PAGE_SIZE, type ImportChunk, type ImportChunkResult } from "../../shared/csv/transport";
 import { can } from "../../shared/policy";
 import { auditInsert } from "../audit";
@@ -17,6 +18,7 @@ interface ExportDbRow {
   title: string;
   authors: string;
   published_year: number | null;
+  genre: GenreKey | null;
   description: string | null;
   location: string;
   shelf: string | null;
@@ -30,7 +32,7 @@ export async function exportPage(db: Db, who: Requester, options: { locationId?:
   if (options.after) conditions.push(sql`c.rowid > ${options.after}`);
   const where = conditions.length > 0 ? sql`WHERE ${sql.join(conditions, sql` AND `)}` : sql``;
   const rows = await db.all<ExportDbRow>(sql`
-    SELECT c.rowid AS seq, b.isbn13, b.title, b.authors, b.published_year, b.description, l.name AS location, c.shelf, c.notes
+    SELECT c.rowid AS seq, b.isbn13, b.title, b.authors, b.published_year, b.genre, b.description, l.name AS location, c.shelf, c.notes
     FROM copy c JOIN book b ON b.id = c.book_id JOIN location l ON l.id = c.location_id
     ${where} ORDER BY c.rowid LIMIT ${EXPORT_PAGE_SIZE + 1}`);
 
@@ -49,6 +51,7 @@ export async function exportPage(db: Db, who: Requester, options: { locationId?:
       title: row.title,
       authors: JSON.parse(row.authors) as string[],
       publishedYear: row.published_year,
+      genre: row.genre,
       description: row.description,
       location: row.location,
       shelf: row.shelf,
@@ -90,8 +93,8 @@ export async function importChunk(db: Db, who: Requester, chunk: ImportChunk): P
       // Con ISBN: se nel frattempo qualcuno l'ha aggiunto, il libro resta quello e la riga diventa una copia.
       bookStatement.push(statements.length);
       statements.push(sql`
-        INSERT OR IGNORE INTO book (id, isbn13, title, authors, published_year, description, source, created_by_id)
-        VALUES (${bookId}, ${book.isbn13}, ${book.title}, ${JSON.stringify(book.authors)}, ${book.publishedYear}, ${book.description}, 'CSV', ${actorId})`);
+        INSERT OR IGNORE INTO book (id, isbn13, title, authors, published_year, genre, description, source, created_by_id)
+        VALUES (${bookId}, ${book.isbn13}, ${book.title}, ${JSON.stringify(book.authors)}, ${book.publishedYear}, ${operation.genre}, ${book.description}, 'CSV', ${actorId})`);
       const owner = book.isbn13 ? sql`(SELECT id FROM book WHERE isbn13 = ${book.isbn13})` : sql`${bookId}`;
       copyStatement.push({ index: statements.length, line: operation.line });
       statements.push(sql`INSERT INTO copy (id, book_id, location_id, shelf, notes, created_by_id) SELECT ${copyId}, ${owner}, ${operation.locationId}, ${shelf}, ${notes}, ${actorId}`);
