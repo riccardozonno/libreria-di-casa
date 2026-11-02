@@ -78,6 +78,8 @@ export const book = sqliteTable(
     publishedYear: integer("published_year"),
     description: text("description"),
     coverKey: text("cover_key"), // oggetto in R2
+    // Uno dei generi di shared/genres.ts. Niente CHECK: cambiare l'elenco obbligherebbe a ricostruire `book` (FTS e trigger).
+    genre: text("genre"),
     source: text("source", { enum: BOOK_SOURCES }).notNull(),
     createdById: text("created_by_id").references(() => user.id, { onDelete: "set null" }),
     createdAt: createdAt(),
