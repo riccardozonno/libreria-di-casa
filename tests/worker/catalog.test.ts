@@ -424,3 +424,48 @@ describe("genere", () => {
     expect((await reader.call("/books?genre=ROSA")).status).toBe(400);
   });
 });
+
+describe("filtri di lettura", () => {
+  const titles = async (who: User, params: string) =>
+    ((await (await who.call(`/books?${params}`)).json()) as { items: Array<{ title: string }> }).items.map((item) => item.title);
+  const markRead = (who: User, bookId: string) => who.call(`/books/${bookId}/readings/${who.id}`, { method: "PUT" });
+  const startReading = (who: User, bookId: string) => who.call(`/books/${bookId}/current-readers/${who.id}`, { method: "PUT" });
+
+  let lettoDalLettore: string;
+  let lettoDallAdmin: string;
+  let inLettura: string;
+  beforeEach(async () => {
+    lettoDalLettore = (await createBook(editorCasa, { book: { title: "A – letto dal lettore", authors: [] }, genre: "GIALLI" })).body.bookId;
+    lettoDallAdmin = (await createBook(editorMare, { book: { title: "B – letto dall'admin", authors: [] }, locationId: mare.id, genre: "GIALLI" })).body.bookId;
+    inLettura = (await createBook(editorCasa, { book: { title: "C – in lettura", authors: [] }, genre: "STORIA" })).body.bookId;
+    await createBook(editorCasa, { book: { title: "D – mai letto", authors: [] } });
+    expect((await markRead(reader, lettoDalLettore)).status).toBe(204);
+    expect((await markRead(admin, lettoDallAdmin)).status).toBe(204);
+    expect((await startReading(reader, inLettura)).status).toBe(204);
+  });
+
+  it("«Non letti da me» dipende da chi è collegato e comprende i libri che sta leggendo", async () => {
+    expect(await titles(reader, "reading=UNREAD_BY_ME")).toEqual(["B – letto dall'admin", "C – in lettura", "D – mai letto"]);
+    expect(await titles(admin, "reading=UNREAD_BY_ME")).toEqual(["A – letto dal lettore", "C – in lettura", "D – mai letto"]);
+  });
+
+  it("«Non letti da nessuno» esclude i libri letti da chiunque", async () => {
+    expect(await titles(editorCasa, "reading=UNREAD")).toEqual(["C – in lettura", "D – mai letto"]);
+  });
+
+  it("«In lettura» mostra i libri che qualcuno sta leggendo; segnato «Letto» sparisce", async () => {
+    expect(await titles(admin, "reading=READING")).toEqual(["C – in lettura"]);
+    expect((await markRead(reader, inLettura)).status).toBe(204);
+    expect(await titles(admin, "reading=READING")).toEqual([]);
+  });
+
+  it("si combina con genere, sede e ricerca", async () => {
+    expect(await titles(reader, "reading=UNREAD_BY_ME&genre=GIALLI")).toEqual(["B – letto dall'admin"]);
+    expect(await titles(admin, `reading=UNREAD&location=${casa.id}`)).toEqual(["C – in lettura", "D – mai letto"]);
+    expect(await titles(admin, "reading=UNREAD&q=mai")).toEqual(["D – mai letto"]);
+  });
+
+  it("valore sconosciuto: 400", async () => {
+    expect((await reader.call("/books?reading=letti")).status).toBe(400);
+  });
+});

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { bookDataSchema, bookGenreSchema, copyDetailsSchema, isbnSchema, locationNameSchema, newBookSchema, optionalIsbnSchema, parseAuthors, ratingSchema } from "../../shared/schemas";
+import { bookDataSchema, bookGenreSchema, copyDetailsSchema, isbnSchema, locationNameSchema, newBookSchema, optionalIsbnSchema, parseAuthors, ratingSchema, readingFilterSchema } from "../../shared/schemas";
 
 describe("schemi di validazione", () => {
   it("isbnSchema normalizza e rifiuta ISBN non validi", () => {
@@ -96,5 +96,19 @@ describe("genere", () => {
     expect(newBookSchema.parse(base).genre).toBeNull();
     expect(newBookSchema.parse({ ...base, genre: "STORIA" }).genre).toBe("STORIA");
     expect(newBookSchema.safeParse({ ...base, genre: "Storia" }).success).toBe(false);
+  });
+});
+
+describe("filtro di lettura", () => {
+  it.each(["UNREAD_BY_ME", "UNREAD", "READING"])("accetta %s", (filter) => {
+    expect(readingFilterSchema.parse(filter)).toBe(filter);
+  });
+
+  it("assente = nessun filtro", () => {
+    expect(readingFilterSchema.parse(undefined)).toBeUndefined();
+  });
+
+  it.each(["letti", "unread", "", "NONE"])("rifiuta %s", (filter) => {
+    expect(readingFilterSchema.safeParse(filter).success).toBe(false);
   });
 });
