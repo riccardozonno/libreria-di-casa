@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { addCopySchema, bookDataSchema, bookGenreSchema, copyDetailsSchema, genreFilterSchema, moveCopySchema, newBookSchema, ratingSchema } from "../../shared/schemas";
+import { addCopySchema, bookDataSchema, bookGenreSchema, copyDetailsSchema, genreFilterSchema, moveCopySchema, newBookSchema, ratingSchema, readingFilterSchema } from "../../shared/schemas";
 import { createDb } from "../db/client";
 import type { AppEnv } from "../env";
 import { readBody, requester, validate } from "../http";
@@ -32,10 +32,11 @@ export const bookRoutes = new Hono<AppEnv>()
   .get("/", async (c) => {
     const page = Number(c.req.query("page") ?? 0);
     return c.json(
-      await listBooks(createDb(c.env.DB), {
+      await listBooks(createDb(c.env.DB), requester(c).actor.id, {
         query: c.req.query("q")?.slice(0, 200),
         locationId: c.req.query("location") || undefined,
         genre: validate(genreFilterSchema, c.req.query("genre") || undefined),
+        reading: validate(readingFilterSchema, c.req.query("reading") || undefined),
         page: Number.isFinite(page) ? page : 0,
       }),
     );

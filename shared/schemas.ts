@@ -115,6 +115,11 @@ export const bookGenreSchema = z.object({ genre: genreSchema });
 export const genreFilterSchema = z.union([z.enum(GENRE_KEYS), z.literal("NONE")], { error: "Genere non valido" }).optional();
 export type GenreFilter = z.infer<typeof genreFilterSchema>;
 
+/** Filtro del catalogo per le letture: «me» è sempre chi è collegato, mai un parametro. */
+export const READING_FILTERS = ["UNREAD_BY_ME", "UNREAD", "READING"] as const;
+export const readingFilterSchema = z.enum(READING_FILTERS, { error: "Filtro di lettura non valido" }).optional();
+export type ReadingFilter = z.infer<typeof readingFilterSchema>;
+
 /** Nuovo libro con la sua prima copia (aggiunta da scanner, ricerca ISBN o a mano). */
 export const newBookSchema = z.object({
   book: bookDataSchema,

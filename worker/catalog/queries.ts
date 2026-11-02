@@ -1,7 +1,7 @@
 import { type SQL, sql } from "drizzle-orm";
 import type { GenreKey } from "../../shared/genres";
 import type { LocationColorKey } from "../../shared/location-colors";
-import type { GenreFilter } from "../../shared/schemas";
+import type { GenreFilter, ReadingFilter } from "../../shared/schemas";
 import { toFtsQuery } from "../../shared/text";
 import { runBatch } from "../db/batch";
 import type { Db } from "../db/client";
@@ -46,13 +46,30 @@ interface ListRow {
   locations: string;
 }
 
-export async function listBooks(db: Db, options: { query?: string; locationId?: string; genre?: GenreFilter; page?: number }): Promise<BookPage> {
+/** Condizione SQL del filtro di lettura; userId è chi è collegato. */
+function readingCondition(filter: NonNullable<ReadingFilter>, userId: string): SQL {
+  switch (filter) {
+    case "UNREAD_BY_ME":
+      return sql`NOT EXISTS (SELECT 1 FROM book_reading r WHERE r.book_id = b.id AND r.user_id = ${userId})`;
+    case "UNREAD":
+      return sql`NOT EXISTS (SELECT 1 FROM book_reading r WHERE r.book_id = b.id)`;
+    case "READING":
+      return sql`EXISTS (SELECT 1 FROM book_current_reading r WHERE r.book_id = b.id)`;
+  }
+}
+
+export async function listBooks(
+  db: Db,
+  userId: string,
+  options: { query?: string; locationId?: string; genre?: GenreFilter; reading?: ReadingFilter; page?: number },
+): Promise<BookPage> {
   const page = Math.max(0, Math.floor(options.page ?? 0));
   const match = options.query ? toFtsQuery(options.query) : null;
   const conditions: SQL[] = [];
   if (options.locationId) conditions.push(sql`EXISTS (SELECT 1 FROM copy c WHERE c.book_id = b.id AND c.location_id = ${options.locationId})`);
   if (options.genre === "NONE") conditions.push(sql`b.genre IS NULL`);
   else if (options.genre) conditions.push(sql`b.genre = ${options.genre}`);
+  if (options.reading) conditions.push(readingCondition(options.reading, userId));
   const where = conditions.length > 0 ? sql`WHERE ${sql.join(conditions, sql` AND `)}` : sql``;
   const search = match ? sql`JOIN book_fts ON book_fts.rowid = b.seq AND book_fts MATCH ${match}` : sql``;
   const order = match ? sql`ORDER BY book_fts.rank, b.title COLLATE NOCASE` : sql`ORDER BY b.title COLLATE NOCASE, b.seq`;
