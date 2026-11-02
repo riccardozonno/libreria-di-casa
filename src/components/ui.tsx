@@ -65,6 +65,55 @@ export function TextField({ label, name, error, hint, id, className = "", ...res
   );
 }
 
+/**
+ * Menu a tendina con freccia disegnata da noi: con l'aspetto nativo Safari su iPhone ignora l'altezza
+ * minima (44 px) e lo disegna più basso.
+ */
+export function SelectInput({ className = "", children, ...rest }: ComponentPropsWithoutRef<"select">) {
+  return (
+    <div className={`relative ${className}`}>
+      <select
+        className="min-h-11 w-full appearance-none rounded-[var(--radius-sm)] border border-line bg-surface py-2 pl-3 pr-10 text-[16px] text-ink aria-[invalid=true]:border-danger"
+        {...rest}
+      >
+        {children}
+      </select>
+      <svg viewBox="0 0 20 20" aria-hidden="true" className="pointer-events-none absolute right-3 top-1/2 size-5 -translate-y-1/2 text-ink-soft">
+        <path d="M5 7.5l5 5 5-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+      </svg>
+    </div>
+  );
+}
+
+type SelectFieldProps = ComponentPropsWithoutRef<"select"> & { label: string; name: string; error?: string; hint?: string };
+
+/** Menu a tendina nativo (sul telefono apre il selettore del sistema), stesso aspetto di TextField. */
+export function SelectField({ label, name, error, hint, id, className = "", children, ...rest }: SelectFieldProps) {
+  const autoId = useId();
+  const selectId = id ?? `campo-${name}-${autoId}`;
+  const describedBy = [error ? `${selectId}-errore` : null, hint ? `${selectId}-nota` : null].filter(Boolean).join(" ");
+  return (
+    <div className={`flex flex-col gap-1.5 ${className}`}>
+      <label htmlFor={selectId} className="text-[13px] font-semibold text-ink-soft">
+        {label}
+      </label>
+      <SelectInput id={selectId} name={name} aria-invalid={error ? true : undefined} aria-describedby={describedBy || undefined} {...rest}>
+        {children}
+      </SelectInput>
+      {hint && !error && (
+        <p id={`${selectId}-nota`} className="text-[13px] text-ink-faint">
+          {hint}
+        </p>
+      )}
+      {error && (
+        <p id={`${selectId}-errore`} className="text-[13px] font-medium text-danger">
+          {error}
+        </p>
+      )}
+    </div>
+  );
+}
+
 type TextAreaProps = ComponentPropsWithoutRef<"textarea"> & { label: string; name: string; error?: string };
 
 export function TextArea({ label, name, error, id, ...rest }: TextAreaProps) {

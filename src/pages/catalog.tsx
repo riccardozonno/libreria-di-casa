@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { Link, useLocation, useSearchParams } from "react-router";
 import { locationColorClass } from "../../shared/location-colors";
 import { BookCover } from "../components/book-cover";
-import { LocationTag, Notice, PageHeader } from "../components/ui";
+import { GenreOptions } from "../components/genre-options";
+import { LocationTag, Notice, PageHeader, SelectInput } from "../components/ui";
 import { useLocations } from "../lib/locations";
 import { useApi } from "../lib/use-api";
 
@@ -27,6 +28,8 @@ export function CatalogPage() {
   const { locations } = useLocations();
   const query = params.get("q") ?? "";
   const locationId = params.get("sede") ?? "";
+  // "NONE" = libri ancora senza genere (per completarli).
+  const genre = params.get("genere") ?? "";
   const page = Math.max(0, Number(params.get("pagina") ?? 1) - 1) || 0;
   const [draft, setDraft] = useState(query);
 
@@ -48,9 +51,10 @@ export function CatalogPage() {
   const apiQuery = new URLSearchParams();
   if (query.trim()) apiQuery.set("q", query.trim());
   if (locationId) apiQuery.set("location", locationId);
+  if (genre) apiQuery.set("genre", genre);
   if (page > 0) apiQuery.set("page", String(page));
   const { data, error, loading } = useApi<{ items: BookListItem[]; hasMore: boolean }>(`/books?${apiQuery.toString()}`);
-  const isFiltered = Boolean(query.trim() || locationId);
+  const isFiltered = Boolean(query.trim() || locationId || genre);
 
   const linkWith = (changes: Record<string, string | null>) => {
     const next = new URLSearchParams(params);
@@ -102,13 +106,37 @@ export function CatalogPage() {
         </nav>
       )}
 
+      <div className="mb-3 flex items-center gap-2">
+        <label htmlFor="filtro-genere" className="text-[14px] font-semibold text-ink-soft">
+          Genere
+        </label>
+        <SelectInput
+          id="filtro-genere"
+          value={genre}
+          onChange={(event) =>
+            setParams((current) => {
+              const next = new URLSearchParams(current);
+              if (event.target.value) next.set("genere", event.target.value);
+              else next.delete("genere");
+              next.delete("pagina");
+              return next;
+            })
+          }
+          className="min-w-0 flex-1"
+        >
+          <option value="">Tutti i generi</option>
+          <GenreOptions />
+          <option value="NONE">Senza genere</option>
+        </SelectInput>
+      </div>
+
       {error && <Notice tone="error">{error}</Notice>}
       {!data && loading && <p className="px-1 py-6 text-center text-ink-soft">Caricamento…</p>}
       {data && data.items.length === 0 && (
         <div className="rounded-[var(--radius-lg)] bg-surface px-5 py-10 text-center shadow-[var(--shadow-card)]">
           <p className="font-serif text-[20px]">{isFiltered ? "Nessun libro trovato" : "Il catalogo è vuoto"}</p>
           <p className="mt-2 text-[15px] text-ink-soft">
-            {isFiltered ? "Prova con meno parole o togli il filtro della sede." : "Aggiungi il primo libro con la fotocamera o a mano."}
+            {isFiltered ? "Prova con meno parole o togli i filtri di sede e genere." : "Aggiungi il primo libro con la fotocamera o a mano."}
           </p>
         </div>
       )}

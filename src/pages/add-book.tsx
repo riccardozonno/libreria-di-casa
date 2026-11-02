@@ -19,7 +19,7 @@ interface LookupResult {
 
 type Step = { kind: "start" } | { kind: "form"; initial: BookFormInitial; notice?: string; retryIsbn?: string } | { kind: "exists"; bookId: string };
 
-const EMPTY_BOOK: BookFormInitial = { isbn13: "", title: "", authors: [], publishedYear: null, description: null, coverUrl: null, source: "MANUAL" };
+const EMPTY_BOOK: BookFormInitial = { isbn13: "", title: "", authors: [], publishedYear: null, description: null, coverUrl: null, source: "MANUAL", suggestedGenre: null };
 
 export function AddBookPage() {
   const { can } = useSession();

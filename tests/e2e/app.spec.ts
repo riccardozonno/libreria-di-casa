@@ -3,10 +3,17 @@ import { asUser, EDITOR_LOCATION, USERS } from "./fixtures";
 
 // Fase 3 (MVP) dal telefono: i tre ruoli, una sede, un libro, la scheda, "letto da".
 
+// WebKit scrive questo messaggio per ogni <select>, anche su una pagina vuota con style-src 'self'
+// (verificato il 02/11/2026): è il motore, non l'app. Chromium (progetto android) controlla tutto.
+const WEBKIT_SELECT_NOISE = "Refused to apply a stylesheet because its hash, its nonce, or 'unsafe-inline' does not appear in the style-src directive";
+
 function failOnCspViolation(page: Page) {
   const violations: string[] = [];
+  const isWebKit = page.context().browser()?.browserType().name() === "webkit";
   page.on("console", (message) => {
-    if (message.type() === "error" && /Content Security Policy|Refused to/i.test(message.text())) violations.push(message.text());
+    if (message.type() !== "error" || !/Content Security Policy|Refused to/i.test(message.text())) return;
+    if (isWebKit && message.text().startsWith(WEBKIT_SELECT_NOISE)) return;
+    violations.push(message.text());
   });
   return violations;
 }
@@ -31,6 +38,7 @@ test.describe("amministratore", () => {
     await page.getByRole("button", { name: "Libro senza ISBN: inserisci a mano" }).click();
     await page.getByLabel("Titolo").fill(titolo);
     await page.getByLabel("Autori (uno per riga)").fill("Niccolò Ammaniti");
+    await page.getByLabel("Genere").selectOption({ label: "Narrativa" });
     await page.getByText(sede, { exact: true }).click();
     await page.getByRole("button", { name: "Salva il libro" }).click();
 
@@ -63,6 +71,12 @@ test.describe("amministratore", () => {
     await page.getByRole("link", { name: "← Catalogo" }).click();
     await page.getByLabel("Cerca per titolo, autore o ISBN").fill("perche la citta");
     await expect(page.getByRole("link", { name: new RegExp(titolo) })).toBeVisible();
+
+    // Filtro per genere: lo trova in «Narrativa», non in «Storia».
+    await page.getByLabel("Genere").selectOption({ label: "Narrativa" });
+    await expect(page.getByRole("link", { name: new RegExp(titolo) })).toBeVisible();
+    await page.getByLabel("Genere").selectOption({ label: "Storia" });
+    await expect(page.getByText("Nessun libro trovato")).toBeVisible();
     expect(violations).toEqual([]);
   });
 
@@ -138,6 +152,19 @@ test.describe("editor", () => {
     await expect(page.getByText(EDITOR_LOCATION.name, { exact: true })).toBeVisible();
     await expect(page.getByRole("radio")).toHaveCount(1);
     await expect(page.getByRole("link", { name: "Admin" })).toHaveCount(0);
+
+    // Il genere lo cambia anche l'editor, per i libri con una copia nella sua sede.
+    const titolo = `Libro dell'editor ${unique()}`;
+    await page.getByLabel("Titolo").fill(titolo);
+    await page.getByText(EDITOR_LOCATION.name, { exact: true }).click();
+    await page.getByRole("button", { name: "Salva il libro" }).click();
+    await expect(page.getByRole("heading", { name: titolo })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Modifica dati" })).toHaveCount(0);
+    await page.getByRole("button", { name: "Indica il genere" }).click();
+    await page.getByLabel("Genere").selectOption({ label: "Storia" });
+    await page.getByRole("button", { name: "Salva il genere" }).click();
+    await expect(page.getByText("Genere aggiornato.")).toBeVisible();
+    await expect(page.getByText("Storia", { exact: true })).toBeVisible();
     await page.goto("/admin/utenti");
     await expect(page.getByRole("heading", { name: "Pagina non trovata" })).toBeVisible();
   });

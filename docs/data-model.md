@@ -20,7 +20,7 @@ erDiagram
 | `user` | email (identità di Access), nome, ruolo, attivo, `sessions_not_before` | email unica e minuscola; ruolo ADMIN/EDITOR/READER |
 | `location` | sede: nome, colore, archiviazione | nome unico senza maiuscole/accenti (`name_key`); un colore per sede |
 | `location_editor` | quali sedi può modificare un editor | chiave utente + sede |
-| `book` | dati bibliografici, `cover_key` in R2, origine (Google Books, Open Library, a mano, CSV) | ISBN-13 unico se presente; autori come array JSON; `seq` numerico stabile per la ricerca |
+| `book` | dati bibliografici, genere, `cover_key` in R2, origine (Google Books, Open Library, a mano, CSV) | ISBN-13 unico se presente; autori come array JSON; genere tra quelli di `shared/genres.ts` (controllato nel codice, non con un CHECK: cambiare l'elenco non richiede di ricostruire la tabella); `seq` numerico stabile per la ricerca |
 | `copy` | copia fisica in una sede, scaffale e note | una sede non si cancella se ha copie (`restrict`) |
 | `copy_movement` | storico degli spostamenti | resta anche se la copia viene eliminata |
 | `book_reading` | chi ha letto il libro, chi l'ha segnato e quando, voto 1–5 del lettore | chiave utente + libro; voto nullo o tra 1 e 5; se si toglie «Letto» il voto sparisce con la riga |

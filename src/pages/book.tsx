@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Link, useParams } from "react-router";
+import { type GenreKey, genreLabel } from "../../shared/genres";
 import { formatIsbn13 } from "../../shared/isbn";
 import { BookCover } from "../components/book-cover";
 import { Button, Notice, Section } from "../components/ui";
@@ -10,6 +11,7 @@ import { AddCopyForm } from "./book/add-copy-form";
 import { CopyRow, type CopyView } from "./book/copy-row";
 import { CurrentReadingToggle } from "./book/current-reading-toggle";
 import { EditBookForm } from "./book/edit-book-form";
+import { GenreForm } from "./book/genre-form";
 import { ReadingToggle } from "./book/reading-toggle";
 import { StarIcon, StarRating, starLabel } from "./book/star-rating";
 import { NotFoundPage } from "./not-found";
@@ -22,6 +24,7 @@ interface BookDetail {
   publishedYear: number | null;
   description: string | null;
   coverKey: string | null;
+  genre: GenreKey | null;
   source: "GOOGLE_BOOKS" | "OPEN_LIBRARY" | "MANUAL" | "CSV";
   createdBy: string | null;
   createdAt: string;
@@ -44,6 +47,8 @@ export function BookPage() {
   const { data: book, error, reload } = useApi<BookDetail>(`/books/${encodeURIComponent(id)}`);
   const [isEditing, setIsEditing] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [isEditingGenre, setIsEditingGenre] = useState(false);
+  const [genreSaved, setGenreSaved] = useState(false);
 
   if (error && !book) return error.includes("non trovato") ? <NotFoundPage what="Libro" /> : <Notice tone="error">{error}</Notice>;
   if (!book) return <p className="px-1 py-6 text-center text-ink-soft">Caricamento…</p>;
@@ -54,6 +59,8 @@ export function BookPage() {
   const isReading = book.currentReaders.some((reader) => reader.userId === me.id);
   const refs = locations.map((location) => ({ id: location.id, archived: location.archived, name: location.name }));
   const addable = refs.filter((location) => can({ type: "copy.create", location }));
+  const copyLocations = book.copies.map((copy) => ({ id: copy.location.id, archived: copy.location.archived }));
+  const canSetGenre = can({ type: "book.genre", copyLocations });
 
   return (
     <article className="pb-4 pt-2">
@@ -73,6 +80,10 @@ export function BookPage() {
                 <dd className="text-ink-soft">{book.publishedYear}</dd>
               </div>
             )}
+            <div className="flex gap-1.5">
+              <dt>Genere</dt>
+              <dd className="text-ink-soft">{book.genre ? genreLabel(book.genre) : "non indicato"}</dd>
+            </div>
             {book.isbn13 && (
               <div className="flex gap-1.5">
                 <dt>ISBN</dt>
@@ -86,12 +97,33 @@ export function BookPage() {
       <div className="mt-5 flex flex-wrap items-start gap-2">
         <ReadingToggle bookId={book.id} userId={me.id} hasRead={hasRead} onChanged={reload} />
         {!hasRead && <CurrentReadingToggle bookId={book.id} userId={me.id} isReading={isReading} onChanged={reload} />}
+        {canSetGenre && !isEditingGenre && (
+          <Button variant="ghost" onClick={() => { setIsEditingGenre(true); setGenreSaved(false); }}>
+            {book.genre ? "Cambia genere" : "Indica il genere"}
+          </Button>
+        )}
         {can({ type: "book.update" }) && !isEditing && (
           <Button variant="ghost" onClick={() => { setIsEditing(true); setSaved(false); }}>
             Modifica dati
           </Button>
         )}
       </div>
+      {genreSaved && (
+        <div className="mt-3">
+          <Notice tone="success">Genere aggiornato.</Notice>
+        </div>
+      )}
+      {isEditingGenre && (
+        <GenreForm
+          bookId={book.id}
+          genre={book.genre}
+          onDone={(didSave) => {
+            setIsEditingGenre(false);
+            setGenreSaved(didSave);
+            if (didSave) reload();
+          }}
+        />
+      )}
       {saved && (
         <div className="mt-3">
           <Notice tone="success">Dati del libro aggiornati.</Notice>

@@ -6,7 +6,7 @@ import { errorMessage } from "../lib/api";
 import { applyImport, downloadCatalog, type ImportTotals, previewImport } from "../lib/csv-client";
 import { type LocationSummary, useLocations } from "../lib/locations";
 
-// Import ed export CSV (solo admin). Colonne: isbn;titolo;autori;anno;descrizione;sede;collocazione;note.
+// Import ed export CSV (solo admin). Colonne: isbn;titolo;autori;anno;genere;descrizione;sede;collocazione;note.
 
 function ExportSection() {
   const { locations } = useLocations();
@@ -93,7 +93,7 @@ function ImportSection() {
     <Section title="Importa">
       <div className="flex flex-col gap-4 rounded-[var(--radius-lg)] bg-surface p-4 shadow-[var(--shadow-card)]">
         <p className="text-[14px] text-ink-soft">
-          Colonne: <code className="break-all">isbn;titolo;autori;anno;descrizione;sede;collocazione;note</code>. Obbligatorie: titolo e sede. Più autori separati da <code>|</code>.
+          Colonne: <code className="break-all">isbn;titolo;autori;anno;genere;descrizione;sede;collocazione;note</code>. Obbligatorie: titolo e sede. Più autori separati da <code>|</code>. Il genere è facoltativo e si scrive come nell'app (es. <code>Gialli e thriller</code>).
         </p>
         <label className="flex flex-col gap-1.5 text-[13px] font-semibold text-ink-soft">
           File CSV

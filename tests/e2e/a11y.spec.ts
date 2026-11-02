@@ -4,7 +4,7 @@ import { asUser, EDITOR_LOCATION } from "./fixtures";
 
 // Accessibilità (WCAG 2.2 A/AA) con axe, in modalità chiara e scura: nessuna violazione seria o critica.
 
-const PAGES = ["/", "/aggiungi", "/sedi", "/profilo", "/installa", "/admin", "/admin/utenti", "/admin/registro", "/admin/csv"];
+const PAGES = ["/", "/?genere=NONE", "/aggiungi", "/sedi", "/profilo", "/installa", "/admin", "/admin/utenti", "/admin/registro", "/admin/csv"];
 
 async function seriousViolations(page: Page): Promise<string[]> {
   const results = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"]).analyze();
@@ -36,6 +36,12 @@ for (const colorScheme of ["light", "dark"] as const) {
       await page.goto(`/libri/${bookId}`);
       await expect(page.getByRole("heading", { level: 1, name: /^Accessibile/ })).toBeVisible();
       expect(await seriousViolations(page)).toEqual([]);
+
+      // Con il modulo del genere aperto.
+      await page.getByRole("button", { name: "Indica il genere" }).click();
+      await expect(page.getByRole("button", { name: "Salva il genere" })).toBeVisible();
+      expect(await seriousViolations(page)).toEqual([]);
+      await page.getByRole("button", { name: "Annulla" }).click();
 
       // Con «Sto leggendo» attivo.
       await page.getByRole("button", { name: "Sto leggendo" }).click();

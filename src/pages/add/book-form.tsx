@@ -1,8 +1,10 @@
 import { type ChangeEvent, useActionState, useEffect, useState } from "react";
 import { useNavigate } from "react-router";
+import type { GenreKey } from "../../../shared/genres";
 import { parseAuthors } from "../../../shared/schemas";
+import { GenreOptions } from "../../components/genre-options";
 import { LocationSelect } from "../../components/location-select";
-import { Button, Notice, TextArea, TextField } from "../../components/ui";
+import { Button, Notice, SelectField, TextArea, TextField } from "../../components/ui";
 import { ApiError, api } from "../../lib/api";
 import { type ActionState, failure, initialActionState, text } from "../../lib/action-state";
 import { resizeImageFile } from "../../lib/resize-image";
@@ -17,6 +19,8 @@ export interface BookFormInitial {
   description: string | null;
   coverUrl: string | null;
   source: "GOOGLE_BOOKS" | "OPEN_LIBRARY" | "MANUAL";
+  /** Dalla categoria di Google Books: si vede già scelto, chi aggiunge lo conferma o lo cambia. */
+  suggestedGenre: GenreKey | null;
 }
 
 interface BookFormProps {
@@ -37,6 +41,7 @@ export function BookForm({ initial, locations, onCancel, onExisting }: BookFormP
     const data = {
       book: { isbn13: initial.isbn13, title: text(form, "title"), authors: parseAuthors(text(form, "authors")), publishedYear: year === "" ? null : year, description: text(form, "description") },
       source: initial.source,
+      genre: text(form, "genre") || null,
       locationId: text(form, "locationId"),
       copy: { shelf: text(form, "shelf"), notes: text(form, "notes") },
       ...(photo ? {} : initial.coverUrl ? { coverUrl: initial.coverUrl } : {}),
@@ -104,6 +109,16 @@ export function BookForm({ initial, locations, onCancel, onExisting }: BookFormP
       <TextField label="Titolo" name="title" defaultValue={initial.title} required maxLength={300} error={fields["book.title"]} />
       <TextArea label="Autori (uno per riga)" name="authors" defaultValue={initial.authors.join("\n")} rows={2} error={fields["book.authors"]} />
       <TextField label="Anno" name="publishedYear" inputMode="numeric" defaultValue={initial.publishedYear ?? ""} maxLength={4} error={fields["book.publishedYear"]} />
+      <SelectField
+        label="Genere"
+        name="genre"
+        defaultValue={initial.suggestedGenre ?? ""}
+        hint={initial.suggestedGenre ? "Suggerito da Google Books: controlla che sia giusto." : undefined}
+        error={fields.genre}
+      >
+        <option value="">Nessun genere</option>
+        <GenreOptions />
+      </SelectField>
       <TextArea label="Descrizione" name="description" defaultValue={initial.description ?? ""} rows={4} maxLength={5000} error={fields["book.description"]} />
 
       <div className="mt-2 border-t border-line pt-4">
