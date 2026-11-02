@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { type GenreKey, suggestGenre } from "../../shared/genres";
 
 // Ricerca ISBN lato server (ADR-0008, dalla v1): Google Books → Open Library. La chiave non arriva
 // mai al client. Le risposte esterne sono dati non fidati: validate con zod e normalizzate.
@@ -21,6 +22,8 @@ export interface BookCandidate {
   description: string | null;
   coverUrl: string | null;
   source: CandidateSource;
+  /** Dalla prima categoria di Google Books (shared/genres.ts); Open Library non lo dà. */
+  suggestedGenre: GenreKey | null;
 }
 
 const TIMEOUT_MS = 6_000;
@@ -50,6 +53,8 @@ const googleSchema = z.object({
           publishedDate: z.string().optional(),
           description: z.string().optional(),
           imageLinks: z.object({ thumbnail: z.string().optional(), smallThumbnail: z.string().optional() }).optional(),
+          // Una categoria malformata non deve far perdere il resto del libro.
+          categories: z.array(z.string()).optional().catch(undefined),
         }),
       }),
     )
@@ -152,6 +157,7 @@ export async function lookupGoogleBooks(isbn13: string, deps: LookupDeps): Promi
     description: info.description ? stripHtml(info.description).slice(0, MAX_DESCRIPTION) : null,
     coverUrl: thumbnail ? thumbnail.replace("&edge=curl", "") : null,
     source: "GOOGLE_BOOKS",
+    suggestedGenre: suggestGenre(info.categories),
   };
 }
 
@@ -168,6 +174,7 @@ export async function lookupOpenLibrary(isbn13: string, fetchImpl: typeof fetch)
     description: null,
     coverUrl: info.cover?.large ?? info.cover?.medium ?? `https://covers.openlibrary.org/b/isbn/${isbn13}-L.jpg?default=false`,
     source: "OPEN_LIBRARY",
+    suggestedGenre: null,
   };
 }
 
@@ -201,6 +208,7 @@ export async function searchOpenLibrary(isbn13: string, fetchImpl: typeof fetch)
       ? `https://covers.openlibrary.org/b/id/${doc.cover_i}-L.jpg?default=false`
       : `https://covers.openlibrary.org/b/isbn/${isbn13}-L.jpg?default=false`,
     source: "OPEN_LIBRARY",
+    suggestedGenre: null,
   };
 }
 

@@ -31,7 +31,11 @@ export async function findIsbn(db: Db, who: Requester, rawIsbn: string, deps: Lo
   const existingBookId = existing?.id ?? null;
 
   const cached = await db.get<{ data: string } | undefined>(sql`SELECT data FROM isbn_cache WHERE isbn13 = ${isbn13}`);
-  if (cached) return { found: true, candidate: JSON.parse(cached.data) as BookCandidate, existingBookId };
+  if (cached) {
+    // Le risposte salvate prima del 02/11/2026 non hanno il genere suggerito.
+    const stored = JSON.parse(cached.data) as Omit<BookCandidate, "suggestedGenre"> & { suggestedGenre?: BookCandidate["suggestedGenre"] };
+    return { found: true, candidate: { ...stored, suggestedGenre: stored.suggestedGenre ?? null }, existingBookId };
+  }
 
   const candidate = await lookupIsbn(isbn13, deps);
   if (!candidate) return { found: false, existingBookId };

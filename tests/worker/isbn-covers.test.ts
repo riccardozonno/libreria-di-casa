@@ -51,6 +51,20 @@ describe("ricerca ISBN", () => {
     expect(externalCalls.length).toBe(callsAfterFirst);
   });
 
+  it("genere suggerito da Google, anche dalla memoria; le risposte salvate prima del genere ne restano senza", async () => {
+    mockExternal((url) =>
+      url.includes("googleapis.com") ? Response.json({ items: [{ volumeInfo: { ...googleHit.items[0]?.volumeInfo, categories: ["Fiction / Mystery & Detective"] } }] }) : Response.json({}),
+    );
+    expect(await (await editor.call(`/isbn/${ISBN}`)).json()).toMatchObject({ candidate: { suggestedGenre: "GIALLI" } });
+    expect(await (await editor.call(`/isbn/${ISBN}`)).json()).toMatchObject({ candidate: { suggestedGenre: "GIALLI" } });
+
+    const oldIsbn = "9788806219352";
+    const oldCandidate = { isbn13: oldIsbn, title: "Se questo è un uomo", authors: ["Primo Levi"], publishedYear: 1947, description: null, coverUrl: null, source: "GOOGLE_BOOKS" };
+    await env.DB.prepare("INSERT INTO isbn_cache (isbn13, source, data) VALUES (?, 'GOOGLE_BOOKS', ?)").bind(oldIsbn, JSON.stringify(oldCandidate)).run();
+    const cached = (await (await editor.call(`/isbn/${oldIsbn}`)).json()) as { candidate: Record<string, unknown> };
+    expect(cached.candidate).toMatchObject({ title: "Se questo è un uomo", suggestedGenre: null });
+  });
+
   it("un ISBN sconosciuto non viene ricordato (può essere un errore temporaneo)", async () => {
     mockExternal((url) => (url.includes("googleapis") ? Response.json({ totalItems: 0 }) : Response.json({})));
     expect(await (await editor.call(`/isbn/${ISBN}`)).json()).toEqual({ found: false, existingBookId: null });

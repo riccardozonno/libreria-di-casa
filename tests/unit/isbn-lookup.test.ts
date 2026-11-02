@@ -43,10 +43,29 @@ describe("lookupIsbn", () => {
       description: "Cosimo sale sugli alberi .",
       coverUrl: "http://books.google.com/books/content?id=x&zoom=1",
       source: "GOOGLE_BOOKS",
+      suggestedGenre: null,
     });
     const calledUrl = new URL(String((fetchMock.mock.calls[0] as unknown[])[0]));
     expect(calledUrl.searchParams.get("key")).toBe("chiave-di-prova");
     expect(calledUrl.searchParams.get("q")).toBe(`isbn:${ISBN}`);
+  });
+
+  it("suggerisce il genere dalla prima categoria di Google Books", async () => {
+    const withCategory = { items: [{ volumeInfo: { ...googleHit.items[0]?.volumeInfo, categories: ["Juvenile Fiction"] } }] };
+    const fetchMock = vi.fn(async () => jsonResponse(withCategory));
+
+    const candidate = await lookupIsbn(ISBN, fetchMock as unknown as typeof fetch);
+
+    expect(candidate?.suggestedGenre).toBe("RAGAZZI");
+  });
+
+  it("categorie malformate non rompono la ricerca: nessun suggerimento", async () => {
+    const odd = { items: [{ volumeInfo: { ...googleHit.items[0]?.volumeInfo, categories: "Fiction" } }] };
+    const fetchMock = vi.fn(async () => jsonResponse(odd));
+
+    const candidate = await lookupIsbn(ISBN, fetchMock as unknown as typeof fetch);
+
+    expect(candidate).toMatchObject({ title: "Il barone rampante. Romanzo", suggestedGenre: null });
   });
 
   it("ripiega su Open Library se Google non trova nulla", async () => {
@@ -60,6 +79,7 @@ describe("lookupIsbn", () => {
 
     expect(candidate?.source).toBe("OPEN_LIBRARY");
     expect(candidate?.publishedYear).toBe(1957);
+    expect(candidate?.suggestedGenre).toBeNull();
     expect(candidate?.coverUrl).toContain("covers.openlibrary.org");
   });
 
