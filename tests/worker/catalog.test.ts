@@ -129,7 +129,7 @@ describe("catalogo", () => {
       expect.objectContaining({ id: copyId, location: expect.objectContaining({ name: "Casa" }) }),
     ]);
     expect(detail.readings).toEqual([{ userId: reader.id, name: "lettore", rating: null }]);
-    expect(detail).toMatchObject({ ratingAverage: null, ratingCount: 0, currentReaders: [] });
+    expect(detail).toMatchObject({ ratingAverage: null, ratingCount: 0, currentReaders: [], genre: null });
     expect(detail.movements).toEqual([expect.objectContaining({ from: "Mare", to: "Casa", movedBy: "mare" })]);
     expect((await reader.call("/books/inesistente")).status).toBe(404);
   });
@@ -363,5 +363,64 @@ describe("sto leggendo", () => {
       { userId: admin.id, name: "admin" },
       { userId: reader.id, name: "lettore" },
     ]);
+  });
+});
+
+describe("genere", () => {
+  const setGenre = (who: User, bookId: string, genre: unknown) => who.call(`/books/${bookId}/genre`, { method: "PUT", body: { genre } });
+  const genreOf = async (bookId: string) => (await env.DB.prepare("SELECT genre FROM book WHERE id = ?").bind(bookId).first<{ genre: string | null }>())?.genre;
+  const list = async (who: User, params: string) => (await (await who.call(`/books?${params}`)).json()) as { items: Array<{ title: string; genre: string | null }> };
+
+  it("si sceglie quando si aggiunge il libro; è nella scheda e nella lista", async () => {
+    const { bookId } = (await createBook(editorCasa, { genre: "NARRATIVA" })).body;
+    expect(await genreOf(bookId)).toBe("NARRATIVA");
+    expect(await (await reader.call(`/books/${bookId}`)).json()).toMatchObject({ genre: "NARRATIVA" });
+    expect((await list(reader, "")).items).toEqual([expect.objectContaining({ title: "Il barone rampante", genre: "NARRATIVA" })]);
+    const audit = await env.DB.prepare("SELECT data FROM audit_log WHERE action = 'book.create' AND entity_id = ?").bind(bookId).first<{ data: string }>();
+    expect(JSON.parse(audit?.data ?? "{}")).toMatchObject({ genre: "NARRATIVA" });
+  });
+
+  it("genere sconosciuto rifiutato alla creazione e alla modifica (400)", async () => {
+    expect((await createBook(editorCasa, { genre: "Romanzi rosa" })).response.status).toBe(400);
+    const { bookId } = (await createBook(editorCasa)).body;
+    expect((await setGenre(admin, bookId, "ROSA")).status).toBe(400);
+  });
+
+  it("lo cambiano l'admin e gli editor di una sede con una copia; registro solo se cambia; null lo toglie", async () => {
+    const { bookId } = (await createBook(editorCasa)).body;
+    expect((await setGenre(editorMare, bookId, "STORIA")).status).toBe(403);
+    expect((await setGenre(reader, bookId, "STORIA")).status).toBe(403);
+    expect((await setGenre(editorCasa, bookId, "STORIA")).status).toBe(204);
+    expect((await setGenre(editorCasa, bookId, "STORIA")).status).toBe(204);
+    expect((await setGenre(admin, bookId, null)).status).toBe(204);
+    expect(await genreOf(bookId)).toBeNull();
+
+    const audit = await env.DB.prepare("SELECT data FROM audit_log WHERE action = 'book.update' AND entity_id = ? ORDER BY created_at, rowid").bind(bookId).all<{ data: string }>();
+    expect(audit.results.map((row) => JSON.parse(row.data))).toEqual([
+      { before: { genre: null }, after: { genre: "STORIA" } },
+      { before: { genre: "STORIA" }, after: { genre: null } },
+    ]);
+    expect((await setGenre(admin, "inesistente", "STORIA")).status).toBe(404);
+  });
+
+  it("modificare i dati del libro non azzera il genere", async () => {
+    const { bookId } = (await createBook(editorCasa, { genre: "CLASSICI" })).body;
+    const changes = { isbn13: "", title: "Il barone rampante (Oscar)", authors: ["Italo Calvino"], publishedYear: 1957, description: "" };
+    expect((await admin.call(`/books/${bookId}`, { method: "PATCH", body: changes })).status).toBe(204);
+    expect(await genreOf(bookId)).toBe("CLASSICI");
+  });
+
+  it("filtro per genere e «senza genere», insieme a sede e ricerca", async () => {
+    await createBook(editorCasa, { book: { title: "Il nome della rosa", authors: ["Umberto Eco"] }, genre: "GIALLI" });
+    await createBook(editorMare, { book: { title: "La donna della domenica", authors: ["Fruttero & Lucentini"] }, locationId: mare.id, genre: "GIALLI" });
+    await createBook(editorCasa, { book: { title: "Storia d'Italia", authors: ["Indro Montanelli"] }, genre: "STORIA" });
+    await createBook(editorCasa, { book: { title: "Senza etichetta", authors: [] } });
+
+    const titles = async (params: string) => (await list(reader, params)).items.map((item) => item.title);
+    expect(await titles("genre=GIALLI")).toEqual(["Il nome della rosa", "La donna della domenica"]);
+    expect(await titles(`genre=GIALLI&location=${mare.id}`)).toEqual(["La donna della domenica"]);
+    expect(await titles("genre=GIALLI&q=rosa")).toEqual(["Il nome della rosa"]);
+    expect(await titles("genre=NONE")).toEqual(["Senza etichetta"]);
+    expect((await reader.call("/books?genre=ROSA")).status).toBe(400);
   });
 });

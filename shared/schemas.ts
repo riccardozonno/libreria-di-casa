@@ -111,6 +111,10 @@ export const genreSchema = z.enum(GENRE_KEYS, { error: "Genere non valido" }).nu
 
 export const bookGenreSchema = z.object({ genre: genreSchema });
 
+/** Filtro del catalogo: un genere, oppure "NONE" per i libri ancora senza genere. */
+export const genreFilterSchema = z.union([z.enum(GENRE_KEYS), z.literal("NONE")], { error: "Genere non valido" }).optional();
+export type GenreFilter = z.infer<typeof genreFilterSchema>;
+
 /** Nuovo libro con la sua prima copia (aggiunta da scanner, ricerca ISBN o a mano). */
 export const newBookSchema = z.object({
   book: bookDataSchema,

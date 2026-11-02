@@ -1,5 +1,7 @@
 import { type SQL, sql } from "drizzle-orm";
+import type { GenreKey } from "../../shared/genres";
 import type { LocationColorKey } from "../../shared/location-colors";
+import type { GenreFilter } from "../../shared/schemas";
 import { toFtsQuery } from "../../shared/text";
 import { runBatch } from "../db/batch";
 import type { Db } from "../db/client";
@@ -22,6 +24,7 @@ export interface BookListItem {
   isbn13: string | null;
   publishedYear: number | null;
   coverKey: string | null;
+  genre: GenreKey | null;
   copyCount: number;
   locations: LocationTag[];
 }
@@ -38,21 +41,24 @@ interface ListRow {
   isbn13: string | null;
   published_year: number | null;
   cover_key: string | null;
+  genre: GenreKey | null;
   copy_count: number;
   locations: string;
 }
 
-export async function listBooks(db: Db, options: { query?: string; locationId?: string; page?: number }): Promise<BookPage> {
+export async function listBooks(db: Db, options: { query?: string; locationId?: string; genre?: GenreFilter; page?: number }): Promise<BookPage> {
   const page = Math.max(0, Math.floor(options.page ?? 0));
   const match = options.query ? toFtsQuery(options.query) : null;
   const conditions: SQL[] = [];
   if (options.locationId) conditions.push(sql`EXISTS (SELECT 1 FROM copy c WHERE c.book_id = b.id AND c.location_id = ${options.locationId})`);
+  if (options.genre === "NONE") conditions.push(sql`b.genre IS NULL`);
+  else if (options.genre) conditions.push(sql`b.genre = ${options.genre}`);
   const where = conditions.length > 0 ? sql`WHERE ${sql.join(conditions, sql` AND `)}` : sql``;
   const search = match ? sql`JOIN book_fts ON book_fts.rowid = b.seq AND book_fts MATCH ${match}` : sql``;
   const order = match ? sql`ORDER BY book_fts.rank, b.title COLLATE NOCASE` : sql`ORDER BY b.title COLLATE NOCASE, b.seq`;
 
   const rows = await db.all<ListRow>(sql`
-    SELECT b.id, b.title, b.authors, b.isbn13, b.published_year, b.cover_key,
+    SELECT b.id, b.title, b.authors, b.isbn13, b.published_year, b.cover_key, b.genre,
       (SELECT count(*) FROM copy c WHERE c.book_id = b.id) AS copy_count,
       (SELECT json_group_array(json_object('id', t.id, 'name', t.name, 'color', t.color))
          FROM (SELECT DISTINCT l.id, l.name, l.color, l.name_key FROM copy c JOIN location l ON l.id = c.location_id
@@ -69,6 +75,7 @@ export async function listBooks(db: Db, options: { query?: string; locationId?: 
       isbn13: row.isbn13,
       publishedYear: row.published_year,
       coverKey: row.cover_key,
+      genre: row.genre,
       copyCount: row.copy_count,
       locations: JSON.parse(row.locations) as LocationTag[],
     })),
@@ -83,6 +90,7 @@ export interface BookDetail {
   publishedYear: number | null;
   description: string | null;
   coverKey: string | null;
+  genre: GenreKey | null;
   source: string;
   createdBy: string | null;
   createdAt: string;
@@ -97,8 +105,8 @@ export interface BookDetail {
 }
 
 export async function getBookDetail(db: Db, id: string): Promise<BookDetail> {
-  const row = await db.get<{ id: string; isbn13: string | null; title: string; authors: string; published_year: number | null; description: string | null; cover_key: string | null; source: string; created_by: string | null; created_at: string } | undefined>(sql`
-    SELECT b.id, b.isbn13, b.title, b.authors, b.published_year, b.description, b.cover_key, b.source, b.created_at,
+  const row = await db.get<{ id: string; isbn13: string | null; title: string; authors: string; published_year: number | null; description: string | null; cover_key: string | null; genre: GenreKey | null; source: string; created_by: string | null; created_at: string } | undefined>(sql`
+    SELECT b.id, b.isbn13, b.title, b.authors, b.published_year, b.description, b.cover_key, b.genre, b.source, b.created_at,
            (SELECT u.name FROM user u WHERE u.id = b.created_by_id) AS created_by
     FROM book b WHERE b.id = ${id}`);
   if (!row) throw notFound("Libro");
@@ -130,6 +138,7 @@ export async function getBookDetail(db: Db, id: string): Promise<BookDetail> {
     publishedYear: row.published_year,
     description: row.description,
     coverKey: row.cover_key,
+    genre: row.genre,
     source: row.source,
     createdBy: row.created_by,
     createdAt: row.created_at,

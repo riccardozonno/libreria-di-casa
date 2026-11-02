@@ -1,5 +1,6 @@
 import { eq, sql } from "drizzle-orm";
 import { can, type LocationRef } from "../../shared/policy";
+import type { GenreKey } from "../../shared/genres";
 import type { AddCopyInput, BookData, CopyDetails, NewBookInput } from "../../shared/schemas";
 import { auditInsert, auditWhen } from "../audit";
 import { changedRows, runBatch } from "../db/batch";
@@ -73,13 +74,13 @@ export async function createBookWithCopy(db: Db, who: Requester, input: NewBookI
   const copyId = crypto.randomUUID();
   try {
     await runBatch(db, [
-      db.insert(book).values({ id: bookId, ...input.book, source: input.source, coverKey, createdById: who.audit.id }),
+      db.insert(book).values({ id: bookId, ...input.book, genre: input.genre, source: input.source, coverKey, createdById: who.audit.id }),
       db.insert(copy).values({ id: copyId, bookId, locationId: location.id, ...input.copy, createdById: who.audit.id }),
       auditInsert(db, who.audit, {
         action: "book.create",
         entityType: "book",
         entityId: bookId,
-        data: { ...input.book, source: input.source, location: location.name, copyId },
+        data: { ...input.book, genre: input.genre, source: input.source, location: location.name, copyId },
         ip: who.audit.ip,
       }),
     ]);
@@ -187,6 +188,22 @@ export async function updateBook(db: Db, who: Requester, bookId: string, data: B
     if (isUniqueViolation(error)) throw conflict("Un altro libro ha già questo ISBN.");
     throw error;
   }
+}
+
+/** Genere: admin, o editor di una sede (attiva) in cui il libro ha una copia. Registro solo se cambia. */
+export async function setBookGenre(db: Db, who: Requester, bookId: string, genre: GenreKey | null): Promise<void> {
+  const current = await db.get<{ genre: GenreKey | null } | undefined>(sql`SELECT genre FROM book WHERE id = ${bookId}`);
+  if (!current) throw notFound("Libro");
+  const copyLocations = (
+    await db.all<{ id: string; archived_at: string | null }>(
+      sql`SELECT DISTINCT l.id, l.archived_at FROM copy c JOIN location l ON l.id = c.location_id WHERE c.book_id = ${bookId}`,
+    )
+  ).map((row) => ({ id: row.id, archived: row.archived_at !== null }));
+  if (!can(who.actor, { type: "book.genre", copyLocations })) throw forbidden();
+
+  const changes = sql`EXISTS (SELECT 1 FROM book WHERE id = ${bookId} AND genre IS NOT ${genre})`;
+  const entry = { action: "book.update", entityType: "book" as const, entityId: bookId, data: { before: { genre: current.genre }, after: { genre } }, ip: who.audit.ip };
+  await runBatch(db, [auditWhen(changes, who.audit, entry), db.update(book).set({ genre }).where(eq(book.id, bookId))]);
 }
 
 /** Nuova copertina (solo admin, come gli altri dati bibliografici). Restituisce la chiave precedente. */

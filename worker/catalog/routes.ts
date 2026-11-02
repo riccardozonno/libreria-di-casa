@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import { addCopySchema, bookDataSchema, copyDetailsSchema, moveCopySchema, newBookSchema, ratingSchema } from "../../shared/schemas";
+import { addCopySchema, bookDataSchema, bookGenreSchema, copyDetailsSchema, genreFilterSchema, moveCopySchema, newBookSchema, ratingSchema } from "../../shared/schemas";
 import { createDb } from "../db/client";
 import type { AppEnv } from "../env";
 import { readBody, requester, validate } from "../http";
@@ -8,7 +8,7 @@ import { detectImageType, MAX_COVER_BYTES } from "../covers/images";
 import { removeCover, storeCover } from "../covers/storage";
 import { can } from "../../shared/policy";
 import { DomainError, forbidden } from "../errors";
-import { addCopy, assertCanCreateIn, createBookWithCopy, deleteCopy, moveCopy, setBookCover, updateBook, updateCopy } from "./mutations";
+import { addCopy, assertCanCreateIn, createBookWithCopy, deleteCopy, moveCopy, setBookCover, setBookGenre, updateBook, updateCopy } from "./mutations";
 import { getBookDetail, listBooks } from "./queries";
 import { setCurrentReading, setRating, setReading } from "./readings";
 
@@ -35,6 +35,7 @@ export const bookRoutes = new Hono<AppEnv>()
       await listBooks(createDb(c.env.DB), {
         query: c.req.query("q")?.slice(0, 200),
         locationId: c.req.query("location") || undefined,
+        genre: validate(genreFilterSchema, c.req.query("genre") || undefined),
         page: Number.isFinite(page) ? page : 0,
       }),
     );
@@ -99,6 +100,11 @@ export const bookRoutes = new Hono<AppEnv>()
   })
   .delete("/:id/readings/:userId", async (c) => {
     await setReading(createDb(c.env.DB), requester(c), c.req.param("id"), c.req.param("userId"), false);
+    return c.body(null, 204);
+  })
+  .put("/:id/genre", async (c) => {
+    const { genre } = await readBody(c, bookGenreSchema);
+    await setBookGenre(createDb(c.env.DB), requester(c), c.req.param("id"), genre);
     return c.body(null, 204);
   })
   .put("/:id/current-readers/:userId", async (c) => {
