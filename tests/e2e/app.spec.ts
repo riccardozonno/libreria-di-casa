@@ -77,6 +77,18 @@ test.describe("amministratore", () => {
     await expect(page.getByRole("link", { name: new RegExp(titolo) })).toBeVisible();
     await page.getByLabel("Genere").selectOption({ label: "Storia" });
     await expect(page.getByText("Nessun libro trovato")).toBeVisible();
+    await page.getByLabel("Genere").selectOption({ label: "Tutti i generi" });
+
+    // Filtri di lettura: «Letto» è stato tolto e non lo sta più leggendo.
+    await page.getByLabel("Lettura").selectOption({ label: "Non letti da me" });
+    await expect(page).toHaveURL(/lettura=UNREAD_BY_ME/);
+    await expect(page.getByRole("link", { name: new RegExp(titolo) })).toBeVisible();
+    await page.getByLabel("Lettura").selectOption({ label: "In lettura" });
+    await expect(page.getByText("Nessun libro trovato")).toBeVisible();
+    await page.getByLabel("Lettura").selectOption({ label: "Non letti da nessuno" });
+    await expect(page.getByRole("link", { name: new RegExp(titolo) })).toBeVisible();
+    await page.getByLabel("Lettura").selectOption({ label: "Tutti i libri" });
+    await expect(page).not.toHaveURL(/lettura=/);
     expect(violations).toEqual([]);
   });
 
@@ -171,10 +183,16 @@ test.describe("editor", () => {
     await expect(page.getByText("Storia", { exact: true })).toBeVisible();
     await expect(page.getByRole("button", { name: "Cambia genere" })).toBeFocused();
 
-    // Un filtro di genere sconosciuto nell'indirizzo si ignora (niente errore).
-    await page.goto("/?genere=ROSA");
+    // Filtri sconosciuti nell'indirizzo si ignorano (niente errore).
+    await page.goto("/?genere=ROSA&lettura=XYZ");
     await expect(page.getByLabel("Genere")).toHaveValue("");
+    await expect(page.getByLabel("Lettura")).toHaveValue("");
     await expect(page.getByRole("alert")).toHaveCount(0);
+    await expect(page.getByRole("link", { name: new RegExp(titolo) })).toBeVisible();
+
+    // L'editor non l'ha letto: lo trova tra i suoi «non letti».
+    await page.goto(`/?lettura=UNREAD_BY_ME&q=${encodeURIComponent(titolo)}`);
+    await expect(page.getByLabel("Lettura")).toHaveValue("UNREAD_BY_ME");
     await expect(page.getByRole("link", { name: new RegExp(titolo) })).toBeVisible();
     await page.goto("/admin/utenti");
     await expect(page.getByRole("heading", { name: "Pagina non trovata" })).toBeVisible();

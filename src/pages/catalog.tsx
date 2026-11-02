@@ -1,14 +1,14 @@
 import { useEffect, useState } from "react";
 import { Link, useLocation, useSearchParams } from "react-router";
 import { locationColorClass } from "../../shared/location-colors";
-import { genreFilterSchema } from "../../shared/schemas";
+import { genreFilterSchema, type ReadingFilter, readingFilterSchema } from "../../shared/schemas";
 import { BookCover } from "../components/book-cover";
 import { GenreOptions } from "../components/genre-options";
 import { LocationTag, Notice, PageHeader, SelectInput } from "../components/ui";
 import { useLocations } from "../lib/locations";
 import { useApi } from "../lib/use-api";
 
-// Catalogo: ricerca (titolo, autore, ISBN, senza accenti), filtro per sede, pagine da 24.
+// Catalogo: ricerca (titolo, autore, ISBN, senza accenti), filtri per sede, genere e lettura, pagine da 24.
 
 interface BookListItem {
   id: string;
@@ -20,6 +20,12 @@ interface BookListItem {
 }
 
 const SEARCH_DELAY_MS = 300;
+const READING_FILTER_LABELS: Record<NonNullable<ReadingFilter>, string> = {
+  UNREAD_BY_ME: "Non letti da me",
+  UNREAD: "Non letti da nessuno",
+  READING: "In lettura",
+};
+const filterLabelClasses = "w-16 shrink-0 text-[14px] font-semibold text-ink-soft";
 const chipClasses =
   "inline-flex min-h-11 shrink-0 items-center rounded-full border border-line px-3.5 text-[14px] font-medium aria-[current=true]:border-accent aria-[current=true]:bg-accent aria-[current=true]:text-accent-ink";
 
@@ -33,6 +39,8 @@ export function CatalogPage() {
   const rawGenre = params.get("genere") ?? "";
   // Un valore sconosciuto (indirizzo scritto a mano o vecchio) si ignora invece di dare errore.
   const genre = genreFilterSchema.safeParse(rawGenre).success ? rawGenre : "";
+  const rawReading = params.get("lettura") ?? "";
+  const reading = readingFilterSchema.safeParse(rawReading).success ? rawReading : "";
   const page = Math.max(0, Number(params.get("pagina") ?? 1) - 1) || 0;
   const [draft, setDraft] = useState(query);
 
@@ -55,9 +63,10 @@ export function CatalogPage() {
   if (query.trim()) apiQuery.set("q", query.trim());
   if (locationId) apiQuery.set("location", locationId);
   if (genre) apiQuery.set("genre", genre);
+  if (reading) apiQuery.set("reading", reading);
   if (page > 0) apiQuery.set("page", String(page));
   const { data, error, loading } = useApi<{ items: BookListItem[]; hasMore: boolean }>(`/books?${apiQuery.toString()}`);
-  const isFiltered = Boolean(query.trim() || locationId || genre);
+  const isFiltered = Boolean(query.trim() || locationId || genre || reading);
 
   const linkWith = (changes: Record<string, string | null>) => {
     const next = new URLSearchParams(params);
@@ -68,6 +77,16 @@ export function CatalogPage() {
     const text = next.toString();
     return text ? `/?${text}` : "/";
   };
+
+  // Un menu cambiato riparte dalla prima pagina.
+  const setFilter = (key: string, value: string) =>
+    setParams((current) => {
+      const next = new URLSearchParams(current);
+      if (value) next.set(key, value);
+      else next.delete(key);
+      next.delete("pagina");
+      return next;
+    });
 
   return (
     <>
@@ -110,26 +129,26 @@ export function CatalogPage() {
       )}
 
       <div className="mb-3 flex items-center gap-2">
-        <label htmlFor="filtro-genere" className="text-[14px] font-semibold text-ink-soft">
+        <label htmlFor="filtro-genere" className={filterLabelClasses}>
           Genere
         </label>
-        <SelectInput
-          id="filtro-genere"
-          value={genre}
-          onChange={(event) =>
-            setParams((current) => {
-              const next = new URLSearchParams(current);
-              if (event.target.value) next.set("genere", event.target.value);
-              else next.delete("genere");
-              next.delete("pagina");
-              return next;
-            })
-          }
-          className="min-w-0 flex-1"
-        >
+        <SelectInput id="filtro-genere" value={genre} onChange={(event) => setFilter("genere", event.target.value)} className="min-w-0 flex-1">
           <option value="">Tutti i generi</option>
           <GenreOptions />
           <option value="NONE">Senza genere</option>
+        </SelectInput>
+      </div>
+      <div className="mb-3 flex items-center gap-2">
+        <label htmlFor="filtro-lettura" className={filterLabelClasses}>
+          Lettura
+        </label>
+        <SelectInput id="filtro-lettura" value={reading} onChange={(event) => setFilter("lettura", event.target.value)} className="min-w-0 flex-1">
+          <option value="">Tutti i libri</option>
+          {Object.entries(READING_FILTER_LABELS).map(([key, label]) => (
+            <option key={key} value={key}>
+              {label}
+            </option>
+          ))}
         </SelectInput>
       </div>
 
@@ -139,7 +158,7 @@ export function CatalogPage() {
         <div className="rounded-[var(--radius-lg)] bg-surface px-5 py-10 text-center shadow-[var(--shadow-card)]">
           <p className="font-serif text-[20px]">{isFiltered ? "Nessun libro trovato" : "Il catalogo è vuoto"}</p>
           <p className="mt-2 text-[15px] text-ink-soft">
-            {isFiltered ? "Prova con meno parole o togli i filtri di sede e genere." : "Aggiungi il primo libro con la fotocamera o a mano."}
+            {isFiltered ? "Prova con meno parole o togli qualche filtro." : "Aggiungi il primo libro con la fotocamera o a mano."}
           </p>
         </div>
       )}
