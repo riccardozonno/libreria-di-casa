@@ -12,7 +12,7 @@ Ogni notte (GitHub Actions, 02:30 in inverno / 03:30 in estate, ora italiana) un
 | `migrations/` | lo schema con cui sono stati salvati i dati |
 | `manifest.json` | data, commit, righe per tabella, numero di copertine (per verificare il ripristino) |
 
-Conservazione **7 giornalieri / 4 settimanali / 6 mensili**; ogni notte `restic check`, la domenica anche la lettura del 5% dei dati. L'indice di ricerca non si salva: lo ricostruiscono i trigger mentre si reinseriscono i libri.
+Conservazione **7 giornalieri / 4 settimanali / 6 mensili**; ogni notte `restic check`, la domenica anche la lettura del 5% dei dati. L'indice di ricerca non si salva: lo ricostruiscono i trigger mentre si reinseriscono i libri. Ogni comando restic ha un tempo massimo di 20 minuti: se B2 non risponde, il backup si ferma con le ultime righe di restic nel log di GitHub invece di scadere in silenzio a 30 minuti (blocco del 02/11/2026, poi riuscito al nuovo tentativo).
 
 ## Controllo settimanale (l'avviso automatico)
 Ogni lunedì il job `controllo` legge dalle statistiche di Cloudflare gli esiti delle richieste degli ultimi 7 giorni e i dati di D1. **Fallisce, e GitHub manda un'email**, se trova: richieste rifiutate per limite di CPU o finite in errore, un database oltre 1 GB, più di metà del limite gratuito giornaliero di righe lette (2,5 milioni) o scritte (50 mila).
