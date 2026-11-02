@@ -1,6 +1,9 @@
 # Intestazioni dei file statici (Workers Assets). L'API (/api/*) imposta le sue in worker/security.ts.
 # CSP: solo risorse nostre; 'wasm-unsafe-eval' serve allo scanner (zxing-wasm); niente script inline.
 # Niente upgrade-insecure-requests: workers.dev è già solo HTTPS (e HSTS), e in locale bloccherebbe WebKit.
+# Cache-Control: le pagine (anche quelle servite come app a pagina singola) mai in cache, così una nuova
+# versione si vede alla prima apertura (02/11/2026: un iPhone mostrava ancora la versione precedente).
+# I file sotto lo tolgono con "!" e mettono la loro regola: le regole per lo stesso indirizzo si sommano.
 /*
   Content-Security-Policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self'; img-src 'self' data: blob:; connect-src 'self'; manifest-src 'self'; worker-src 'self'; media-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
   X-Content-Type-Options: nosniff
@@ -9,10 +12,13 @@
   Permissions-Policy: camera=(self), microphone=(), geolocation=(), payment=(), usb=()
   Cross-Origin-Opener-Policy: same-origin
   Strict-Transport-Security: max-age=31536000
+  Cache-Control: no-store
 
 /assets/*
+  ! Cache-Control
   Cache-Control: public, max-age=31536000, immutable
 
 # Il service worker deve aggiornarsi subito dopo ogni pubblicazione.
 /sw.js
+  ! Cache-Control
   Cache-Control: no-cache
