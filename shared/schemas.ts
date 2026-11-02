@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { GENRE_KEYS } from "./genres";
 import { normalizeIsbn } from "./isbn";
 import { LOCATION_COLOR_KEYS } from "./location-colors";
 
@@ -105,12 +106,18 @@ export type BookSource = (typeof BOOK_SOURCES)[number];
 
 const idSchema = z.string().trim().min(1, "Identificativo mancante").max(64);
 
+/** Un genere dell'elenco (shared/genres.ts) o null. Nessun CHECK nel database: si controlla qui. */
+export const genreSchema = z.enum(GENRE_KEYS, { error: "Genere non valido" }).nullable();
+
+export const bookGenreSchema = z.object({ genre: genreSchema });
+
 /** Nuovo libro con la sua prima copia (aggiunta da scanner, ricerca ISBN o a mano). */
 export const newBookSchema = z.object({
   book: bookDataSchema,
   source: z.enum(BOOK_SOURCES, { error: "Origine dei dati non valida" }),
   locationId: idSchema,
   copy: copyDetailsSchema.default({ shelf: null, notes: null }),
+  genre: genreSchema.default(null),
   /** Copertina trovata dalla ricerca ISBN: il server la scarica solo da host consentiti. */
   coverUrl: z.string().trim().max(2000).optional(),
 });

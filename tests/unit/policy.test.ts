@@ -121,6 +121,25 @@ describe("modificare collocazione e note di una copia", () => {
   });
 });
 
+describe("genere del libro", () => {
+  it("l'admin sempre, anche senza copie", () => {
+    expect(can(admin, { type: "book.genre", copyLocations: [casa] })).toBe(true);
+    expect(can(admin, { type: "book.genre", copyLocations: [] })).toBe(true);
+  });
+
+  it("l'editor se il libro ha una copia in una sua sede attiva", () => {
+    expect(can(editorCasa, { type: "book.genre", copyLocations: [mare, casa] })).toBe(true);
+    expect(can(editorCasa, { type: "book.genre", copyLocations: [mare] })).toBe(false);
+    expect(can(editorVecchia, { type: "book.genre", copyLocations: [vecchia] })).toBe(false);
+    expect(can(editorSenzaSedi, { type: "book.genre", copyLocations: [casa] })).toBe(false);
+  });
+
+  it("il lettore mai", () => {
+    expect(can(reader, { type: "book.genre", copyLocations: [casa] })).toBe(false);
+    expect(can(readerConSedi, { type: "book.genre", copyLocations: [casa] })).toBe(false);
+  });
+});
+
 describe("eliminare una copia", () => {
   it("editor della sede se il libro ha altre copie", () => {
     expect(can(editorCasa, { type: "copy.delete", location: casa, isLastCopy: false })).toBe(true);

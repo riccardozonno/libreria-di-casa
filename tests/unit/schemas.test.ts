@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { bookDataSchema, copyDetailsSchema, isbnSchema, locationNameSchema, optionalIsbnSchema, parseAuthors, ratingSchema } from "../../shared/schemas";
+import { bookDataSchema, bookGenreSchema, copyDetailsSchema, isbnSchema, locationNameSchema, newBookSchema, optionalIsbnSchema, parseAuthors, ratingSchema } from "../../shared/schemas";
 
 describe("schemi di validazione", () => {
   it("isbnSchema normalizza e rifiuta ISBN non validi", () => {
@@ -78,5 +78,23 @@ describe("voto", () => {
 
   it.each([0, 6, 2.5, "4", undefined])("rifiuta %s", (rating) => {
     expect(ratingSchema.safeParse({ rating }).success).toBe(false);
+  });
+});
+
+describe("genere", () => {
+  it("accetta le chiavi dell'elenco e null", () => {
+    expect(bookGenreSchema.parse({ genre: "GIALLI" })).toEqual({ genre: "GIALLI" });
+    expect(bookGenreSchema.parse({ genre: null })).toEqual({ genre: null });
+  });
+
+  it.each(["Gialli e thriller", "ROSA", "", 3, undefined])("rifiuta %s", (genre) => {
+    expect(bookGenreSchema.safeParse({ genre }).success).toBe(false);
+  });
+
+  it("nuovo libro: genere facoltativo, assente = null", () => {
+    const base = { book: { title: "Titolo" }, source: "MANUAL", locationId: "casa" };
+    expect(newBookSchema.parse(base).genre).toBeNull();
+    expect(newBookSchema.parse({ ...base, genre: "STORIA" }).genre).toBe("STORIA");
+    expect(newBookSchema.safeParse({ ...base, genre: "Storia" }).success).toBe(false);
   });
 });
