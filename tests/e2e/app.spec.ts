@@ -43,7 +43,8 @@ test.describe("amministratore", () => {
     await page.getByRole("button", { name: "Segna come letto" }).click();
     await expect(page.getByRole("button", { name: "✓ L'ho letto" })).toBeVisible();
     await expect(page.getByText("📖 Sta leggendo:")).toBeHidden();
-    await expect(page.getByRole("button", { name: /leggendo/ })).toBeHidden();
+    await expect(page.getByRole("button", { name: "Sto leggendo" })).toBeHidden();
+    await expect(page.getByRole("button", { name: "📖 Lo sto leggendo" })).toBeHidden();
 
     // Voto: compare solo dopo «Letto»; ritoccare la stessa stella lo toglie.
     const votes = page.getByRole("group", { name: "Il tuo voto" });

@@ -7,6 +7,7 @@ export function ReadingToggle({ bookId, userId, hasRead, onChanged }: { bookId: 
   const [error, setError] = useState("");
 
   async function toggle() {
+    if (isBusy) return;
     setIsBusy(true);
     setError("");
     try {
@@ -21,7 +22,7 @@ export function ReadingToggle({ bookId, userId, hasRead, onChanged }: { bookId: 
 
   return (
     <div className="space-y-2">
-      <Button variant={hasRead ? "secondary" : "primary"} aria-pressed={hasRead} onClick={() => void toggle()} disabled={isBusy}>
+      <Button variant={hasRead ? "secondary" : "primary"} aria-pressed={hasRead} onClick={() => void toggle()} aria-disabled={isBusy} className="aria-disabled:opacity-60">
         {hasRead ? "✓ L'ho letto" : "Segna come letto"}
       </Button>
       {error && <Notice tone="error">{error}</Notice>}
