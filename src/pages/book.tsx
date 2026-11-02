@@ -8,6 +8,7 @@ import { useSession } from "../lib/session";
 import { useApi } from "../lib/use-api";
 import { AddCopyForm } from "./book/add-copy-form";
 import { CopyRow, type CopyView } from "./book/copy-row";
+import { CurrentReadingToggle } from "./book/current-reading-toggle";
 import { EditBookForm } from "./book/edit-book-form";
 import { ReadingToggle } from "./book/reading-toggle";
 import { StarIcon, StarRating, starLabel } from "./book/star-rating";
@@ -28,6 +29,7 @@ interface BookDetail {
   readings: Array<{ userId: string; name: string; rating: number | null }>;
   ratingAverage: number | null;
   ratingCount: number;
+  currentReaders: Array<{ userId: string; name: string }>;
   movements: Array<{ id: string; from: string; to: string; movedBy: string | null; movedAt: string }>;
 }
 
@@ -49,6 +51,7 @@ export function BookPage() {
   const copyCount = book.copies.length;
   const myReading = book.readings.find((reading) => reading.userId === me.id);
   const hasRead = myReading !== undefined;
+  const isReading = book.currentReaders.some((reader) => reader.userId === me.id);
   const refs = locations.map((location) => ({ id: location.id, archived: location.archived, name: location.name }));
   const addable = refs.filter((location) => can({ type: "copy.create", location }));
 
@@ -82,6 +85,7 @@ export function BookPage() {
 
       <div className="mt-5 flex flex-wrap items-start gap-2">
         <ReadingToggle bookId={book.id} userId={me.id} hasRead={hasRead} onChanged={reload} />
+        {!hasRead && <CurrentReadingToggle bookId={book.id} userId={me.id} isReading={isReading} onChanged={reload} />}
         {can({ type: "book.update" }) && !isEditing && (
           <Button variant="ghost" onClick={() => { setIsEditing(true); setSaved(false); }}>
             Modifica dati
@@ -136,6 +140,11 @@ export function BookPage() {
             <StarIcon filled className="size-5 text-star" />
             {averageFormat.format(book.ratingAverage)}
             <span className="font-normal text-ink-soft">· {book.ratingCount === 1 ? "1 voto" : `${book.ratingCount} voti`}</span>
+          </p>
+        )}
+        {book.currentReaders.length > 0 && (
+          <p className="mb-2 px-1 text-[15px] text-ink-soft">
+            <span className="font-semibold text-ink">📖 Sta leggendo:</span> {book.currentReaders.map((reader) => reader.name).join(", ")}
           </p>
         )}
         {book.readings.length === 0 ? (

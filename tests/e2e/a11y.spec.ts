@@ -37,6 +37,11 @@ for (const colorScheme of ["light", "dark"] as const) {
       await expect(page.getByRole("heading", { level: 1, name: /^Accessibile/ })).toBeVisible();
       expect(await seriousViolations(page)).toEqual([]);
 
+      // Con «Sto leggendo» attivo.
+      await page.getByRole("button", { name: "Sto leggendo" }).click();
+      await expect(page.getByText("📖 Sta leggendo:")).toBeVisible();
+      expect(await seriousViolations(page)).toEqual([]);
+
       // Con le stelle del voto visibili (dopo «Letto») e un voto dato.
       await page.getByRole("button", { name: "Segna come letto" }).click();
       await page.getByRole("group", { name: "Il tuo voto" }).getByRole("button", { name: "3 stelle" }).click();

@@ -16,7 +16,7 @@ const unique = () => `${Date.now().toString(36)}${Math.random().toString(36).sli
 test.describe("amministratore", () => {
   test.use(asUser("admin"));
 
-  test("crea una sede, aggiunge un libro a mano, lo segna come letto, lo vota e lo trova nel catalogo", async ({ page }) => {
+  test("crea una sede, aggiunge un libro a mano, lo sta leggendo, lo segna come letto, lo vota e lo trova nel catalogo", async ({ page }) => {
     const violations = failOnCspViolation(page);
     const sede = `Sede ${unique()}`;
     const titolo = `Perché la città ${unique()}`;
@@ -35,8 +35,15 @@ test.describe("amministratore", () => {
     await page.getByRole("button", { name: "Salva il libro" }).click();
 
     await expect(page.getByRole("heading", { name: titolo })).toBeVisible();
+
+    // «Sto leggendo», poi «Letto» lo toglie e il tasto sparisce (niente riletture).
+    await page.getByRole("button", { name: "Sto leggendo" }).click();
+    await expect(page.getByRole("button", { name: "📖 Lo sto leggendo" })).toBeVisible();
+    await expect(page.getByText("📖 Sta leggendo:")).toBeVisible();
     await page.getByRole("button", { name: "Segna come letto" }).click();
     await expect(page.getByRole("button", { name: "✓ L'ho letto" })).toBeVisible();
+    await expect(page.getByText("📖 Sta leggendo:")).toBeHidden();
+    await expect(page.getByRole("button", { name: /leggendo/ })).toBeHidden();
 
     // Voto: compare solo dopo «Letto»; ritoccare la stessa stella lo toglie.
     const votes = page.getByRole("group", { name: "Il tuo voto" });

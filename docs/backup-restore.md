@@ -7,7 +7,7 @@ Ogni notte (GitHub Actions, 02:30 in inverno / 03:30 in estate, ora italiana) un
 
 | Contenuto | Origine |
 |---|---|
-| `data/01-user.sql` … `data/09-isbn_cache.sql` | dati D1, **una tabella alla volta nell'ordine delle dipendenze** (l'export completo rifiuta FTS5; wrangler scriverebbe le tabelle in ordine alfabetico e online D1 importa a pezzi) |
+| `data/01-user.sql` … `data/10-isbn_cache.sql` (fino al 02/11/2026 erano 9: i backup vecchi si ripristinano lo stesso, i file si leggono in ordine di nome) | dati D1, **una tabella alla volta nell'ordine delle dipendenze** (l'export completo rifiuta FTS5; wrangler scriverebbe le tabelle in ordine alfabetico e online D1 importa a pezzi) |
 | `covers/` | copertine da R2 (rclone, token R2 in sola lettura) |
 | `migrations/` | lo schema con cui sono stati salvati i dati |
 | `manifest.json` | data, commit, righe per tabella, numero di copertine (per verificare il ripristino) |

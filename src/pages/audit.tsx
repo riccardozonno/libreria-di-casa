@@ -39,6 +39,8 @@ const ACTION_LABELS: Record<string, string> = {
   "reading.mark": "ha segnato un libro come letto",
   "reading.unmark": "ha tolto un \"letto\"",
   "reading.rate": "ha votato un libro",
+  "reading.start": "ha iniziato a leggere un libro",
+  "reading.stop": "ha tolto «Sto leggendo»",
   "csv.import": "ha importato un CSV",
   "csv.export": "ha esportato un CSV",
 };
