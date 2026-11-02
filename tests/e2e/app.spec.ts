@@ -247,6 +247,17 @@ test("i file statici hanno le intestazioni di sicurezza", async ({ request }) =>
   expect(response.headers()["x-content-type-options"]).toBe("nosniff");
 });
 
+test("le pagine non restano in cache (una nuova versione si vede subito); i file con hash sì", async ({ request }) => {
+  for (const path of ["/", "/statistiche"]) {
+    expect((await request.get(path)).headers()["cache-control"]).toBe("no-store");
+  }
+  const html = await (await request.get("/")).text();
+  const script = html.match(/src="(\/assets\/[^"]+\.js)"/)?.[1];
+  expect(script).toBeDefined();
+  expect((await request.get(script!)).headers()["cache-control"]).toBe("public, max-age=31536000, immutable");
+  expect((await request.get("/sw.js")).headers()["cache-control"]).toBe("no-cache");
+});
+
 test.describe("app installabile", () => {
   test.use(asUser("reader"));
 
