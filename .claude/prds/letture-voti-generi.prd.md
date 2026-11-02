@@ -56,7 +56,7 @@ utente ha usato almeno una volta filtri o Statistiche**.
 | 2 | Sto leggendo | Tasto nella scheda; si vede chi sta leggendo cosa; «Letto» lo chiude | complete | .claude/plans/sto-leggendo.plan.md |
 | 3 | Genere | Genere suggerito, confermato e modificabile; filtro e colonna CSV | complete | .claude/plans/genere.plan.md |
 | 4 | Filtri di lettura | «Non letti da me», «Non letti da nessuno», «In lettura» nel catalogo | complete | .claude/plans/filtri-lettura.plan.md |
-| 5 | Statistiche | Pagina per tutta la famiglia con classifiche, andamento, voti, generi | in-progress | .claude/plans/statistiche.plan.md |
+| 5 | Statistiche | Pagina per tutta la famiglia con classifiche, andamento, voti, generi | complete | .claude/plans/statistiche.plan.md |
 
 Ogni tappa si pubblica e si prova online prima della successiva, con uno stop ⏸ e l'OK dell'admin.
 
@@ -75,4 +75,4 @@ Ogni tappa si pubblica e si prova online prima della successiva, con uno stop �
 | Barra di navigazione affollata | Media | Bassa | Statistiche da un pulsante nel Catalogo, non una nuova voce nella barra |
 
 ---
-*Status: DRAFT — requirements only. Implementation planning pending via /plan.*
+*Status: COMPLETE — tutte e 5 le tappe pubblicate e approvate (02/11/2026).*
