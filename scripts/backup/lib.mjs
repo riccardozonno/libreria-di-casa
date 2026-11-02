@@ -1,7 +1,7 @@
 // Regole del backup (fase 6): funzioni pure, testate in tests/unit/backup-lib.test.ts.
 
 /** Tabelle salvate, in ordine di dipendenza (prima quelle a cui le altre fanno riferimento). */
-export const BACKUP_TABLES = ["user", "location", "location_editor", "book", "copy", "copy_movement", "book_reading", "audit_log", "isbn_cache"];
+export const BACKUP_TABLES = ["user", "location", "location_editor", "book", "copy", "copy_movement", "book_reading", "book_current_reading", "audit_log", "isbn_cache"];
 
 /** Conservazione restic: 7 giornalieri, 4 settimanali, 6 mensili. */
 export const RETENTION_ARGS = ["--keep-daily", "7", "--keep-weekly", "4", "--keep-monthly", "6", "--prune"];

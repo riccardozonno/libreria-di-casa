@@ -29,6 +29,13 @@
       "when": 1793468256699,
       "tag": "0003_reading_rating",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1793622767583,
+      "tag": "0004_current_reading",
+      "breakpoints": true
     }
   ]
 }

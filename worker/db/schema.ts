@@ -141,6 +141,19 @@ export const bookReading = sqliteTable(
   ],
 );
 
+// «Sto leggendo»: chi ha iniziato un libro e quando (la data non si mostra, decisione del 31/10/2026).
+// Mai su un libro già letto dallo stesso utente; segnare «Letto» toglie la riga.
+export const bookCurrentReading = sqliteTable(
+  "book_current_reading",
+  {
+    userId: text("user_id").notNull().references(() => user.id, { onDelete: "cascade" }),
+    bookId: text("book_id").notNull().references(() => book.id, { onDelete: "cascade" }),
+    markedById: text("marked_by_id").references(() => user.id, { onDelete: "set null" }),
+    startedAt: timestamp("started_at"),
+  },
+  (table) => [primaryKey({ columns: [table.userId, table.bookId] }), index("book_current_reading_book_idx").on(table.bookId)],
+);
+
 // Registro attività: in sola aggiunta (trigger nella migrazione). Mai segreti in `data`.
 export const auditLog = sqliteTable(
   "audit_log",

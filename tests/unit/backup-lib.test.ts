@@ -36,7 +36,7 @@ describe("comandi", () => {
 
   it("i file dei dati sono numerati nell'ordine delle dipendenze, così il ripristino li carica in quell'ordine", () => {
     expect(dataFileName("user")).toBe("01-user.sql");
-    expect(dataFileName("isbn_cache")).toBe("09-isbn_cache.sql");
+    expect(dataFileName("isbn_cache")).toBe("10-isbn_cache.sql");
     expect(BACKUP_TABLES.map(dataFileName)).toEqual([...BACKUP_TABLES.map(dataFileName)].sort());
   });
 
