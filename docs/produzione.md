@@ -54,7 +54,8 @@ Dal Mac resta possibile: `pnpm exec wrangler d1 migrations apply DB --remote && 
 | API senza login | 302 verso il login di Access |
 | Vecchio indirizzo di anteprima | 404 |
 | Ruoli online | tre utenti attivi con i ruoli attesi (Giulia promossa a EDITOR dall'admin) |
-| Primo backup notturno automatico | da controllare dopo le 02:30 del 01/11/2026 |
+| Primo backup notturno automatico | riuscito il 01/11 e il 02/11/2026 (run 41286481371 e 41409644674). GitHub li ha avviati verso le 08:00 UTC invece delle 01:30: i cron di GitHub Actions possono partire con ore di ritardo, per un backup giornaliero va bene |
+| Controllo settimanale del lunedì | il 02/11/2026 GitHub non l'ha avviato; lanciato a mano: riuscito (622 richieste riuscite in 7 giorni, CPU p99 16,6 ms, database 200 KB). Spostato alle 06:17 UTC, lontano dall'ora esatta |
 
 ## Verifica finale (fase 8, 31/10/2026)
 

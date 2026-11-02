@@ -7,7 +7,7 @@ name: Backup
 on:
   schedule:
     - cron: "30 1 * * *" # ogni notte, 02:30 (inverno) / 03:30 (estate) ora italiana
-    - cron: "0 6 * * 1" # ogni lunedì mattina: controllo settimanale
+    - cron: "17 6 * * 1" # ogni lunedì mattina: controllo settimanale (non all'ora esatta: GitHub salta più spesso le esecuzioni a :00)
   workflow_dispatch:
     inputs:
       job:
@@ -52,7 +52,7 @@ jobs:
           B2_ACCOUNT_KEY: ${{ secrets.B2_ACCOUNT_KEY }}
 
   controllo:
-    if: (github.event_name == 'schedule' && github.event.schedule == '0 6 * * 1') || (github.event_name == 'workflow_dispatch' && inputs.job == 'controllo')
+    if: (github.event_name == 'schedule' && github.event.schedule == '17 6 * * 1') || (github.event_name == 'workflow_dispatch' && inputs.job == 'controllo')
     runs-on: ubuntu-24.04
     timeout-minutes: 10
     steps:

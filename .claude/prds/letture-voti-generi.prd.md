@@ -52,8 +52,8 @@ utente ha usato almeno una volta filtri o Statistiche**.
 
 | # | Milestone | Outcome | Status | Plan |
 |---|---|---|---|---|
-| 1 | Voto | Dopo «Letto» si danno 1–5 stelline; la scheda mostra media e voti | in-progress | .claude/plans/voto-stelline.plan.md |
-| 2 | Sto leggendo | Tasto nella scheda; si vede chi sta leggendo cosa; «Letto» lo chiude | pending | — |
+| 1 | Voto | Dopo «Letto» si danno 1–5 stelline; la scheda mostra media e voti | complete | .claude/plans/voto-stelline.plan.md |
+| 2 | Sto leggendo | Tasto nella scheda; si vede chi sta leggendo cosa; «Letto» lo chiude | in-progress | .claude/plans/sto-leggendo.plan.md |
 | 3 | Genere | Genere suggerito, confermato e modificabile; filtro e colonna CSV | pending | — |
 | 4 | Filtri di lettura | «Non letti da me», «Non letti da nessuno», «In lettura» nel catalogo | pending | — |
 | 5 | Statistiche | Pagina per tutta la famiglia con classifiche, andamento, voti, generi | pending | — |
