@@ -8,6 +8,7 @@ Legenda: ✅ sì · ❌ no · **S** = sede della copia · **S→T** = da sede S 
 |---|---|---|---|
 | Accedere, vedere catalogo, schede, sedi (anche archiviate), storico spostamenti | ✅ | ✅ | ✅ |
 | Cercare e filtrare | ✅ | ✅ | ✅ |
+| Vedere le **Statistiche** di lettura di tutta la famiglia (le persone disattivate contano nei totali, non nelle classifiche per persona) | ✅ | ✅ | ✅ |
 | Segnare/togliere **sé stesso** in "Letto da" | ✅ | ✅ | ✅ |
 | Segnare/togliere **altri utenti** in "Letto da" | ✅ | ❌ | ❌ |
 | Dare, cambiare o togliere il **proprio** voto (1–5 stelle) a un libro che ha segnato come letto | ✅ | ✅ | ✅ |
