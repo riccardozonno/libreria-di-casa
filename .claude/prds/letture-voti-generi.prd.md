@@ -54,14 +54,14 @@ utente ha usato almeno una volta filtri o Statistiche**.
 |---|---|---|---|---|
 | 1 | Voto | Dopo «Letto» si danno 1–5 stelline; la scheda mostra media e voti | complete | .claude/plans/voto-stelline.plan.md |
 | 2 | Sto leggendo | Tasto nella scheda; si vede chi sta leggendo cosa; «Letto» lo chiude | complete | .claude/plans/sto-leggendo.plan.md |
-| 3 | Genere | Genere suggerito, confermato e modificabile; filtro e colonna CSV | in-progress | .claude/plans/genere.plan.md |
-| 4 | Filtri di lettura | «Non letti da me», «Non letti da nessuno», «In lettura» nel catalogo | pending | — |
+| 3 | Genere | Genere suggerito, confermato e modificabile; filtro e colonna CSV | complete | .claude/plans/genere.plan.md |
+| 4 | Filtri di lettura | «Non letti da me», «Non letti da nessuno», «In lettura» nel catalogo | in-progress | .claude/plans/filtri-lettura.plan.md |
 | 5 | Statistiche | Pagina per tutta la famiglia con classifiche, andamento, voti, generi | pending | — |
 
 Ogni tappa si pubblica e si prova online prima della successiva, con uno stop ⏸ e l'OK dell'admin.
 
 ## Open Questions
-- [ ] Elenco dei generi (circa 15 voci) e corrispondenza con le categorie di Google Books — da approvare nella tappa 3.
+- [x] Elenco dei generi (22 voci) e corrispondenza con le categorie di Google Books: approvati il 02/11/2026.
 - [ ] Le letture segnate prima del rilascio hanno come data il giorno in cui sono state segnate: l'andamento parte sbilanciato su ottobre 2026. Accettato (31/10/2026), da ricordare nella pagina.
 - [x] «Sto leggendo» su un libro già letto: **non permesso** (decisione del 31/10/2026, niente riletture).
 - [x] «Sto leggendo» dimenticato: **nessun avviso e nessun «da quando» mostrato**, ma la data di inizio si salva per usi futuri (31/10/2026).
