@@ -12,6 +12,7 @@ import { locationRoutes } from "./locations/routes";
 import { requester } from "./http";
 import { rateLimit } from "./rate-limit";
 import { apiHeaders, requestSizeLimit, sameOriginWrites } from "./security";
+import { statsRoutes } from "./stats/routes";
 import { userRoutes } from "./users/routes";
 import { signOutEverywhere } from "./users/service";
 
@@ -34,6 +35,7 @@ app.route("/covers", coverRoutes);
 app.route("/users", userRoutes);
 app.route("/audit", auditRoutes);
 app.route("/csv", csvRoutes);
+app.route("/stats", statsRoutes);
 
 app.notFound((c) => c.json({ error: "Non trovato." }, 404));
 
