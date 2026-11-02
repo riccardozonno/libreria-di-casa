@@ -129,7 +129,7 @@ describe("catalogo", () => {
       expect.objectContaining({ id: copyId, location: expect.objectContaining({ name: "Casa" }) }),
     ]);
     expect(detail.readings).toEqual([{ userId: reader.id, name: "lettore", rating: null }]);
-    expect(detail).toMatchObject({ ratingAverage: null, ratingCount: 0 });
+    expect(detail).toMatchObject({ ratingAverage: null, ratingCount: 0, currentReaders: [] });
     expect(detail.movements).toEqual([expect.objectContaining({ from: "Mare", to: "Casa", movedBy: "mare" })]);
     expect((await reader.call("/books/inesistente")).status).toBe(404);
   });
@@ -292,5 +292,76 @@ describe("voto", () => {
       { userId: editorMare.id, name: "mare", rating: null },
     ]);
     expect(book).toMatchObject({ ratingAverage: 4.3, ratingCount: 3 });
+  });
+});
+
+describe("sto leggendo", () => {
+  let bookId: string;
+  const path = (userId: string) => `/books/${bookId}/current-readers/${userId}`;
+  const start = (who: User, userId = who.id) => who.call(path(userId), { method: "PUT" });
+  const stop = (who: User, userId = who.id) => who.call(path(userId), { method: "DELETE" });
+  const currentRows = () =>
+    env.DB.prepare("SELECT user_id, marked_by_id, started_at FROM book_current_reading WHERE book_id = ?").bind(bookId).all<{ user_id: string; marked_by_id: string; started_at: string }>();
+  const actions = async () =>
+    (await env.DB.prepare("SELECT action, data FROM audit_log WHERE entity_id = ? ORDER BY created_at, rowid").bind(bookId).all<{ action: string; data: string }>()).results
+      .filter((row) => row.action.startsWith("reading."))
+      .map((row) => ({ action: row.action, data: JSON.parse(row.data) as Record<string, unknown> }));
+
+  beforeEach(async () => {
+    ({ bookId } = (await createBook(editorCasa)).body);
+  });
+
+  it("ognuno inizia e smette per sé; operazioni idempotenti registrate una volta; data di inizio salvata", async () => {
+    expect((await start(reader)).status).toBe(204);
+    expect((await start(reader)).status).toBe(204);
+    const [row] = (await currentRows()).results;
+    expect(row).toMatchObject({ user_id: reader.id, marked_by_id: reader.id });
+    expect(Date.parse(row?.started_at ?? "")).not.toBeNaN();
+
+    expect((await stop(reader)).status).toBe(204);
+    expect((await stop(reader)).status).toBe(204);
+    expect((await currentRows()).results).toEqual([]);
+    expect(await actions()).toEqual([
+      { action: "reading.start", data: { userId: reader.id } },
+      { action: "reading.stop", data: { userId: reader.id } },
+    ]);
+  });
+
+  it("per un altro utente: solo l'admin; 404 se libro o utente non esistono", async () => {
+    expect((await start(reader, editorCasa.id)).status).toBe(403);
+    expect((await stop(editorCasa, reader.id)).status).toBe(403);
+    expect((await start(admin, editorCasa.id)).status).toBe(204);
+    expect((await stop(admin, editorCasa.id)).status).toBe(204);
+    expect((await start(admin, "utente-inesistente")).status).toBe(404);
+    bookId = "inesistente";
+    expect((await start(reader)).status).toBe(404);
+  });
+
+  it("non si può su un libro già letto (409)", async () => {
+    await reader.call(`/books/${bookId}/readings/${reader.id}`, { method: "PUT" });
+    const response = await start(reader);
+    expect(response.status).toBe(409);
+    expect(await response.json()).toMatchObject({ error: "Questo libro risulta già letto." });
+    expect((await currentRows()).results).toEqual([]);
+  });
+
+  it("segnare «Letto» toglie «Sto leggendo»; il registro lo dice nella riga di «Letto»", async () => {
+    await start(reader);
+    expect((await reader.call(`/books/${bookId}/readings/${reader.id}`, { method: "PUT" })).status).toBe(204);
+    expect((await currentRows()).results).toEqual([]);
+    expect(await actions()).toEqual([
+      { action: "reading.start", data: { userId: reader.id } },
+      { action: "reading.mark", data: { userId: reader.id, wasReading: true } },
+    ]);
+  });
+
+  it("scheda: chi sta leggendo, in ordine di nome, senza la data", async () => {
+    await start(reader);
+    await start(admin);
+    const book = (await (await reader.call(`/books/${bookId}`)).json()) as Record<string, unknown>;
+    expect(book.currentReaders).toEqual([
+      { userId: admin.id, name: "admin" },
+      { userId: reader.id, name: "lettore" },
+    ]);
   });
 });

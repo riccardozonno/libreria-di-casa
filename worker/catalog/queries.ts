@@ -91,6 +91,8 @@ export interface BookDetail {
   /** Media dei voti con una cifra decimale; null se nessuno ha votato. */
   ratingAverage: number | null;
   ratingCount: number;
+  /** Chi ha premuto «Sto leggendo» (la data di inizio non si mostra). */
+  currentReaders: Array<{ userId: string; name: string }>;
   movements: Array<{ id: string; from: string; to: string; movedBy: string | null; movedAt: string }>;
 }
 
@@ -104,18 +106,21 @@ export async function getBookDetail(db: Db, id: string): Promise<BookDetail> {
   type CopyRow = { id: string; shelf: string | null; notes: string | null; location_id: string; name: string; color: LocationColorKey; archived_at: string | null };
   type ReadingRow = { user_id: string; name: string; rating: number | null };
   type MovementRow = { id: string; from_name: string; to_name: string; moved_by: string | null; moved_at: string };
-  // Tre letture in un solo viaggio verso D1.
-  const [copyResult, readingResult, movementResult] = await runBatch(db, [
+  // Quattro letture in un solo viaggio verso D1.
+  type CurrentReaderRow = { user_id: string; name: string };
+  const [copyResult, readingResult, movementResult, currentResult] = await runBatch(db, [
     sql`SELECT c.id, c.shelf, c.notes, l.id AS location_id, l.name, l.color, l.archived_at
         FROM copy c JOIN location l ON l.id = c.location_id WHERE c.book_id = ${id} ORDER BY c.rowid`,
     sql`SELECT r.user_id, u.name, r.rating FROM book_reading r JOIN user u ON u.id = r.user_id WHERE r.book_id = ${id} ORDER BY u.name`,
     sql`SELECT m.id, f.name AS from_name, t.name AS to_name, u.name AS moved_by, m.moved_at
         FROM copy_movement m JOIN location f ON f.id = m.from_location_id JOIN location t ON t.id = m.to_location_id
         LEFT JOIN user u ON u.id = m.moved_by_id WHERE m.book_id = ${id} ORDER BY m.moved_at DESC`,
+    sql`SELECT r.user_id, u.name FROM book_current_reading r JOIN user u ON u.id = r.user_id WHERE r.book_id = ${id} ORDER BY u.name`,
   ]);
   const copies = (copyResult?.results ?? []) as CopyRow[];
   const readings = (readingResult?.results ?? []) as ReadingRow[];
   const movements = (movementResult?.results ?? []) as MovementRow[];
+  const currentReaders = (currentResult?.results ?? []) as CurrentReaderRow[];
 
   return {
     id: row.id,
@@ -136,6 +141,7 @@ export async function getBookDetail(db: Db, id: string): Promise<BookDetail> {
     })),
     readings: readings.map((reading) => ({ userId: reading.user_id, name: reading.name, rating: reading.rating })),
     ...ratingSummary(readings.map((reading) => reading.rating)),
+    currentReaders: currentReaders.map((reader) => ({ userId: reader.user_id, name: reader.name })),
     movements: movements.map((movement) => ({ id: movement.id, from: movement.from_name, to: movement.to_name, movedBy: movement.moved_by, movedAt: movement.moved_at })),
   };
 }
