@@ -13,6 +13,7 @@ import { LocationsPage } from "./pages/locations";
 import { NotFoundPage } from "./pages/not-found";
 import { ProfilePage } from "./pages/profile";
 import { RouteErrorPage } from "./pages/route-error";
+import { StatsPage } from "./pages/stats";
 import { UsersPage } from "./pages/users";
 
 // Pagine dell'app (navigazione nel browser, nessun rendering sul server). Ogni dato arriva da /api.
@@ -29,6 +30,7 @@ const router = createBrowserRouter([
     children: [
       { path: "/", element: <CatalogPage /> },
       { path: "/libri/:id", element: <BookPage /> },
+      { path: "/statistiche", element: <StatsPage /> },
       { path: "/aggiungi", element: <AddBookPage /> },
       { path: "/sedi", element: <LocationsPage /> },
       { path: "/admin", element: <AdminPage /> },

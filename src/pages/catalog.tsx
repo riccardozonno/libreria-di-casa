@@ -4,7 +4,7 @@ import { locationColorClass } from "../../shared/location-colors";
 import { genreFilterSchema, type ReadingFilter, readingFilterSchema } from "../../shared/schemas";
 import { BookCover } from "../components/book-cover";
 import { GenreOptions } from "../components/genre-options";
-import { LocationTag, Notice, PageHeader, SelectInput } from "../components/ui";
+import { buttonClasses, LocationTag, Notice, PageHeader, SelectInput } from "../components/ui";
 import { useLocations } from "../lib/locations";
 import { useApi } from "../lib/use-api";
 
@@ -90,7 +90,15 @@ export function CatalogPage() {
 
   return (
     <>
-      <PageHeader title="Catalogo" subtitle={isFiltered ? "Risultati della ricerca" : "Tutti i libri di casa"} />
+      <PageHeader
+        title="Catalogo"
+        subtitle={isFiltered ? "Risultati della ricerca" : "Tutti i libri di casa"}
+        action={
+          <Link to="/statistiche" className={buttonClasses("secondary", "shrink-0")}>
+            Statistiche
+          </Link>
+        }
+      />
       {state?.deleted && (
         <div className="mb-3">
           <Notice tone="success">Libro eliminato.</Notice>

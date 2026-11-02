@@ -135,7 +135,7 @@ test.describe("amministratore", () => {
   });
 
   test("nessuna pagina scorre di lato sul telefono", async ({ page }) => {
-    for (const path of ["/", "/aggiungi", "/sedi", "/profilo", "/installa", "/admin", "/admin/utenti", "/admin/registro", "/admin/csv"]) {
+    for (const path of ["/", "/statistiche", "/aggiungi", "/sedi", "/profilo", "/installa", "/admin", "/admin/utenti", "/admin/registro", "/admin/csv"]) {
       await page.goto(path);
       await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
@@ -208,6 +208,22 @@ test.describe("lettore", () => {
     await expect(page.getByRole("link", { name: "Aggiungi" })).toHaveCount(0);
     await page.goto("/aggiungi");
     await expect(page.getByText("Non sei editor di nessuna sede attiva")).toBeVisible();
+  });
+
+  test("apre le Statistiche dal Catalogo", async ({ page }) => {
+    const violations = failOnCspViolation(page);
+    await page.goto("/");
+    await page.getByRole("link", { name: "Statistiche" }).click();
+    await expect(page).toHaveURL(/\/statistiche$/);
+    await expect(page.getByRole("heading", { level: 1, name: "Statistiche" })).toBeVisible();
+    for (const title of ["Chi legge di più", "Sta leggendo", "Letture per mese", "Letture per anno", "I più apprezzati", "Autori più letti", "Generi più letti", "Letture in comune"]) {
+      await expect(page.getByRole("heading", { level: 2, name: title })).toBeVisible();
+    }
+    // Sempre 12 mesi, anche a zero.
+    await expect(page.getByRole("list", { name: "Letture per mese" }).getByRole("listitem")).toHaveCount(12);
+    await page.getByRole("link", { name: "← Catalogo" }).click();
+    await expect(page.getByRole("heading", { name: "Catalogo" })).toBeVisible();
+    expect(violations).toEqual([]);
   });
 
   test("le scritture dirette all'API sono rifiutate", async ({ page }) => {
