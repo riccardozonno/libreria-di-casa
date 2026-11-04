@@ -268,6 +268,27 @@ test("l'icona per la schermata Home è incorporata nella pagina (iOS la cerca se
   expect(html).toMatch(/<link rel="apple-touch-icon" href="data:image\/png;base64,[A-Za-z0-9+/=]{100,}"/);
 });
 
+test.describe("dopo una pubblicazione", () => {
+  test.use(asUser("reader"));
+
+  test("un file JS che non esiste più (vecchio hash) fa ricaricare la pagina una volta sola", async ({ page }) => {
+    await page.goto("/");
+    await expect(page.getByRole("heading", { name: "Catalogo" })).toBeVisible();
+    let loads = 0;
+    page.on("load", () => (loads += 1));
+    const preloadError = () => page.evaluate(() => window.dispatchEvent(new Event("vite:preloadError", { cancelable: true })));
+
+    await preloadError();
+    await expect.poll(() => loads).toBe(1);
+    await expect(page.getByRole("heading", { name: "Catalogo" })).toBeVisible();
+
+    // Subito dopo, un altro errore non ricarica di nuovo (niente cicli se il file manca davvero).
+    await preloadError();
+    await page.waitForTimeout(1_000);
+    expect(loads).toBe(1);
+  });
+});
+
 test("i file statici hanno le intestazioni di sicurezza", async ({ request }) => {
   const response = await request.get("/");
   expect(response.headers()["content-security-policy"]).toContain("frame-ancestors 'none'");
