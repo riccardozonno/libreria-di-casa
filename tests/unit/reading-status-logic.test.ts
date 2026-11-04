@@ -100,7 +100,8 @@ describe("riepilogo della famiglia", () => {
       readings: ["Bruno", "Carla", "Dario"].map((name) => ({ userId: `u-${name}`, name, rating: null })),
       currentReaders: ["Elisa", "Franco"].map((name) => ({ userId: `u-${name}`, name })),
     });
-    expect(summary.avatars).toEqual(["B", "C", "D", "E"]);
+    expect(summary.avatars.map((avatar) => avatar.initials)).toEqual(["B", "C", "D", "E"]);
+    expect(summary.avatars[0]).toEqual({ userId: "u-Bruno", initials: "B" });
     expect(summary.moreCount).toBe(1);
     expect(summary.currentReaders.map((reader) => reader.name)).toEqual(["Elisa", "Franco"]);
   });

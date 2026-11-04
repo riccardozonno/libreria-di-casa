@@ -59,7 +59,7 @@ export interface FamilySummary {
   average: string | null;
   /** «2 letti · 1 in lettura», oppure il messaggio quando non c'è nessuno. */
   counts: string;
-  avatars: string[];
+  avatars: Array<{ userId: string; initials: string }>;
   moreCount: number;
   readers: FamilyRow[];
   currentReaders: FamilyRow[];
@@ -95,7 +95,7 @@ export function familySummary(input: {
     isEmpty: people.length === 0,
     average: input.ratingCount > 0 && input.ratingAverage !== null ? average.format(input.ratingAverage) : null,
     counts: parts.length > 0 ? parts.join(" · ") : "Nessuno l'ha ancora letto o iniziato",
-    avatars: people.slice(0, MAX_AVATARS).map((person) => initialsOf(person.name)),
+    avatars: people.slice(0, MAX_AVATARS).map((person) => ({ userId: person.userId, initials: initialsOf(person.name) })),
     moreCount: Math.max(0, people.length - MAX_AVATARS),
     readers,
     currentReaders,

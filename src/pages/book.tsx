@@ -38,19 +38,25 @@ interface BookDetail {
 const SOURCE_LABELS: Record<BookDetail["source"], string> = { GOOGLE_BOOKS: "Google Books", OPEN_LIBRARY: "Open Library", MANUAL: "inserimento manuale", CSV: "importazione CSV" };
 const dateFormat = new Intl.DateTimeFormat("it-IT", { day: "numeric", month: "long", year: "numeric" });
 
+/** Una scheda per libro: passando a un altro libro moduli, conferme e pannelli ripartono da zero. */
 export function BookPage() {
   const { id = "" } = useParams();
+  return <BookDetailPage key={id} id={id} />;
+}
+
+function BookDetailPage({ id }: { id: string }) {
   const { me, can } = useSession();
   const { locations } = useLocations();
-  const { data: book, error, reload } = useApi<BookDetail>(`/books/${encodeURIComponent(id)}`);
+  const { data: book, error, loading, reload } = useApi<BookDetail>(`/books/${encodeURIComponent(id)}`);
   const [isEditing, setIsEditing] = useState(false);
   const [saved, setSaved] = useState(false);
   // Chiuso il modulo, il focus torna su «Modifica dati» (che React ha appena ricreato).
   const editButton = useRef<HTMLButtonElement>(null);
   const shouldRefocusEdit = useRef(false);
   useEffect(() => {
-    if (!shouldRefocusEdit.current) return;
-    editButton.current?.focus();
+    // Il segnale resta finché il pulsante non c'è davvero (es. permessi che cambiano durante il ricaricamento).
+    if (!shouldRefocusEdit.current || !editButton.current) return;
+    editButton.current.focus();
     shouldRefocusEdit.current = false;
   });
 
@@ -99,7 +105,7 @@ export function BookPage() {
       </header>
 
       <Section title="La tua lettura">
-        <ReadingStatusControl bookId={book.id} userId={me.id} status={statusOf(hasRead, isReading)} rating={myReading?.rating ?? null} onChanged={reload} />
+        <ReadingStatusControl bookId={book.id} userId={me.id} status={statusOf(hasRead, isReading)} rating={myReading?.rating ?? null} isRefreshing={loading} onChanged={reload} />
       </Section>
 
       <Section title="In famiglia">
@@ -113,11 +119,10 @@ export function BookPage() {
           </Button>
         </div>
       )}
-      {saved && (
-        <div className="mt-3">
-          <Notice tone="success">Dati del libro aggiornati.</Notice>
-        </div>
-      )}
+      {/* Sempre presente: VoiceOver annuncia il messaggio quando compare (una regione nuova già piena a volte la salta). */}
+      <div role="status" className={saved ? "mt-3 rounded-[var(--radius-sm)] bg-success-soft px-3 py-2.5 text-[14px] font-medium text-success" : "sr-only"}>
+        {saved ? "Dati del libro aggiornati." : ""}
+      </div>
       {isEditing && (
         <EditBookForm
           book={book}

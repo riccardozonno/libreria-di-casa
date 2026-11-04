@@ -26,9 +26,9 @@ export function FamilyReadings({ readings, currentReaders, ratingAverage, rating
     <div className={`${cardClasses} overflow-hidden`}>
       <button type="button" aria-expanded={isOpen} aria-controls={panelId} onClick={() => setIsOpen((open) => !open)} className="flex min-h-14 w-full items-center gap-3 px-4 py-3 text-left active:bg-sunken">
         <span aria-hidden="true" className="flex shrink-0">
-          {summary.avatars.map((initials, index) => (
-            <span key={index} className="-ml-2 flex size-9 items-center justify-center rounded-full bg-accent-soft text-[12px] font-semibold text-accent ring-2 ring-surface first:ml-0">
-              {initials}
+          {summary.avatars.map((avatar) => (
+            <span key={avatar.userId} className="-ml-2 flex size-9 items-center justify-center rounded-full bg-accent-soft text-[12px] font-semibold text-accent ring-2 ring-surface first:ml-0">
+              {avatar.initials}
             </span>
           ))}
           {summary.moreCount > 0 && (
@@ -50,12 +50,10 @@ export function FamilyReadings({ readings, currentReaders, ratingAverage, rating
         </svg>
       </button>
 
-      {isOpen && (
-        <div id={panelId} className="space-y-4 border-t border-line px-4 pb-4 pt-3">
-          {summary.readers.length > 0 && <Group title={`L'hanno letto · ${summary.readers.length}`} rows={summary.readers} showRating />}
-          {summary.currentReaders.length > 0 && <Group title={`Lo stanno leggendo · ${summary.currentReaders.length}`} rows={summary.currentReaders} />}
-        </div>
-      )}
+      <div id={panelId} hidden={!isOpen} className="space-y-4 border-t border-line px-4 pb-4 pt-3">
+        {summary.readers.length > 0 && <Group title={`L'hanno letto · ${summary.readers.length}`} rows={summary.readers} showRating />}
+        {summary.currentReaders.length > 0 && <Group title={`Lo stanno leggendo · ${summary.currentReaders.length}`} rows={summary.currentReaders} />}
+      </div>
     </div>
   );
 }

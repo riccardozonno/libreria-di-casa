@@ -37,14 +37,15 @@ export function StarRow({ rating }: { rating: number }) {
   );
 }
 
-export function StarRating({ bookId, userId, rating, onChanged }: { bookId: string; userId: string; rating: number | null; onChanged: () => void }) {
+export function StarRating({ bookId, userId, rating, isRefreshing = false, onChanged }: { bookId: string; userId: string; rating: number | null; isRefreshing?: boolean; onChanged: () => void }) {
   const [isBusy, setIsBusy] = useState(false);
   const [error, setError] = useState("");
   // Blocca il doppio tocco prima che React aggiorni lo stato.
   const sending = useRef(false);
 
   async function choose(star: number) {
-    if (sending.current) return;
+    // Fino all'arrivo del voto ricaricato, `rating` è quello vecchio: un secondo tocco non vale.
+    if (sending.current || isRefreshing) return;
     sending.current = true;
     setIsBusy(true);
     setError("");
@@ -68,7 +69,7 @@ export function StarRating({ bookId, userId, rating, onChanged }: { bookId: stri
             type="button"
             aria-label={starLabel(star)}
             aria-pressed={star === rating}
-            aria-disabled={isBusy}
+            aria-disabled={isBusy || isRefreshing}
             onClick={() => void choose(star)}
             className="-mx-0.5 flex size-11 items-center justify-center rounded-full text-star aria-disabled:opacity-60 active:scale-95"
           >

@@ -1,4 +1,4 @@
-import { eq, sql } from "drizzle-orm";
+import { and, eq, type SQL, sql } from "drizzle-orm";
 import { can, type LocationRef } from "../../shared/policy";
 import type { GenreKey } from "../../shared/genres";
 import type { AddCopyInput, BookUpdate, CopyDetails, NewBookInput } from "../../shared/schemas";
@@ -175,10 +175,19 @@ export async function moveCopy(db: Db, who: Requester, copyId: string, toLocatio
 
 type BookSnapshot = { isbn13: string | null; title: string; authors: string[]; publishedYear: number | null; description: string | null; genre: GenreKey | null };
 
+function parseAuthors(raw: string): string[] {
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.filter((author): author is string => typeof author === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
 /** Dati del libro, genere e copertina: admin, o editor di una sede (attiva) in cui il libro ha una copia. */
-export async function assertCanEditBook(db: Db, who: Requester, bookId: string): Promise<BookSnapshot> {
-  const row = await db.get<(Omit<BookSnapshot, "authors"> & { authors: string }) | undefined>(
-    sql`SELECT isbn13, title, authors, published_year AS publishedYear, description, genre FROM book WHERE id = ${bookId}`,
+export async function assertCanEditBook(db: Db, who: Requester, bookId: string): Promise<{ book: BookSnapshot; coverKey: string | null }> {
+  const row = await db.get<(Omit<BookSnapshot, "authors"> & { authors: string; cover_key: string | null }) | undefined>(
+    sql`SELECT isbn13, title, authors, published_year AS publishedYear, description, genre, cover_key FROM book WHERE id = ${bookId}`,
   );
   if (!row) throw notFound("Libro");
   const copyLocations = (
@@ -187,7 +196,8 @@ export async function assertCanEditBook(db: Db, who: Requester, bookId: string):
     )
   ).map((location) => ({ id: location.id, archived: location.archived_at !== null }));
   if (!can(who.actor, { type: "book.update", copyLocations })) throw forbidden();
-  return { ...row, authors: JSON.parse(row.authors) as string[] };
+  const { cover_key: coverKey, authors, ...rest } = row;
+  return { book: { ...rest, authors: parseAuthors(authors) }, coverKey };
 }
 
 /** Campi cambiati, per il registro: { before, after } solo con quelli diversi. */
@@ -199,19 +209,27 @@ function changedFields(before: BookSnapshot, after: BookSnapshot): { before: Par
   };
 }
 
-/** Modifica dei dati del libro (genere compreso, se indicato). Registro solo se qualcosa cambia davvero. */
+/** Il libro ha ancora esattamente questi valori? (nessuno l'ha modificato dopo la lettura) */
+function sameAs(snapshot: BookSnapshot): SQL {
+  return sql`isbn13 IS ${snapshot.isbn13} AND title IS ${snapshot.title} AND authors IS ${JSON.stringify(snapshot.authors)}
+    AND published_year IS ${snapshot.publishedYear} AND description IS ${snapshot.description} AND genre IS ${snapshot.genre}`;
+}
+
+/**
+ * Modifica dei dati del libro (genere compreso, se indicato). Si applica solo se nessuno l'ha cambiato dopo la
+ * lettura (altrimenti 409): così il registro, scritto solo se qualcosa cambia, riporta valori «prima» esatti.
+ */
 export async function updateBook(db: Db, who: Requester, bookId: string, data: BookUpdate): Promise<void> {
-  const before = await assertCanEditBook(db, who, bookId);
+  const { book: before } = await assertCanEditBook(db, who, bookId);
   const after: BookSnapshot = { ...data, genre: data.genre === undefined ? before.genre : data.genre };
-  const authors = JSON.stringify(after.authors);
-  // Stessa condizione per registro e modifica: se nel frattempo nessun campo è diverso, nessuna riga.
-  const changes = sql`EXISTS (SELECT 1 FROM book WHERE id = ${bookId} AND (isbn13 IS NOT ${after.isbn13} OR title IS NOT ${after.title}
-    OR authors IS NOT ${authors} OR published_year IS NOT ${after.publishedYear} OR description IS NOT ${after.description} OR genre IS NOT ${after.genre}))`;
+  const unchanged = sameAs(before);
+  const changes = sql`EXISTS (SELECT 1 FROM book WHERE id = ${bookId} AND ${unchanged} AND NOT (${sameAs(after)}))`;
   try {
-    await runBatch(db, [
+    const [, updated] = await runBatch(db, [
       auditWhen(changes, who.audit, { action: "book.update", entityType: "book", entityId: bookId, data: changedFields(before, after), ip: who.audit.ip }),
-      db.update(book).set(after).where(eq(book.id, bookId)),
+      db.update(book).set(after).where(and(eq(book.id, bookId), unchanged)),
     ]);
+    if (!changedRows(updated)) throw conflict("Il libro è stato modificato nel frattempo: ricarica e riprova.");
   } catch (error) {
     if (isUniqueViolation(error)) throw conflict("Un altro libro ha già questo ISBN.");
     throw error;
@@ -220,12 +238,10 @@ export async function updateBook(db: Db, who: Requester, bookId: string, data: B
 
 /** Nuova copertina (stesso permesso degli altri dati del libro). Restituisce la chiave precedente. */
 export async function setBookCover(db: Db, who: Requester, bookId: string, coverKey: string): Promise<string | null> {
-  await assertCanEditBook(db, who, bookId);
-  const current = await db.get<{ cover_key: string | null } | undefined>(sql`SELECT cover_key FROM book WHERE id = ${bookId}`);
-  if (!current) throw notFound("Libro");
+  const { coverKey: previous } = await assertCanEditBook(db, who, bookId);
   await runBatch(db, [
     db.update(book).set({ coverKey }).where(eq(book.id, bookId)),
     auditInsert(db, who.audit, { action: "book.update", entityType: "book", entityId: bookId, data: { cover: "nuova copertina" }, ip: who.audit.ip }),
   ]);
-  return current.cover_key;
+  return previous;
 }
