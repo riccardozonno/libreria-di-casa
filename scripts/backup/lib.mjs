@@ -60,36 +60,36 @@ const TOP_VERSIONS = 5;
 const toMs = (microseconds) => Math.round(microseconds / 100) / 10;
 
 /**
- * Riassume le righe di Cloudflare (una per versione del Worker ed esito, tempi in microsecondi): esiti
- * sommati, p99 complessivo e, per le versioni più usate, p50/p90/p99/p99,9 della CPU in ms. Con più righe
- * per la stessa versione si tiene il valore più alto: i percentili non si possono sommare, è una stima prudente.
+ * Riassume le statistiche di Cloudflare (tempi in microsecondi). `byStatus`: una riga per esito, da cui
+ * esiti e p99 complessivo (come sempre). `byVersion`: una riga per versione ed esito; per ogni versione si
+ * usano i percentili della riga con più richieste (di solito gli esiti riusciti), perché i percentili non
+ * si possono sommare e una riga con poche richieste lente falserebbe tutta la versione.
  */
-export function summarizeInvocations(rows) {
+export function summarizeInvocations(byStatus, byVersion) {
   const statuses = {};
-  const versions = new Map();
   let cpuP99 = 0;
-  for (const row of rows) {
-    const { status, scriptVersion } = row.dimensions;
-    statuses[status] = (statuses[status] ?? 0) + row.sum.requests;
+  for (const row of byStatus) {
+    statuses[row.dimensions.status] = (statuses[row.dimensions.status] ?? 0) + row.sum.requests;
     cpuP99 = Math.max(cpuP99, row.quantiles.cpuTimeP99);
-    const version = scriptVersion.slice(0, 8);
-    const current = versions.get(version) ?? { version, requests: 0, p50: 0, p90: 0, p99: 0, p999: 0 };
-    versions.set(version, {
-      version,
-      requests: current.requests + row.sum.requests,
-      p50: Math.max(current.p50, row.quantiles.cpuTimeP50),
-      p90: Math.max(current.p90, row.quantiles.cpuTimeP90),
-      p99: Math.max(current.p99, row.quantiles.cpuTimeP99),
-      p999: Math.max(current.p999, row.quantiles.cpuTimeP999),
-    });
+  }
+  const versions = new Map();
+  for (const row of byVersion) {
+    const version = row.dimensions.scriptVersion.slice(0, 8);
+    const current = versions.get(version);
+    const main = current && current.main.sum.requests >= row.sum.requests ? current.main : row;
+    versions.set(version, { requests: (current?.requests ?? 0) + row.sum.requests, main });
   }
   return {
     statuses,
     cpuP99Ms: toMs(cpuP99),
-    versions: [...versions.values()]
-      .sort((a, b) => b.requests - a.requests)
+    versions: [...versions.entries()]
+      .sort(([, a], [, b]) => b.requests - a.requests)
       .slice(0, TOP_VERSIONS)
-      .map((entry) => ({ version: entry.version, requests: entry.requests, cpuMs: { p50: toMs(entry.p50), p90: toMs(entry.p90), p99: toMs(entry.p99), p999: toMs(entry.p999) } })),
+      .map(([version, { requests, main }]) => ({
+        version,
+        requests,
+        cpuMs: { p50: toMs(main.quantiles.cpuTimeP50), p90: toMs(main.quantiles.cpuTimeP90), p99: toMs(main.quantiles.cpuTimeP99), p999: toMs(main.quantiles.cpuTimeP999) },
+      })),
   };
 }
 

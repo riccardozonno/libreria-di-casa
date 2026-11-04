@@ -12,13 +12,16 @@ const DAYS = 7;
 
 for (const name of ["CLOUDFLARE_API_TOKEN", "CLOUDFLARE_ACCOUNT_ID"]) if (!process.env[name]) throw new Error(`Variabile ${name} mancante.`);
 
-const query = `query Salute($account: string!, $script: string!, $since: Time!, $until: Time!) {
-  viewer { accounts(filter: { accountTag: $account }) {
-    workersInvocationsAdaptive(limit: 1000, filter: { scriptName: $script, datetime_geq: $since, datetime_leq: $until }) {
+// Due viste degli stessi dati: per esito (esiti e p99 complessivo, come sempre) e per versione ed esito.
+const invocations = (alias, dimensions) => `${alias}: workersInvocationsAdaptive(limit: 1000, filter: { scriptName: $script, datetime_geq: $since, datetime_leq: $until }) {
       sum { requests }
       quantiles { cpuTimeP50 cpuTimeP90 cpuTimeP99 cpuTimeP999 }
-      dimensions { status scriptVersion }
-    }
+      dimensions { ${dimensions} }
+    }`;
+const query = `query Salute($account: string!, $script: string!, $since: Time!, $until: Time!) {
+  viewer { accounts(filter: { accountTag: $account }) {
+    ${invocations("byStatus", "status")}
+    ${invocations("byVersion", "status scriptVersion")}
   } }
 }`;
 const until = new Date();
@@ -31,7 +34,8 @@ const response = await fetch("https://api.cloudflare.com/client/v4/graphql", {
 const body = await response.json();
 if (!response.ok || body.errors?.length) throw new Error(`Statistiche Cloudflare non disponibili: ${JSON.stringify(body.errors ?? response.status)}`);
 
-const { statuses, cpuP99Ms, versions } = summarizeInvocations(body.data.viewer.accounts[0]?.workersInvocationsAdaptive ?? []);
+const account = body.data.viewer.accounts[0];
+const { statuses, cpuP99Ms, versions } = summarizeInvocations(account?.byStatus ?? [], account?.byVersion ?? []);
 const database = JSON.parse(wrangler(["d1", "info", DATABASE, "--json"]));
 
 const report = { periodo: `ultimi ${DAYS} giorni`, esiti: statuses, cpuP99Ms, database: { byte: database.database_size, righeLette24h: database.rows_read_24h, righeScritte24h: database.rows_written_24h } };

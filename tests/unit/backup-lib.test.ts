@@ -100,24 +100,26 @@ describe("tempi del Worker nel rapporto settimanale", () => {
     dimensions: { scriptVersion: version, status },
   });
 
-  it("esiti sommati, p99 complessivo e tempi per versione (in ms, dalla più usata)", () => {
-    const summary = summarizeInvocations([
+  it("esiti e p99 dalle righe per esito; per versione i tempi della riga con più richieste (in ms, dalla più usata)", () => {
+    const byStatus = [row("", "success", 1200, [1000, 3000, 11000, 16500]), row("", "clientDisconnected", 4, [800, 1500, 17600, 17600])];
+    const byVersion = [
       row("aaaaaaaa-1111", "success", 300, [1200, 3400, 11000, 16500]),
       row("bbbbbbbb-2222", "success", 900, [900, 2100, 7600, 12200]),
-      row("bbbbbbbb-2222", "clientDisconnected", 4, [800, 1500, 17600, 17600]),
-    ]);
+      // Poche richieste con tempi alti non devono «colorare» tutta la versione.
+      row("bbbbbbbb-2222", "clientDisconnected", 4, [15700, 15700, 17600, 17600]),
+    ];
+    const summary = summarizeInvocations(byStatus, byVersion);
     expect(summary.statuses).toEqual({ success: 1200, clientDisconnected: 4 });
     expect(summary.cpuP99Ms).toBe(17.6);
     expect(summary.versions).toEqual([
-      // Più righe della stessa versione: si tiene il valore più alto (stima prudente).
-      { version: "bbbbbbbb", requests: 904, cpuMs: { p50: 0.9, p90: 2.1, p99: 17.6, p999: 17.6 } },
+      { version: "bbbbbbbb", requests: 904, cpuMs: { p50: 0.9, p90: 2.1, p99: 7.6, p999: 12.2 } },
       { version: "aaaaaaaa", requests: 300, cpuMs: { p50: 1.2, p90: 3.4, p99: 11, p999: 16.5 } },
     ]);
   });
 
   it("al massimo 5 versioni; nessuna richiesta → elenco vuoto", () => {
     const many = Array.from({ length: 7 }, (_, index) => row(`v${index}`, "success", index + 1, [1000, 1000, 1000, 1000]));
-    expect(summarizeInvocations(many).versions.map((version) => version.version)).toEqual(["v6", "v5", "v4", "v3", "v2"]);
-    expect(summarizeInvocations([])).toEqual({ statuses: {}, cpuP99Ms: 0, versions: [] });
+    expect(summarizeInvocations([], many).versions.map((version) => version.version)).toEqual(["v6", "v5", "v4", "v3", "v2"]);
+    expect(summarizeInvocations([], [])).toEqual({ statuses: {}, cpuP99Ms: 0, versions: [] });
   });
 });

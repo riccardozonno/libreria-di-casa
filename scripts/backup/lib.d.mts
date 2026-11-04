@@ -10,7 +10,7 @@ export interface InvocationRow {
   quantiles: { cpuTimeP50: number; cpuTimeP90: number; cpuTimeP99: number; cpuTimeP999: number };
   dimensions: { scriptVersion: string; status: string };
 }
-export function summarizeInvocations(rows: InvocationRow[]): {
+export function summarizeInvocations(byStatus: InvocationRow[], byVersion: InvocationRow[]): {
   statuses: Record<string, number>;
   cpuP99Ms: number;
   versions: Array<{ version: string; requests: number; cpuMs: { p50: number; p90: number; p99: number; p999: number } }>;
