@@ -190,12 +190,22 @@ describe("copie", () => {
 });
 
 describe("dati del libro", () => {
-  it("dopo la creazione li modifica solo l'admin", async () => {
+  const changes = { isbn13: "", title: "Il barone rampante (Oscar)", authors: ["Italo Calvino"], publishedYear: 1993, description: "Riedizione" };
+
+  it("li modificano l'admin e gli editor delle sedi in cui il libro ha una copia", async () => {
     const { bookId } = (await createBook(editorCasa)).body;
-    const changes = { isbn13: "", title: "Il barone rampante (Oscar)", authors: ["Italo Calvino"], publishedYear: 1993, description: "Riedizione" };
-    expect((await editorCasa.call(`/books/${bookId}`, { method: "PATCH", body: changes })).status).toBe(403);
-    expect((await admin.call(`/books/${bookId}`, { method: "PATCH", body: changes })).status).toBe(204);
+    expect((await editorMare.call(`/books/${bookId}`, { method: "PATCH", body: changes })).status).toBe(403);
+    expect((await reader.call(`/books/${bookId}`, { method: "PATCH", body: changes })).status).toBe(403);
+    expect((await editorCasa.call(`/books/${bookId}`, { method: "PATCH", body: changes })).status).toBe(204);
     expect(await env.DB.prepare("SELECT title, isbn13 FROM book WHERE id = ?").bind(bookId).first()).toEqual({ title: "Il barone rampante (Oscar)", isbn13: null });
+    expect((await admin.call(`/books/${bookId}`, { method: "PATCH", body: { ...changes, title: "Il barone rampante" } })).status).toBe(204);
+    expect((await admin.call("/books/inesistente", { method: "PATCH", body: changes })).status).toBe(404);
+  });
+
+  it("copia solo in una sede archiviata: l'editor non può più", async () => {
+    const { bookId } = (await createBook(editorCasa)).body;
+    await env.DB.prepare("UPDATE copy SET location_id = ? WHERE book_id = ?").bind(vecchia.id, bookId).run();
+    expect((await editorCasa.call(`/books/${bookId}`, { method: "PATCH", body: changes })).status).toBe(403);
   });
 });
 
@@ -367,7 +377,12 @@ describe("sto leggendo", () => {
 });
 
 describe("genere", () => {
-  const setGenre = (who: User, bookId: string, genre: unknown) => who.call(`/books/${bookId}/genre`, { method: "PUT", body: { genre } });
+  // Il genere si cambia con gli altri dati del libro (un solo modulo «Modifica dati»).
+  const setGenre = async (who: User, bookId: string, genre: unknown) => {
+    const current = (await (await admin.call(`/books/${bookId}`)).json()) as { isbn13: string | null; title: string; authors: string[]; publishedYear: number | null; description: string | null };
+    const body = { isbn13: current.isbn13 ?? "", title: current.title, authors: current.authors, publishedYear: current.publishedYear, description: current.description ?? "", genre };
+    return who.call(`/books/${bookId}`, { method: "PATCH", body });
+  };
   const genreOf = async (bookId: string) => (await env.DB.prepare("SELECT genre FROM book WHERE id = ?").bind(bookId).first<{ genre: string | null }>())?.genre;
   const list = async (who: User, params: string) => (await (await who.call(`/books?${params}`)).json()) as { items: Array<{ title: string; genre: string | null }> };
 

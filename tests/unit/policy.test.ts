@@ -121,22 +121,22 @@ describe("modificare collocazione e note di una copia", () => {
   });
 });
 
-describe("genere del libro", () => {
+describe("dati del libro (anche genere e copertina)", () => {
   it("l'admin sempre, anche senza copie", () => {
-    expect(can(admin, { type: "book.genre", copyLocations: [casa] })).toBe(true);
-    expect(can(admin, { type: "book.genre", copyLocations: [] })).toBe(true);
+    expect(can(admin, { type: "book.update", copyLocations: [casa] })).toBe(true);
+    expect(can(admin, { type: "book.update", copyLocations: [] })).toBe(true);
   });
 
   it("l'editor se il libro ha una copia in una sua sede attiva", () => {
-    expect(can(editorCasa, { type: "book.genre", copyLocations: [mare, casa] })).toBe(true);
-    expect(can(editorCasa, { type: "book.genre", copyLocations: [mare] })).toBe(false);
-    expect(can(editorVecchia, { type: "book.genre", copyLocations: [vecchia] })).toBe(false);
-    expect(can(editorSenzaSedi, { type: "book.genre", copyLocations: [casa] })).toBe(false);
+    expect(can(editorCasa, { type: "book.update", copyLocations: [mare, casa] })).toBe(true);
+    expect(can(editorCasa, { type: "book.update", copyLocations: [mare] })).toBe(false);
+    expect(can(editorVecchia, { type: "book.update", copyLocations: [vecchia] })).toBe(false);
+    expect(can(editorSenzaSedi, { type: "book.update", copyLocations: [casa] })).toBe(false);
   });
 
   it("il lettore mai", () => {
-    expect(can(reader, { type: "book.genre", copyLocations: [casa] })).toBe(false);
-    expect(can(readerConSedi, { type: "book.genre", copyLocations: [casa] })).toBe(false);
+    expect(can(reader, { type: "book.update", copyLocations: [casa] })).toBe(false);
+    expect(can(readerConSedi, { type: "book.update", copyLocations: [casa] })).toBe(false);
   });
 });
 
@@ -203,7 +203,6 @@ describe("spostare una copia", () => {
 
 describe("operazioni riservate all'admin", () => {
   const adminOnly = [
-    { type: "book.update" },
     { type: "book.delete" },
     { type: "location.manage" },
     { type: "csv.export" },

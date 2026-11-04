@@ -23,6 +23,7 @@ let casa: { id: string };
 let admin: User;
 let editor: User;
 let reader: User;
+let editorMare: User;
 let externalCalls: string[];
 
 beforeEach(async () => {
@@ -30,6 +31,8 @@ beforeEach(async () => {
   admin = await signedIn(key, { email: "admin@example.com", role: "ADMIN" });
   editor = await signedIn(key, { email: "editor@example.com", role: "EDITOR", editorOf: [casa.id] });
   reader = await signedIn(key, { email: "lettore@example.com" });
+  const mare = await seedLocation("Mare", "BLU");
+  editorMare = await signedIn(key, { email: "mare@example.com", role: "EDITOR", editorOf: [mare.id] });
   externalCalls = [];
   mockExternal((url) => {
     externalCalls.push(url);
@@ -134,9 +137,11 @@ describe("copertine", () => {
     expect(externalCalls.some((url) => url.includes("sito-malevolo"))).toBe(false);
   });
 
-  it("l'admin cambia la copertina con una foto; un editor no; un file che non è un'immagine no", async () => {
+  it("cambiano la copertina l'admin e gli editor di una sede con una copia; gli altri no; un file che non è un'immagine no", async () => {
     const { bookId } = (await (await editor.call("/books", { method: "POST", body: { book: { title: "X" }, source: "MANUAL", locationId: casa.id } })).json()) as { bookId: string };
-    expect((await editor.call(`/books/${bookId}/cover`, { method: "PUT", body: JPEG })).status).toBe(403);
+    expect((await editorMare.call(`/books/${bookId}/cover`, { method: "PUT", body: JPEG })).status).toBe(403);
+    expect((await reader.call(`/books/${bookId}/cover`, { method: "PUT", body: JPEG })).status).toBe(403);
+    expect((await editor.call(`/books/${bookId}/cover`, { method: "PUT", body: JPEG })).status).toBe(204);
     expect((await admin.call(`/books/${bookId}/cover`, { method: "PUT", body: new TextEncoder().encode("<svg onload=alert(1)>") })).status).toBe(415);
     expect((await admin.call(`/books/${bookId}/cover`, { method: "PUT", body: JPEG })).status).toBe(204);
     const coverKey = await coverKeyOf(bookId);
@@ -171,7 +176,7 @@ describe("copertine", () => {
       return realPut(...args);
     }) as R2Bucket["put"];
     try {
-      expect((await editor.call(`/books/${bookId}/cover`, { method: "PUT", body: JPEG })).status).toBe(403);
+      expect((await editorMare.call(`/books/${bookId}/cover`, { method: "PUT", body: JPEG })).status).toBe(403);
     } finally {
       env.COVERS.put = realPut;
     }
