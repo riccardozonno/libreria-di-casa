@@ -2,6 +2,7 @@
 
 Tutto sul piano gratuito di Cloudflare, senza server e senza dominio. La v1 (Next.js + Postgres + Docker
 su Raspberry Pi) è descritta nel tag `v1-nextjs`. Decisione: [ADR-0014](adr/0014-riscrittura-cloudflare.md).
+Le cartelle del codice con linguaggi e framework: [schema-del-codice.md](schema-del-codice.md).
 
 ## Vista d'insieme
 
