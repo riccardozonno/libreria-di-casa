@@ -9,11 +9,10 @@ import { useSession } from "../lib/session";
 import { useApi } from "../lib/use-api";
 import { AddCopyForm } from "./book/add-copy-form";
 import { CopyRow, type CopyView } from "./book/copy-row";
-import { CurrentReadingToggle } from "./book/current-reading-toggle";
 import { EditBookForm } from "./book/edit-book-form";
-import { GenreForm } from "./book/genre-form";
-import { ReadingToggle } from "./book/reading-toggle";
-import { StarIcon, StarRating, starLabel } from "./book/star-rating";
+import { FamilyReadings } from "./book/family-readings";
+import { ReadingStatusControl } from "./book/reading-status";
+import { statusOf } from "./book/reading-status-logic";
 import { NotFoundPage } from "./not-found";
 
 interface BookDetail {
@@ -37,7 +36,6 @@ interface BookDetail {
 }
 
 const SOURCE_LABELS: Record<BookDetail["source"], string> = { GOOGLE_BOOKS: "Google Books", OPEN_LIBRARY: "Open Library", MANUAL: "inserimento manuale", CSV: "importazione CSV" };
-const averageFormat = new Intl.NumberFormat("it-IT", { maximumFractionDigits: 1 });
 const dateFormat = new Intl.DateTimeFormat("it-IT", { day: "numeric", month: "long", year: "numeric" });
 
 export function BookPage() {
@@ -47,16 +45,13 @@ export function BookPage() {
   const { data: book, error, reload } = useApi<BookDetail>(`/books/${encodeURIComponent(id)}`);
   const [isEditing, setIsEditing] = useState(false);
   const [saved, setSaved] = useState(false);
-  const [isEditingGenre, setIsEditingGenre] = useState(false);
-  const [genreSaved, setGenreSaved] = useState(false);
-  // Chiuso un modulo, il focus torna sul pulsante che l'aveva aperto (che React ha appena ricreato).
-  const genreButton = useRef<HTMLButtonElement>(null);
+  // Chiuso il modulo, il focus torna su «Modifica dati» (che React ha appena ricreato).
   const editButton = useRef<HTMLButtonElement>(null);
-  const returnFocusTo = useRef<"genre" | "edit" | null>(null);
+  const shouldRefocusEdit = useRef(false);
   useEffect(() => {
-    if (!returnFocusTo.current) return;
-    (returnFocusTo.current === "genre" ? genreButton : editButton).current?.focus();
-    returnFocusTo.current = null;
+    if (!shouldRefocusEdit.current) return;
+    editButton.current?.focus();
+    shouldRefocusEdit.current = false;
   });
 
   if (error && !book) return error.includes("non trovato") ? <NotFoundPage what="Libro" /> : <Notice tone="error">{error}</Notice>;
@@ -103,36 +98,20 @@ export function BookPage() {
         </div>
       </header>
 
-      <div className="mt-5 flex flex-wrap items-start gap-2">
-        <ReadingToggle bookId={book.id} userId={me.id} hasRead={hasRead} onChanged={reload} />
-        {!hasRead && <CurrentReadingToggle bookId={book.id} userId={me.id} isReading={isReading} onChanged={reload} />}
-        {canEditBook && !isEditingGenre && (
-          <Button ref={genreButton} variant="ghost" onClick={() => { setIsEditingGenre(true); setGenreSaved(false); }}>
-            {book.genre ? "Cambia genere" : "Indica il genere"}
-          </Button>
-        )}
-        {canEditBook && !isEditing && (
-          <Button ref={editButton} variant="ghost" onClick={() => { setIsEditing(true); setSaved(false); }}>
+      <Section title="La tua lettura">
+        <ReadingStatusControl bookId={book.id} userId={me.id} status={statusOf(hasRead, isReading)} rating={myReading?.rating ?? null} onChanged={reload} />
+      </Section>
+
+      <Section title="In famiglia">
+        <FamilyReadings readings={book.readings} currentReaders={book.currentReaders} ratingAverage={book.ratingAverage} ratingCount={book.ratingCount} meId={me.id} />
+      </Section>
+
+      {canEditBook && !isEditing && (
+        <div className="mt-4">
+          <Button ref={editButton} variant="ghost" className="-ml-2" onClick={() => { setIsEditing(true); setSaved(false); }}>
             Modifica dati
           </Button>
-        )}
-      </div>
-      {genreSaved && (
-        <div className="mt-3">
-          <Notice tone="success">Genere aggiornato.</Notice>
         </div>
-      )}
-      {isEditingGenre && (
-        <GenreForm
-          bookId={book.id}
-          genre={book.genre}
-          onDone={(didSave) => {
-            returnFocusTo.current = "genre";
-            setIsEditingGenre(false);
-            setGenreSaved(didSave);
-            if (didSave) reload();
-          }}
-        />
       )}
       {saved && (
         <div className="mt-3">
@@ -143,7 +122,7 @@ export function BookPage() {
         <EditBookForm
           book={book}
           onDone={(didSave) => {
-            returnFocusTo.current = "edit";
+            shouldRefocusEdit.current = true;
             setIsEditing(false);
             setSaved(didSave);
             if (didSave) reload();
@@ -175,44 +154,6 @@ export function BookPage() {
           })}
         </ul>
         {addable.length > 0 && <AddCopyForm bookId={book.id} locations={addable} onAdded={reload} />}
-      </Section>
-
-      <Section title="Letto da">
-        {book.ratingAverage !== null && (
-          <p className="mb-2 flex items-center gap-1.5 px-1 text-[16px] font-semibold">
-            <StarIcon filled className="size-5 text-star" />
-            {averageFormat.format(book.ratingAverage)}
-            <span className="font-normal text-ink-soft">· {book.ratingCount === 1 ? "1 voto" : `${book.ratingCount} voti`}</span>
-          </p>
-        )}
-        {book.currentReaders.length > 0 && (
-          <p className="mb-2 px-1 text-[15px] text-ink-soft">
-            <span className="font-semibold text-ink">📖 Sta leggendo:</span> {book.currentReaders.map((reader) => reader.name).join(", ")}
-          </p>
-        )}
-        {book.readings.length === 0 ? (
-          <p className="px-1 text-[15px] text-ink-faint">Nessuno l&apos;ha ancora segnato come letto.</p>
-        ) : (
-          <ul className="flex flex-wrap gap-2 px-1">
-            {book.readings.map((reading) => (
-              <li key={reading.userId} className="flex items-center gap-1 rounded-full bg-success-soft px-3 py-1.5 text-[14px] font-medium text-success">
-                {reading.name}
-                {reading.rating !== null && (
-                  <span className="flex items-center gap-0.5 text-ink-soft">
-                    <span aria-hidden="true">· {reading.rating}</span>
-                    <StarIcon filled className="size-3.5 text-star" />
-                    <span className="sr-only">, {starLabel(reading.rating)}</span>
-                  </span>
-                )}
-              </li>
-            ))}
-          </ul>
-        )}
-        {myReading && (
-          <div className="mt-3">
-            <StarRating bookId={book.id} userId={me.id} rating={myReading.rating} onChanged={reload} />
-          </div>
-        )}
       </Section>
 
       <Section title="Spostamenti">

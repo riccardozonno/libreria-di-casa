@@ -25,6 +25,18 @@ export function starLabel(rating: number): string {
   return rating === 1 ? "1 stella" : `${rating} stelle`;
 }
 
+/** Voto di sola lettura (5 stelline piccole); per i lettori di schermo «4 stelle su 5». */
+export function StarRow({ rating }: { rating: number }) {
+  return (
+    <span className="flex shrink-0 items-center gap-0.5 text-star">
+      {STARS.map((star) => (
+        <StarIcon key={star} filled={star <= rating} className="size-4" />
+      ))}
+      <span className="sr-only">{starLabel(rating)} su 5</span>
+    </span>
+  );
+}
+
 export function StarRating({ bookId, userId, rating, onChanged }: { bookId: string; userId: string; rating: number | null; onChanged: () => void }) {
   const [isBusy, setIsBusy] = useState(false);
   const [error, setError] = useState("");
@@ -65,7 +77,7 @@ export function StarRating({ bookId, userId, rating, onChanged }: { bookId: stri
         ))}
       </div>
       <p className="px-1 text-[14px] text-ink-soft" aria-live="polite">
-        {rating === null ? "Tocca le stelle per votarlo." : `Il tuo voto: ${starLabel(rating)} su 5. Tocca di nuovo la stessa per toglierlo.`}
+        {rating === null ? "Tocca le stelle per votarlo." : `Il tuo voto: ${starLabel(rating)} su 5. Ritocca la stessa per toglierlo.`}
       </p>
       {error && <Notice tone="error">{error}</Notice>}
     </div>
