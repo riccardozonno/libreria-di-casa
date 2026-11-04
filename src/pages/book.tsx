@@ -69,7 +69,7 @@ export function BookPage() {
   const refs = locations.map((location) => ({ id: location.id, archived: location.archived, name: location.name }));
   const addable = refs.filter((location) => can({ type: "copy.create", location }));
   const copyLocations = book.copies.map((copy) => ({ id: copy.location.id, archived: copy.location.archived }));
-  const canSetGenre = can({ type: "book.genre", copyLocations });
+  const canEditBook = can({ type: "book.update", copyLocations });
 
   return (
     <article className="pb-4 pt-2">
@@ -106,12 +106,12 @@ export function BookPage() {
       <div className="mt-5 flex flex-wrap items-start gap-2">
         <ReadingToggle bookId={book.id} userId={me.id} hasRead={hasRead} onChanged={reload} />
         {!hasRead && <CurrentReadingToggle bookId={book.id} userId={me.id} isReading={isReading} onChanged={reload} />}
-        {canSetGenre && !isEditingGenre && (
+        {canEditBook && !isEditingGenre && (
           <Button ref={genreButton} variant="ghost" onClick={() => { setIsEditingGenre(true); setGenreSaved(false); }}>
             {book.genre ? "Cambia genere" : "Indica il genere"}
           </Button>
         )}
-        {can({ type: "book.update" }) && !isEditing && (
+        {canEditBook && !isEditing && (
           <Button ref={editButton} variant="ghost" onClick={() => { setIsEditing(true); setSaved(false); }}>
             Modifica dati
           </Button>

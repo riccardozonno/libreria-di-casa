@@ -1,7 +1,7 @@
 import { eq, sql } from "drizzle-orm";
 import { can, type LocationRef } from "../../shared/policy";
 import type { GenreKey } from "../../shared/genres";
-import type { AddCopyInput, BookData, CopyDetails, NewBookInput } from "../../shared/schemas";
+import type { AddCopyInput, BookUpdate, CopyDetails, NewBookInput } from "../../shared/schemas";
 import { auditInsert, auditWhen } from "../audit";
 import { changedRows, runBatch } from "../db/batch";
 import type { Db } from "../db/client";
@@ -173,16 +173,44 @@ export async function moveCopy(db: Db, who: Requester, copyId: string, toLocatio
   if (!changedRows(moved)) throw conflict("La copia è stata spostata nel frattempo: ricarica e riprova.");
 }
 
-export async function updateBook(db: Db, who: Requester, bookId: string, data: BookData): Promise<void> {
-  if (!can(who.actor, { type: "book.update" })) throw forbidden();
-  const before = await db.get<Record<string, unknown> | undefined>(
-    sql`SELECT isbn13, title, authors, published_year AS publishedYear, description FROM book WHERE id = ${bookId}`,
+type BookSnapshot = { isbn13: string | null; title: string; authors: string[]; publishedYear: number | null; description: string | null; genre: GenreKey | null };
+
+/** Dati del libro, genere e copertina: admin, o editor di una sede (attiva) in cui il libro ha una copia. */
+export async function assertCanEditBook(db: Db, who: Requester, bookId: string): Promise<BookSnapshot> {
+  const row = await db.get<(Omit<BookSnapshot, "authors"> & { authors: string }) | undefined>(
+    sql`SELECT isbn13, title, authors, published_year AS publishedYear, description, genre FROM book WHERE id = ${bookId}`,
   );
-  if (!before) throw notFound("Libro");
+  if (!row) throw notFound("Libro");
+  const copyLocations = (
+    await db.all<{ id: string; archived_at: string | null }>(
+      sql`SELECT DISTINCT l.id, l.archived_at FROM copy c JOIN location l ON l.id = c.location_id WHERE c.book_id = ${bookId}`,
+    )
+  ).map((location) => ({ id: location.id, archived: location.archived_at !== null }));
+  if (!can(who.actor, { type: "book.update", copyLocations })) throw forbidden();
+  return { ...row, authors: JSON.parse(row.authors) as string[] };
+}
+
+/** Campi cambiati, per il registro: { before, after } solo con quelli diversi. */
+function changedFields(before: BookSnapshot, after: BookSnapshot): { before: Partial<BookSnapshot>; after: Partial<BookSnapshot> } {
+  const keys = (Object.keys(after) as Array<keyof BookSnapshot>).filter((key) => JSON.stringify(before[key]) !== JSON.stringify(after[key]));
+  return {
+    before: Object.fromEntries(keys.map((key) => [key, before[key]])) as Partial<BookSnapshot>,
+    after: Object.fromEntries(keys.map((key) => [key, after[key]])) as Partial<BookSnapshot>,
+  };
+}
+
+/** Modifica dei dati del libro (genere compreso, se indicato). Registro solo se qualcosa cambia davvero. */
+export async function updateBook(db: Db, who: Requester, bookId: string, data: BookUpdate): Promise<void> {
+  const before = await assertCanEditBook(db, who, bookId);
+  const after: BookSnapshot = { ...data, genre: data.genre === undefined ? before.genre : data.genre };
+  const authors = JSON.stringify(after.authors);
+  // Stessa condizione per registro e modifica: se nel frattempo nessun campo è diverso, nessuna riga.
+  const changes = sql`EXISTS (SELECT 1 FROM book WHERE id = ${bookId} AND (isbn13 IS NOT ${after.isbn13} OR title IS NOT ${after.title}
+    OR authors IS NOT ${authors} OR published_year IS NOT ${after.publishedYear} OR description IS NOT ${after.description} OR genre IS NOT ${after.genre}))`;
   try {
     await runBatch(db, [
-      db.update(book).set(data).where(eq(book.id, bookId)),
-      auditInsert(db, who.audit, { action: "book.update", entityType: "book", entityId: bookId, data: { before, after: data }, ip: who.audit.ip }),
+      auditWhen(changes, who.audit, { action: "book.update", entityType: "book", entityId: bookId, data: changedFields(before, after), ip: who.audit.ip }),
+      db.update(book).set(after).where(eq(book.id, bookId)),
     ]);
   } catch (error) {
     if (isUniqueViolation(error)) throw conflict("Un altro libro ha già questo ISBN.");
@@ -190,25 +218,9 @@ export async function updateBook(db: Db, who: Requester, bookId: string, data: B
   }
 }
 
-/** Genere: admin, o editor di una sede (attiva) in cui il libro ha una copia. Registro solo se cambia. */
-export async function setBookGenre(db: Db, who: Requester, bookId: string, genre: GenreKey | null): Promise<void> {
-  const current = await db.get<{ genre: GenreKey | null } | undefined>(sql`SELECT genre FROM book WHERE id = ${bookId}`);
-  if (!current) throw notFound("Libro");
-  const copyLocations = (
-    await db.all<{ id: string; archived_at: string | null }>(
-      sql`SELECT DISTINCT l.id, l.archived_at FROM copy c JOIN location l ON l.id = c.location_id WHERE c.book_id = ${bookId}`,
-    )
-  ).map((row) => ({ id: row.id, archived: row.archived_at !== null }));
-  if (!can(who.actor, { type: "book.genre", copyLocations })) throw forbidden();
-
-  const changes = sql`EXISTS (SELECT 1 FROM book WHERE id = ${bookId} AND genre IS NOT ${genre})`;
-  const entry = { action: "book.update", entityType: "book" as const, entityId: bookId, data: { before: { genre: current.genre }, after: { genre } }, ip: who.audit.ip };
-  await runBatch(db, [auditWhen(changes, who.audit, entry), db.update(book).set({ genre }).where(eq(book.id, bookId))]);
-}
-
-/** Nuova copertina (solo admin, come gli altri dati bibliografici). Restituisce la chiave precedente. */
+/** Nuova copertina (stesso permesso degli altri dati del libro). Restituisce la chiave precedente. */
 export async function setBookCover(db: Db, who: Requester, bookId: string, coverKey: string): Promise<string | null> {
-  if (!can(who.actor, { type: "book.update" })) throw forbidden();
+  await assertCanEditBook(db, who, bookId);
   const current = await db.get<{ cover_key: string | null } | undefined>(sql`SELECT cover_key FROM book WHERE id = ${bookId}`);
   if (!current) throw notFound("Libro");
   await runBatch(db, [

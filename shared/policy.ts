@@ -26,9 +26,8 @@ export type Action =
   | { type: "copy.update"; location: LocationRef }
   | { type: "copy.delete"; location: LocationRef; isLastCopy: boolean }
   | { type: "copy.move"; from: LocationRef; to: LocationRef }
-  | { type: "book.update" }
-  /** Genere: sedi in cui il libro ha una copia (decisione del 31/10/2026: anche gli editor). */
-  | { type: "book.genre"; copyLocations: readonly LocationRef[] }
+  /** Dati del libro, genere e copertina: sedi in cui il libro ha una copia (04/11/2026: anche gli editor). */
+  | { type: "book.update"; copyLocations: readonly LocationRef[] }
   | { type: "book.delete" }
   | { type: "location.manage" }
   | { type: "csv.export" }
@@ -70,9 +69,8 @@ export function can(actor: Actor, action: Action): boolean {
       // verso qualsiasi sede attiva; poi la copia "segue la sede". Da una sede archiviata sposta solo l'admin.
       if (action.from.id === action.to.id || action.to.archived) return false;
       return isAdmin(actor) || edits(actor, action.from);
-    case "book.genre":
-      return isAdmin(actor) || action.copyLocations.some((location) => edits(actor, location));
     case "book.update":
+      return isAdmin(actor) || action.copyLocations.some((location) => edits(actor, location));
     case "book.delete":
     case "location.manage":
     case "csv.export":

@@ -1,14 +1,13 @@
 import { Hono } from "hono";
-import { addCopySchema, bookDataSchema, bookGenreSchema, copyDetailsSchema, genreFilterSchema, moveCopySchema, newBookSchema, ratingSchema, readingFilterSchema } from "../../shared/schemas";
+import { addCopySchema, bookUpdateSchema, copyDetailsSchema, genreFilterSchema, moveCopySchema, newBookSchema, ratingSchema, readingFilterSchema } from "../../shared/schemas";
 import { createDb } from "../db/client";
 import type { AppEnv } from "../env";
 import { readBody, requester, validate } from "../http";
 import { downloadCover, isAllowedCoverUrl, upgradeToHttps } from "../covers/download";
 import { detectImageType, MAX_COVER_BYTES } from "../covers/images";
 import { removeCover, storeCover } from "../covers/storage";
-import { can } from "../../shared/policy";
-import { DomainError, forbidden } from "../errors";
-import { addCopy, assertCanCreateIn, createBookWithCopy, deleteCopy, moveCopy, setBookCover, setBookGenre, updateBook, updateCopy } from "./mutations";
+import { DomainError } from "../errors";
+import { addCopy, assertCanCreateIn, assertCanEditBook, createBookWithCopy, deleteCopy, moveCopy, setBookCover, updateBook, updateCopy } from "./mutations";
 import { getBookDetail, listBooks } from "./queries";
 import { setCurrentReading, setRating, setReading } from "./readings";
 
@@ -69,8 +68,8 @@ export const bookRoutes = new Hono<AppEnv>()
     }
   })
   .put("/:id/cover", async (c) => {
-    // Permesso prima di leggere o salvare qualunque byte (la copertina è un dato bibliografico: solo admin).
-    if (!can(requester(c).actor, { type: "book.update" })) throw forbidden();
+    // Permesso prima di leggere o salvare qualunque byte (stesso permesso degli altri dati del libro).
+    await assertCanEditBook(createDb(c.env.DB), requester(c), c.req.param("id"));
     const declared = Number(c.req.header("Content-Length") ?? "0");
     if (declared > MAX_COVER_BYTES) throw new DomainError("VALIDATION", "La foto è troppo grande (massimo 2 MB).");
     const bytes = new Uint8Array(await c.req.arrayBuffer());
@@ -91,7 +90,7 @@ export const bookRoutes = new Hono<AppEnv>()
   })
   .get("/:id", async (c) => c.json(await getBookDetail(createDb(c.env.DB), c.req.param("id"))))
   .patch("/:id", async (c) => {
-    await updateBook(createDb(c.env.DB), requester(c), c.req.param("id"), await readBody(c, bookDataSchema));
+    await updateBook(createDb(c.env.DB), requester(c), c.req.param("id"), await readBody(c, bookUpdateSchema));
     return c.body(null, 204);
   })
   .post("/:id/copies", async (c) => c.json(await addCopy(createDb(c.env.DB), requester(c), c.req.param("id"), await readBody(c, addCopySchema)), 201))
@@ -101,11 +100,6 @@ export const bookRoutes = new Hono<AppEnv>()
   })
   .delete("/:id/readings/:userId", async (c) => {
     await setReading(createDb(c.env.DB), requester(c), c.req.param("id"), c.req.param("userId"), false);
-    return c.body(null, 204);
-  })
-  .put("/:id/genre", async (c) => {
-    const { genre } = await readBody(c, bookGenreSchema);
-    await setBookGenre(createDb(c.env.DB), requester(c), c.req.param("id"), genre);
     return c.body(null, 204);
   })
   .put("/:id/current-readers/:userId", async (c) => {

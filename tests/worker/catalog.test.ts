@@ -415,7 +415,7 @@ describe("genere", () => {
       { before: { genre: null }, after: { genre: "STORIA" } },
       { before: { genre: "STORIA" }, after: { genre: null } },
     ]);
-    expect((await setGenre(admin, "inesistente", "STORIA")).status).toBe(404);
+    expect((await admin.call("/books/inesistente", { method: "PATCH", body: { title: "X", genre: "STORIA" } })).status).toBe(404);
   });
 
   it("modificare i dati del libro non azzera il genere", async () => {

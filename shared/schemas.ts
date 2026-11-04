@@ -109,7 +109,9 @@ const idSchema = z.string().trim().min(1, "Identificativo mancante").max(64);
 /** Un genere dell'elenco (shared/genres.ts) o null. Nessun CHECK nel database: si controlla qui. */
 export const genreSchema = z.enum(GENRE_KEYS, { error: "Genere non valido" }).nullable();
 
-export const bookGenreSchema = z.object({ genre: genreSchema });
+/** Modifica dei dati del libro: il genere è facoltativo (assente = resta com'è). */
+export const bookUpdateSchema = bookDataSchema.extend({ genre: genreSchema.optional() });
+export type BookUpdate = z.infer<typeof bookUpdateSchema>;
 
 /** Filtro del catalogo: un genere, oppure "NONE" per i libri ancora senza genere. */
 export const genreFilterSchema = z.union([z.enum(GENRE_KEYS), z.literal("NONE")], { error: "Genere non valido" }).optional();
