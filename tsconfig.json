@@ -17,6 +17,6 @@
     "allowImportingTsExtensions": true,
     "types": ["./worker-configuration.d.ts", "vite/client", "@cloudflare/vitest-plugin/types"]
   },
-  "include": ["src", "shared", "worker", "tests", "scripts", "*.ts", "worker-configuration.d.ts"],
+  "include": ["src", "shared", "worker", "tests", "scripts", "tools", "*.ts", "worker-configuration.d.ts"],
   "exclude": ["node_modules", "dist", "spike"]
 }
