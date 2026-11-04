@@ -30,7 +30,7 @@ Le istruzioni sono anche nell'app, in **Profilo → Installa l'app**.
 
 | Scheda | Cosa trovi |
 |---|---|
-| **Catalogo** | Tutti i libri di casa. Cerca per titolo, autore o ISBN (gli accenti non contano), filtra per sede, per genere («Senza genere» trova i libri da completare) e per lettura: «Non letti da me», «Non letti da nessuno», «In lettura» (quelli che qualcuno sta leggendo). I filtri si combinano tra loro e con la ricerca. Tocca un libro per la scheda: copie e sedi, «Letto da» con i voti, spostamenti. Con «Sto leggendo» la famiglia vede chi lo ha in mano (sparisce quando lo segni come letto). Dopo «Segna come letto» puoi dare da 1 a 5 stelle (tocca di nuovo la stessa per toglierle): la scheda mostra la media e il voto di ognuno. Il pulsante **Statistiche** in alto apre le letture di tutta la famiglia: chi legge di più, chi sta leggendo cosa, letture per mese e per anno, i libri più apprezzati (almeno 2 voti), autori e generi più letti, letture in comune. |
+| **Catalogo** | Tutti i libri di casa. Cerca per titolo, autore o ISBN (gli accenti non contano), filtra per sede, per genere («Senza genere» trova i libri da completare) e per lettura: «Non letti da me», «Non letti da nessuno», «In lettura» (quelli che qualcuno sta leggendo). I filtri si combinano tra loro e con la ricerca. Tocca un libro per la scheda. In «La tua lettura» scegli «Da leggere», «Sto leggendo» o «Letto»; su «Letto» dai da 1 a 5 stelle (tocca di nuovo la stessa per toglierle). Togliere «letto» chiede conferma, perché il voto si perde. «In famiglia» riassume media, chi l'ha letto e chi lo sta leggendo: toccalo per vedere i nomi e i voti. Poi copie e sedi, e spostamenti. Il pulsante **Statistiche** in alto apre le letture di tutta la famiglia: chi legge di più, chi sta leggendo cosa, letture per mese e per anno, i libri più apprezzati (almeno 2 voti), autori e generi più letti, letture in comune. |
 | **Aggiungi** (editor e admin) | Inquadra il codice a barre sul retro del libro, oppure scrivi l'ISBN: i dati arrivano da Google Books o Open Library. Controlla, scegli il genere (se Google Books ne suggerisce uno è già scelto: verificalo), la sede e salva. Se non li trova, compili a mano e puoi fotografare la copertina. Se il libro c'è già, aggiungi una copia. |
 | **Sedi** | Le case con il loro colore. L'admin le crea, rinomina, archivia e riattiva. |
 | **Admin** (solo admin) | **Utenti**: aggiungi una persona (email, nome, ruolo, sedi) e mandale il testo d'invito; cambia ruolo o sedi, disattiva, fai uscire da tutti i dispositivi. **Registro attività**: chi ha fatto cosa e quando. **Import ed export CSV**: scarica il catalogo o carica molti libri insieme (prima la prova, poi l'import); la colonna `genere` è facoltativa. |
@@ -39,7 +39,7 @@ Le istruzioni sono anche nell'app, in **Profilo → Installa l'app**.
 ### Ruoli
 
 - **Admin**: tutto, su tutte le sedi.
-- **Editor**: aggiunge, modifica, sposta ed elimina copie nelle sue sedi; cambia il genere dei libri che hanno una copia nelle sue sedi; gli altri dati del libro dopo la creazione e l'eliminazione dell'ultima copia restano all'admin.
+- **Editor**: aggiunge, modifica, sposta ed elimina copie nelle sue sedi; con «Modifica dati» cambia i dati dei libri che hanno una copia nelle sue sedi (genere compreso); l'eliminazione dell'ultima copia resta all'admin.
 - **Lettore**: consulta tutto, segna i libri che sta leggendo e quelli che ha letto, e li vota.
 
 Il voto lo dà solo chi ha letto il libro, per sé: nemmeno l'admin vota al posto di un altro.

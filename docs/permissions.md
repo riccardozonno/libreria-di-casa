@@ -22,8 +22,7 @@ Legenda: ✅ sì · ❌ no · **S** = sede della copia · **S→T** = da sede S 
 | Eliminare una copia in S che non è l'ultima del libro | ✅ | ✅ se editor(S) | ❌ |
 | Eliminare l'**ultima** copia, cioè il libro con le sue letture | ✅ | ❌ (vede "solo l'amministratore può eliminare un libro") | ❌ |
 | Spostare una copia S→T (T attiva) | ✅ | ✅ se editor(S), verso qualsiasi sede attiva; dopo lo spostamento la copia la gestiscono gli editor di T (decisione del 29/10/2026, opzione B, sostituisce "editor di S e di T") | ❌ |
-| Modificare dati bibliografici/copertina dopo la creazione | ✅ | ❌ | ❌ |
-| Cambiare il **genere** di un libro | ✅ | ✅ se editor di una sede attiva in cui il libro ha una copia (decisione del 31/10/2026) | ❌ |
+| Modificare i **dati del libro** dopo la creazione (titolo, autori, anno, ISBN, descrizione, genere, copertina) | ✅ | ✅ se editor di una sede attiva in cui il libro ha una copia (decisione del 04/11/2026; prima solo l'admin, tranne il genere) | ❌ |
 | Creare sedi, cambiarne nome e colore, archiviarle, riattivarle | ✅ | ❌ | ❌ |
 | Export CSV (totale o per sede) | ✅ | ❌ | ❌ |
 | Import CSV (anche prova a secco) | ✅ | ❌ | ❌ |

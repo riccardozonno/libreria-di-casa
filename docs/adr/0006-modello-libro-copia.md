@@ -34,3 +34,9 @@ Un libro (dati bibliografici) può avere più copie in sedi diverse. I dati arri
 - Una tabella Autori richiederebbe una migrazione futura.
 ### Risks
 - Libri senza ISBN possono duplicarsi: in fase di inserimento manuale mostriamo i titoli simili prima di salvare.
+
+## Aggiornamento (04/11/2026)
+
+Per scelta dell'admin i dati del libro (genere e copertina compresi) li modificano anche gli editor di una
+sede attiva in cui il libro ha una copia, con un solo modulo «Modifica dati». Restano all'admin solo
+l'eliminazione dell'ultima copia e la gestione di sedi, utenti e CSV (vedi docs/permissions.md).
