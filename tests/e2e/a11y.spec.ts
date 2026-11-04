@@ -37,21 +37,25 @@ for (const colorScheme of ["light", "dark"] as const) {
       await expect(page.getByRole("heading", { level: 1, name: /^Accessibile/ })).toBeVisible();
       expect(await seriousViolations(page)).toEqual([]);
 
-      // Con il modulo del genere aperto.
-      await page.getByRole("button", { name: "Indica il genere" }).click();
-      await expect(page.getByRole("button", { name: "Salva il genere" })).toBeVisible();
+      // Con il modulo «Modifica dati» aperto (genere compreso).
+      await page.getByRole("button", { name: "Modifica dati" }).click();
+      await expect(page.getByLabel("Genere")).toBeVisible();
       expect(await seriousViolations(page)).toEqual([]);
       await page.getByRole("button", { name: "Annulla" }).click();
 
-      // Con «Sto leggendo» attivo.
-      await page.getByRole("button", { name: "Sto leggendo" }).click();
-      await expect(page.getByText("📖 Sta leggendo:")).toBeVisible();
+      // Con «Sto leggendo» attivo e il riepilogo della famiglia aperto.
+      const status = page.getByRole("group", { name: "Il tuo stato" });
+      await status.getByRole("button", { name: "Sto leggendo", exact: true }).click();
+      await page.getByRole("button", { name: /In famiglia/ }).click();
+      await expect(page.getByRole("heading", { name: "Lo stanno leggendo · 1" })).toBeVisible();
       expect(await seriousViolations(page)).toEqual([]);
 
-      // Con le stelle del voto visibili (dopo «Letto») e un voto dato.
-      await page.getByRole("button", { name: "Segna come letto" }).click();
+      // Con il voto dato (dopo «Letto») e la conferma per togliere «letto» aperta.
+      await status.getByRole("button", { name: "Letto", exact: true }).click();
       await page.getByRole("group", { name: "Il tuo voto" }).getByRole("button", { name: "3 stelle" }).click();
-      await expect(page.getByText("· 1 voto")).toBeVisible();
+      await expect(page.getByRole("heading", { name: "L'hanno letto · 1" })).toBeVisible();
+      await status.getByRole("button", { name: "Da leggere", exact: true }).click();
+      await expect(page.getByRole("button", { name: "Togli «letto»" })).toBeVisible();
       expect(await seriousViolations(page)).toEqual([]);
 
       await page.goto("/aggiungi");

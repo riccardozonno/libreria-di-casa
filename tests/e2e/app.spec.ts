@@ -44,29 +44,53 @@ test.describe("amministratore", () => {
 
     await expect(page.getByRole("heading", { name: titolo })).toBeVisible();
 
-    // «Sto leggendo», poi «Letto» lo toglie e il tasto sparisce (niente riletture).
-    await page.getByRole("button", { name: "Sto leggendo" }).click();
-    await expect(page.getByRole("button", { name: "📖 Lo sto leggendo" })).toBeVisible();
-    await expect(page.getByText("📖 Sta leggendo:")).toBeVisible();
-    await page.getByRole("button", { name: "Segna come letto" }).click();
-    await expect(page.getByRole("button", { name: "✓ L'ho letto" })).toBeVisible();
-    await expect(page.getByText("📖 Sta leggendo:")).toBeHidden();
-    await expect(page.getByRole("button", { name: "Sto leggendo" })).toBeHidden();
-    await expect(page.getByRole("button", { name: "📖 Lo sto leggendo" })).toBeHidden();
+    // Selettore di stato: parte da «Da leggere»; la famiglia non ha ancora nessuno.
+    const status = page.getByRole("group", { name: "Il tuo stato" });
+    const option = (name: string) => status.getByRole("button", { name, exact: true });
+    await expect(option("Da leggere")).toHaveAttribute("aria-pressed", "true");
+    await expect(page.getByText("Nessuno l'ha ancora letto o iniziato")).toBeVisible();
 
-    // Voto: compare solo dopo «Letto»; ritoccare la stessa stella lo toglie.
+    // «Sto leggendo»: il riepilogo (chiuso) lo conta; aperto mostra il gruppo.
+    await option("Sto leggendo").click();
+    await expect(option("Sto leggendo")).toHaveAttribute("aria-pressed", "true");
+    const family = page.getByRole("button", { name: /In famiglia/ });
+    await expect(family).toHaveAttribute("aria-expanded", "false");
+    await expect(family).toContainText("1 in lettura");
+    await family.click();
+    await expect(family).toHaveAttribute("aria-expanded", "true");
+    await expect(page.getByRole("heading", { name: "Lo stanno leggendo · 1" })).toBeVisible();
+
+    // «Letto»: toglie «Sto leggendo» e fa comparire il tuo voto sotto il selettore.
+    await option("Letto").click();
+    await expect(option("Letto")).toHaveAttribute("aria-pressed", "true");
+    await expect(family).toContainText("1 letto");
+    await expect(page.getByRole("heading", { name: "L'hanno letto · 1" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: /Lo stanno leggendo/ })).toBeHidden();
+
+    // Voto: ritoccare la stessa stella lo toglie; la media compare nel riepilogo.
     const votes = page.getByRole("group", { name: "Il tuo voto" });
     await votes.getByRole("button", { name: "4 stelle" }).click();
     await expect(page.getByText("Il tuo voto: 4 stelle su 5.", { exact: false })).toBeVisible();
-    await expect(page.getByText("· 1 voto")).toBeVisible();
+    await expect(family).toContainText("4 · 1 letto");
     await votes.getByRole("button", { name: "4 stelle" }).click();
     await expect(page.getByText("Tocca le stelle per votarlo.")).toBeVisible();
-    await expect(page.getByText("· 1 voto")).toBeHidden();
+    await expect(family).not.toContainText("4 ·");
     await votes.getByRole("button", { name: "5 stelle" }).click();
-    await expect(page.getByText("· 1 voto")).toBeVisible();
-    await page.getByRole("button", { name: "✓ L'ho letto" }).click();
+    await expect(family).toContainText("5 · 1 letto");
+
+    // Togliere «letto» chiede conferma: «Annulla» lascia tutto com'era.
+    await option("Da leggere").click();
+    await expect(page.getByText("Togliere «letto»? Il tuo voto si perde.")).toBeVisible();
+    await expect(page.getByRole("button", { name: "Annulla" })).toBeFocused();
+    await page.getByRole("button", { name: "Annulla" }).click();
+    await expect(option("Letto")).toHaveAttribute("aria-pressed", "true");
+    await expect(option("Da leggere")).toBeFocused();
+    await expect(family).toContainText("5 · 1 letto");
+    await option("Da leggere").click();
+    await page.getByRole("button", { name: "Togli «letto»" }).click();
+    await expect(option("Da leggere")).toHaveAttribute("aria-pressed", "true");
     await expect(page.getByRole("group", { name: "Il tuo voto" })).toBeHidden();
-    await expect(page.getByText("· 1 voto")).toBeHidden();
+    await expect(page.getByText("Nessuno l'ha ancora letto o iniziato")).toBeVisible();
 
     await page.getByRole("link", { name: "← Catalogo" }).click();
     await page.getByLabel("Cerca per titolo, autore o ISBN").fill("perche la citta");
@@ -165,23 +189,26 @@ test.describe("editor", () => {
     await expect(page.getByRole("radio")).toHaveCount(1);
     await expect(page.getByRole("link", { name: "Admin" })).toHaveCount(0);
 
-    // Il genere lo cambia anche l'editor, per i libri con una copia nella sua sede.
+    // I dati del libro (genere compreso) li modifica anche l'editor, per i libri con una copia nella sua sede.
     const titolo = `Libro dell'editor ${unique()}`;
     await page.getByLabel("Titolo").fill(titolo);
     await page.getByText(EDITOR_LOCATION.name, { exact: true }).click();
     await page.getByRole("button", { name: "Salva il libro" }).click();
     await expect(page.getByRole("heading", { name: titolo })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Modifica dati" })).toHaveCount(0);
-    await page.getByRole("button", { name: "Indica il genere" }).click();
-    await expect(page.getByLabel("Genere")).toBeFocused();
+    await expect(page.getByRole("button", { name: "Cambia genere" })).toHaveCount(0);
+    const edit = page.getByRole("button", { name: "Modifica dati" });
+    await edit.click();
+    await expect(page.getByLabel("Titolo")).toBeFocused();
     await page.getByRole("button", { name: "Annulla" }).click();
-    await expect(page.getByRole("button", { name: "Indica il genere" })).toBeFocused();
-    await page.getByRole("button", { name: "Indica il genere" }).click();
+    await expect(edit).toBeFocused();
+    await edit.click();
     await page.getByLabel("Genere").selectOption({ label: "Storia" });
-    await page.getByRole("button", { name: "Salva il genere" }).click();
-    await expect(page.getByText("Genere aggiornato.")).toBeVisible();
+    await page.getByLabel("Anno").fill("1999");
+    await page.getByRole("button", { name: "Salva" }).click();
+    await expect(page.getByText("Dati del libro aggiornati.")).toBeVisible();
     await expect(page.getByText("Storia", { exact: true })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Cambia genere" })).toBeFocused();
+    await expect(page.getByText("1999", { exact: true })).toBeVisible();
+    await expect(edit).toBeFocused();
 
     // Filtri sconosciuti nell'indirizzo si ignorano (niente errore).
     await page.goto("/?genere=ROSA&lettura=XYZ");
