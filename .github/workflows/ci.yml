@@ -32,6 +32,16 @@ jobs:
       - run: pnpm typecheck
       - name: Test unitari e di integrazione (runtime Workers + D1 locale) con copertura
         run: pnpm test:coverage
+      # I browser (~1 minuto di download) restano in cache finché non cambia la versione di Playwright;
+      # --with-deps installa comunque le librerie di sistema, che non sono nella cache.
+      - name: Versione di Playwright
+        id: playwright
+        run: echo "version=$(pnpm exec playwright --version | awk '{print $2}')" >> "$GITHUB_OUTPUT"
+      - name: Cache dei browser Playwright
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
       - name: Browser Playwright
         run: pnpm exec playwright install --with-deps chromium webkit
       - name: Test E2E (build vera, iPhone/WebKit e Android/Chromium)

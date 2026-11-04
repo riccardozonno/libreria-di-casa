@@ -1,26 +1,49 @@
 name: Deploy
 
 # Pubblicazione in produzione, solo a mano (Actions → Deploy → Run workflow) e solo dal branch
-# `main`. Prima gli stessi controlli della CI, poi migrazioni D1 e Worker. I segreti del Worker
-# (GOOGLE_BOOKS_API_KEY, CF_API_TOKEN) restano su Cloudflare: la pubblicazione non li tocca.
+# `main`. Prima gli stessi controlli della CI (saltati se la CI è già passata su questo stesso commit),
+# poi migrazioni D1 e Worker. I segreti del Worker (GOOGLE_BOOKS_API_KEY, CF_API_TOKEN) restano su
+# Cloudflare: la pubblicazione non li tocca.
 
 on:
   workflow_dispatch:
 
 permissions:
   contents: read
+  actions: read
 
 concurrency:
   group: deploy
   cancel-in-progress: false
 
 jobs:
-  verify:
+  # Stesso commit = stesso codice: se la CI (push su main o cloudflare) è già verde, non si ripete.
+  # Se sta ancora girando o è fallita, la si riesegue qui come prima.
+  check:
     if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      verified: ${{ steps.ci.outputs.verified }}
+    steps:
+      - name: CI già verde su questo commit?
+        id: ci
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          count=$(gh api "repos/${{ github.repository }}/actions/workflows/ci.yml/runs?head_sha=${{ github.sha }}&status=success&per_page=1" --jq '.total_count')
+          echo "Esecuzioni CI riuscite per ${{ github.sha }}: $count"
+          if [ "$count" -gt 0 ]; then echo "verified=true" >> "$GITHUB_OUTPUT"; else echo "verified=false" >> "$GITHUB_OUTPUT"; fi
+
+  verify:
+    needs: check
+    if: needs.check.outputs.verified != 'true'
     uses: ./.github/workflows/ci.yml
 
   deploy:
-    needs: verify
+    needs: [check, verify]
+    # Si pubblica se il commit è verificato: dalla CI già passata (verify saltato) o da quella appena eseguita.
+    if: always() && needs.check.result == 'success' && (needs.verify.result == 'success' || needs.verify.result == 'skipped')
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:

@@ -25,7 +25,9 @@ Utenti al 31/10/2026: Riccardo (ADMIN), Filiberto Canino (EDITOR, 3 sedi), Giuli
 Solo a mano, da GitHub: **Actions → Deploy → Run workflow** (branch `main`). Il workflow
 (`.github/workflows/deploy.yml`):
 
-1. esegue gli stessi controlli della CI (lint, tipi, test con copertura, E2E iPhone/Android);
+1. esegue gli stessi controlli della CI (lint, tipi, test con copertura, E2E iPhone/Android), a meno che
+   la CI sia già passata sullo stesso commit (push su `main` o `cloudflare`): allora li salta e pubblica
+   in circa un minuto;
 2. stampa il segnalibro di Time Travel del database (punto di ripristino);
 3. applica le migrazioni D1 nuove;
 4. pubblica il Worker con il commit nel messaggio;
@@ -34,6 +36,13 @@ Solo a mano, da GitHub: **Actions → Deploy → Run workflow** (branch `main`).
 Se un passo fallisce, quelli dopo non partono e GitHub manda un'email. Il token
 `CLOUDFLARE_DEPLOY_TOKEN` (segreto GitHub) può solo pubblicare Worker e modificare D1; i segreti del
 Worker (`GOOGLE_BOOKS_API_KEY`, `CF_API_TOKEN`) restano su Cloudflare e la pubblicazione non li tocca.
+
+**Regola per le migrazioni.** Le migrazioni partono prima del nuovo Worker, e `wrangler rollback`
+riporta indietro solo il codice: per qualche secondo (o dopo un ritorno indietro) il codice vecchio gira
+sul database nuovo. Quindi ogni migrazione deve funzionare anche con il codice precedente: **prima si
+aggiunge** (colonne facoltative, tabelle nuove), **si toglie o si rinomina solo in un rilascio
+successivo**, quando nessun codice in produzione usa più la vecchia forma. Finora tutte le migrazioni
+(0002–0005) sono solo aggiunte.
 
 Dal Mac resta possibile: `pnpm exec wrangler d1 migrations apply DB --remote && pnpm build && pnpm exec wrangler deploy`.
 
