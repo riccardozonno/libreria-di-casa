@@ -1,4 +1,4 @@
-import { lazy, type ReactNode, Suspense } from "react";
+import { type ComponentType, lazy, type ReactNode, Suspense } from "react";
 import { createBrowserRouter, RouterProvider } from "react-router";
 import { Layout } from "./layout";
 import { LocationsProvider } from "./lib/locations";
@@ -15,11 +15,21 @@ import { RouteErrorPage } from "./pages/route-error";
 // Pagine dell'app (navigazione nel browser, nessun rendering sul server). Ogni dato arriva da /api.
 // Quelle di tutti i giorni sono nel file principale; Statistiche e area admin si scaricano solo quando
 // servono (il CSV porta con sé papaparse). Se dopo una pubblicazione il file non c'è più, main.tsx ricarica.
-const AdminPage = lazy(() => import("./pages/admin").then((module) => ({ default: module.AdminPage })));
-const AuditPage = lazy(() => import("./pages/audit").then((module) => ({ default: module.AuditPage })));
-const CsvPage = lazy(() => import("./pages/csv").then((module) => ({ default: module.CsvPage })));
-const StatsPage = lazy(() => import("./pages/stats").then((module) => ({ default: module.StatsPage })));
-const UsersPage = lazy(() => import("./pages/users").then((module) => ({ default: module.UsersPage })));
+function lazyPage<Module>(load: () => Promise<Module>, pick: (module: Module) => ComponentType) {
+  return lazy(async () => {
+    const module = await load();
+    // Senza modulo main.tsx sta già ricaricando la pagina (file vecchio dopo una pubblicazione): si resta su
+    // «Caricamento…» invece di mostrare per un attimo la pagina d'errore.
+    if (!module) return new Promise<never>(() => undefined);
+    return { default: pick(module) };
+  });
+}
+
+const AdminPage = lazyPage(() => import("./pages/admin"), (module) => module.AdminPage);
+const AuditPage = lazyPage(() => import("./pages/audit"), (module) => module.AuditPage);
+const CsvPage = lazyPage(() => import("./pages/csv"), (module) => module.CsvPage);
+const StatsPage = lazyPage(() => import("./pages/stats"), (module) => module.StatsPage);
+const UsersPage = lazyPage(() => import("./pages/users"), (module) => module.UsersPage);
 
 function OnDemand({ children }: { children: ReactNode }) {
   return <Suspense fallback={<p className="px-1 py-6 text-center text-ink-soft">Caricamento…</p>}>{children}</Suspense>;
@@ -40,7 +50,7 @@ const router = createBrowserRouter([
       { path: "/statistiche", element: <OnDemand><StatsPage /></OnDemand> },
       { path: "/aggiungi", element: <AddBookPage /> },
       { path: "/sedi", element: <LocationsPage /> },
-      { path: "/admin", element: <OnDemand><AdminPage /></OnDemand> },
+      { path: "/admin", element: <AdminOnly><OnDemand><AdminPage /></OnDemand></AdminOnly> },
       { path: "/admin/utenti", element: <AdminOnly><OnDemand><UsersPage /></OnDemand></AdminOnly> },
       { path: "/admin/registro", element: <AdminOnly><OnDemand><AuditPage /></OnDemand></AdminOnly> },
       { path: "/admin/csv", element: <AdminOnly><OnDemand><CsvPage /></OnDemand></AdminOnly> },

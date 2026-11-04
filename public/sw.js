@@ -8,6 +8,9 @@
 const CACHE = "home-library-static-v2";
 const OFFLINE_URL = "/offline";
 const PRECACHE = [OFFLINE_URL, "/offline.css", "/icons/icon-192.png"];
+// Ogni pubblicazione porta file con nomi nuovi: senza un tetto la cache crescerebbe per sempre.
+// Si tengono i più recenti (la cache conserva l'ordine di inserimento); la pagina offline non si tocca.
+const MAX_ASSETS = 60;
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE).then((cache) => cache.addAll(PRECACHE)).then(() => self.skipWaiting()));
@@ -21,6 +24,12 @@ self.addEventListener("activate", (event) => {
       .then(() => self.clients.claim()),
   );
 });
+
+async function trimCache(cache) {
+  const assets = (await cache.keys()).filter((request) => !PRECACHE.includes(new URL(request.url).pathname));
+  const excess = assets.length - MAX_ASSETS;
+  if (excess > 0) await Promise.all(assets.slice(0, excess).map((request) => cache.delete(request)));
+}
 
 function isImmutableAsset(url) {
   return url.origin === self.location.origin && ["/assets/", "/icons/", "/vendor/"].some((prefix) => url.pathname.startsWith(prefix));
@@ -46,7 +55,7 @@ self.addEventListener("fetch", (event) => {
             // Un file mancante (vecchio hash dopo una pubblicazione) torna come pagina HTML: mai in cache.
             if (response.ok && !response.headers.get("content-type")?.includes("text/html")) {
               const copy = response.clone();
-              caches.open(CACHE).then((cache) => cache.put(request, copy));
+              caches.open(CACHE).then((cache) => cache.put(request, copy).then(() => trimCache(cache)));
             }
             return response;
           }),

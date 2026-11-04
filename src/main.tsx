@@ -11,7 +11,13 @@ if (!root) throw new Error("Elemento #root mancante in index.html");
 // una volta al minuto: se un file manca davvero, l'errore resta visibile invece di ricaricare all'infinito.
 const RELOAD_KEY = "home-library:reload-after-deploy";
 const RELOAD_PAUSE_MS = 60_000;
+let isReloading = false;
 window.addEventListener("vite:preloadError", (event) => {
+  // Vite può segnalare lo stesso caricamento due volte: con la ricarica già avviata, niente errore a schermo.
+  if (isReloading) {
+    event.preventDefault();
+    return;
+  }
   try {
     const last = Number(sessionStorage.getItem(RELOAD_KEY) ?? 0);
     if (Date.now() - last < RELOAD_PAUSE_MS) return;
@@ -19,6 +25,7 @@ window.addEventListener("vite:preloadError", (event) => {
   } catch {
     return; // Senza sessionStorage (navigazione privata molto restrittiva) meglio non rischiare un ciclo.
   }
+  isReloading = true;
   event.preventDefault();
   window.location.reload();
 });

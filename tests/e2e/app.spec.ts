@@ -289,6 +289,42 @@ test.describe("dopo una pubblicazione", () => {
   });
 });
 
+test.describe("dopo una pubblicazione (file vero mancante)", () => {
+  // Il service worker inoltrerebbe la richiesta senza passare da page.route: qui lo si blocca.
+  test.use({ ...asUser("reader"), serviceWorkers: "block" });
+
+  test("le Statistiche con il vecchio file: niente pagina d'errore, la pagina si ricarica e si aprono", async ({ page, browserName }) => {
+    // In un Deploy vero, dopo la ricarica il file ha un nome nuovo. Qui il nome resta lo stesso e WebKit
+    // ripresenta l'errore per quell'indirizzo anche dopo la ricarica (verificato il 04/11/2026): il percorso
+    // reale si prova su Chromium; la ricarica una sola volta è provata su entrambi dal test con l'evento.
+    test.skip(browserName === "webkit", "WebKit ricorda l'errore per lo stesso indirizzo dopo la ricarica");
+    await page.goto("/");
+    await expect(page.getByRole("heading", { name: "Catalogo" })).toBeVisible();
+    // Come dopo un Deploy: il vecchio file non esiste e Cloudflare risponde con la pagina HTML (200).
+    const html = await (await page.request.get("/")).text();
+    await page.route("**/assets/stats-*.js", (route) => route.fulfill({ status: 200, contentType: "text/html", headers: { "Cache-Control": "no-store" }, body: html }), {
+      times: 1,
+    });
+    // no-store: dopo un vero Deploy la pagina ricaricata chiede un file con un nome nuovo; qui il nome resta
+    // lo stesso, e senza no-store Safari riuserebbe la risposta finta tenuta in cache.
+    // Annota se la pagina d'errore compare anche per un istante (sessionStorage sopravvive alla ricarica).
+    await page.addInitScript(() => {
+      new MutationObserver(() => {
+        if (document.body?.textContent?.includes("Qualcosa è andato storto")) sessionStorage.setItem("e2e-error-page", "1");
+      }).observe(document, { childList: true, subtree: true, characterData: true });
+    });
+    await page.reload();
+    await expect(page.getByRole("heading", { name: "Catalogo" })).toBeVisible();
+    let loads = 0;
+    page.on("load", () => (loads += 1));
+
+    await page.getByRole("link", { name: "Statistiche" }).click();
+    await expect(page.getByRole("heading", { level: 1, name: "Statistiche" })).toBeVisible();
+    expect(loads).toBe(1);
+    expect(await page.evaluate(() => sessionStorage.getItem("e2e-error-page"))).toBeNull();
+  });
+});
+
 test("i file statici hanno le intestazioni di sicurezza", async ({ request }) => {
   const response = await request.get("/");
   expect(response.headers()["content-security-policy"]).toContain("frame-ancestors 'none'");
