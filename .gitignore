@@ -1,12 +1,9 @@
 # dipendenze e build
 node_modules/
-.next/
-out/
 coverage/
 playwright-report/
 test-results/
 *.tsbuildinfo
-next-env.d.ts
 
 # segreti e dati locali
 .env
@@ -19,14 +16,9 @@ next-env.d.ts
 .claude/settings.local.json
 .DS_Store
 
-# pnpm / next
-.pnp.*
+# chiavi e log
 *.pem
 .pnpm-debug.log*
-/build
-
-# client Prisma generato
-/src/generated/
 
 # WASM copiato da scripts/copy-wasm.mjs
 /public/vendor/
