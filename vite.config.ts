@@ -25,5 +25,16 @@ export default defineConfig({
   plugins: [react(), tailwindcss(), inlineAppleTouchIcon(), cloudflare({ persistState: process.env.E2E_STATE ? { path: process.env.E2E_STATE } : true })],
   build: { sourcemap: false },
   // Worker minificato: meno codice da leggere al primo avvio di un'istanza (limite di 10 ms di CPU).
-  environments: { homelibrary: { build: { minify: true } } },
+  environments: {
+    homelibrary: { build: { minify: true } },
+    // React e il router in un file proprio: cambia solo quando cambiano le librerie, quindi dopo una
+    // pubblicazione resta nella cache del service worker e il telefono riscarica solo il codice dell'app.
+    client: {
+      build: {
+        rolldownOptions: {
+          output: { codeSplitting: { groups: [{ name: "react", test: /node_modules[\\/](react|react-dom|react-router|scheduler)[\\/]/ }] } },
+        },
+      },
+    },
+  },
 });
