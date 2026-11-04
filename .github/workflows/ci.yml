@@ -2,7 +2,7 @@ name: CI
 
 on:
   push:
-    branches: [main, cloudflare]
+    branches: [main]
   pull_request:
   # Riusata da deploy.yml: si pubblica solo dopo gli stessi controlli.
   workflow_call:

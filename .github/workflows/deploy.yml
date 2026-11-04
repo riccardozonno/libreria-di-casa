@@ -17,7 +17,7 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # Stesso commit = stesso codice: se la CI (push su main o cloudflare) è già verde, non si ripete.
+  # Stesso commit = stesso codice: se la CI (push su main) è già verde, non si ripete.
   # Se sta ancora girando o è fallita, la si riesegue qui come prima.
   check:
     if: github.ref == 'refs/heads/main'

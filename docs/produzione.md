@@ -26,7 +26,7 @@ Solo a mano, da GitHub: **Actions → Deploy → Run workflow** (branch `main`).
 (`.github/workflows/deploy.yml`):
 
 1. esegue gli stessi controlli della CI (lint, tipi, test con copertura, E2E iPhone/Android), a meno che
-   la CI sia già passata sullo stesso commit (push su `main` o `cloudflare`): allora li salta e pubblica
+   la CI sia già passata sullo stesso commit (push su `main`): allora li salta e pubblica
    in circa un minuto;
 2. stampa il segnalibro di Time Travel del database (punto di ripristino);
 3. applica le migrazioni D1 nuove;
