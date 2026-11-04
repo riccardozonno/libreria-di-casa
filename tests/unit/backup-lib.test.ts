@@ -1,6 +1,6 @@
 import { getTableConfig, type SQLiteTable } from "drizzle-orm/sqlite-core";
 import { describe, expect, it } from "vitest";
-import { BACKUP_TABLES, compareCounts, countsQuery, dataFileName, evaluateHealth, isWeeklyCheckDay, RETENTION_ARGS, tableExportArgs } from "../../scripts/backup/lib.mjs";
+import { BACKUP_TABLES, compareCounts, countsQuery, dataFileName, evaluateHealth, isWeeklyCheckDay, RETENTION_ARGS, summarizeInvocations, tableExportArgs } from "../../scripts/backup/lib.mjs";
 import * as schema from "../../worker/db/schema";
 
 // Regole del backup (ADR-0014, fase 6): cosa si salva, in che ordine, quanto si conserva, come si verifica.
@@ -89,5 +89,35 @@ describe("controllo settimanale", () => {
       "3000000 righe lette nelle ultime 24 ore (metà del limite gratuito: 2500000)",
       "60000 righe scritte nelle ultime 24 ore (metà del limite gratuito: 50000)",
     ]);
+  });
+});
+
+describe("tempi del Worker nel rapporto settimanale", () => {
+  // Righe come le restituisce Cloudflare (tempi in microsecondi), una per versione ed esito.
+  const row = (version: string, status: string, requests: number, [p50, p90, p99, p999]: [number, number, number, number]) => ({
+    sum: { requests },
+    quantiles: { cpuTimeP50: p50, cpuTimeP90: p90, cpuTimeP99: p99, cpuTimeP999: p999 },
+    dimensions: { scriptVersion: version, status },
+  });
+
+  it("esiti sommati, p99 complessivo e tempi per versione (in ms, dalla più usata)", () => {
+    const summary = summarizeInvocations([
+      row("aaaaaaaa-1111", "success", 300, [1200, 3400, 11000, 16500]),
+      row("bbbbbbbb-2222", "success", 900, [900, 2100, 7600, 12200]),
+      row("bbbbbbbb-2222", "clientDisconnected", 4, [800, 1500, 17600, 17600]),
+    ]);
+    expect(summary.statuses).toEqual({ success: 1200, clientDisconnected: 4 });
+    expect(summary.cpuP99Ms).toBe(17.6);
+    expect(summary.versions).toEqual([
+      // Più righe della stessa versione: si tiene il valore più alto (stima prudente).
+      { version: "bbbbbbbb", requests: 904, cpuMs: { p50: 0.9, p90: 2.1, p99: 17.6, p999: 17.6 } },
+      { version: "aaaaaaaa", requests: 300, cpuMs: { p50: 1.2, p90: 3.4, p99: 11, p999: 16.5 } },
+    ]);
+  });
+
+  it("al massimo 5 versioni; nessuna richiesta → elenco vuoto", () => {
+    const many = Array.from({ length: 7 }, (_, index) => row(`v${index}`, "success", index + 1, [1000, 1000, 1000, 1000]));
+    expect(summarizeInvocations(many).versions.map((version) => version.version)).toEqual(["v6", "v5", "v4", "v3", "v2"]);
+    expect(summarizeInvocations([])).toEqual({ statuses: {}, cpuP99Ms: 0, versions: [] });
   });
 });

@@ -56,6 +56,43 @@ const MAX_ROWS_WRITTEN_24H = 50_000; // metà del limite gratuito di D1 (100 mil
  * @param {{ statuses: Record<string, number>, cpuP99Ms: number, database: { database_size: number, rows_read_24h: number, rows_written_24h: number } }} health
  * @returns {string[]}
  */
+const TOP_VERSIONS = 5;
+const toMs = (microseconds) => Math.round(microseconds / 100) / 10;
+
+/**
+ * Riassume le righe di Cloudflare (una per versione del Worker ed esito, tempi in microsecondi): esiti
+ * sommati, p99 complessivo e, per le versioni più usate, p50/p90/p99/p99,9 della CPU in ms. Con più righe
+ * per la stessa versione si tiene il valore più alto: i percentili non si possono sommare, è una stima prudente.
+ */
+export function summarizeInvocations(rows) {
+  const statuses = {};
+  const versions = new Map();
+  let cpuP99 = 0;
+  for (const row of rows) {
+    const { status, scriptVersion } = row.dimensions;
+    statuses[status] = (statuses[status] ?? 0) + row.sum.requests;
+    cpuP99 = Math.max(cpuP99, row.quantiles.cpuTimeP99);
+    const version = scriptVersion.slice(0, 8);
+    const current = versions.get(version) ?? { version, requests: 0, p50: 0, p90: 0, p99: 0, p999: 0 };
+    versions.set(version, {
+      version,
+      requests: current.requests + row.sum.requests,
+      p50: Math.max(current.p50, row.quantiles.cpuTimeP50),
+      p90: Math.max(current.p90, row.quantiles.cpuTimeP90),
+      p99: Math.max(current.p99, row.quantiles.cpuTimeP99),
+      p999: Math.max(current.p999, row.quantiles.cpuTimeP999),
+    });
+  }
+  return {
+    statuses,
+    cpuP99Ms: toMs(cpuP99),
+    versions: [...versions.values()]
+      .sort((a, b) => b.requests - a.requests)
+      .slice(0, TOP_VERSIONS)
+      .map((entry) => ({ version: entry.version, requests: entry.requests, cpuMs: { p50: toMs(entry.p50), p90: toMs(entry.p90), p99: toMs(entry.p99), p999: toMs(entry.p999) } })),
+  };
+}
+
 export function evaluateHealth({ statuses, database }) {
   const problems = Object.entries(statuses)
     .filter(([status, count]) => !HARMLESS_STATUSES.has(status) && count > 0)
