@@ -11,7 +11,7 @@ import { addCopy, assertCanCreateIn, assertCanEditBook, createBookWithCopy, dele
 import { getBookDetail, listBooks } from "./queries";
 import { setCurrentReading, setRating, setReading } from "./readings";
 
-function parseJsonField(value: FormDataEntryValue | null): unknown {
+function parseJsonField(value: File | string | null): unknown {
   if (typeof value !== "string") throw new DomainError("VALIDATION", "Dati del libro mancanti.");
   try {
     return JSON.parse(value);

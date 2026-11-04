@@ -6,7 +6,7 @@ export default defineConfig({
   test: {
     coverage: {
       provider: "istanbul",
-      include: ["shared/**", "worker/**"],
+      include: ["shared/**/*.ts", "worker/**/*.ts"],
       // Schema dichiarativo di Drizzle: le sue callback (es. `references(() => …)`) servono solo agli
       // strumenti. Il comportamento reale (vincoli, chiavi esterne, FTS, trigger) è in tests/worker/schema.test.ts.
       exclude: ["worker/db/schema.ts"],

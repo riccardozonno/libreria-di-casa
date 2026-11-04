@@ -9,7 +9,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "lint": "eslint .",
-    "typecheck": "wrangler types --strict-vars=false && tsc --noEmit",
+    "typecheck": "wrangler types --strict-vars=false && tsc -p tsconfig.json && tsc -p shared && tsc -p src && tsc -p worker && tsc -p tests",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage",
     "e2e": "playwright test",

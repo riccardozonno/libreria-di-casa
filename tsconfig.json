@@ -1,22 +1,8 @@
 {
-  "compilerOptions": {
-    "target": "ES2024",
-    "lib": ["ES2024", "DOM", "DOM.Iterable"],
-    "module": "ESNext",
-    "moduleResolution": "Bundler",
-    "jsx": "react-jsx",
-    "strict": true,
-    "noUncheckedIndexedAccess": true,
-    "noImplicitOverride": true,
-    "noFallthroughCasesInSwitch": true,
-    "noEmit": true,
-    "skipLibCheck": true,
-    "isolatedModules": true,
-    "verbatimModuleSyntax": true,
-    "resolveJsonModule": true,
-    "allowImportingTsExtensions": true,
-    "types": ["./worker-configuration.d.ts", "vite/client", "@cloudflare/vitest-plugin/types"]
-  },
-  "include": ["src", "shared", "worker", "tests", "scripts", "tools", "*.ts", "worker-configuration.d.ts"],
-  "exclude": ["node_modules", "dist", "spike"]
+  // File di configurazione e strumenti di build (Node). Gli altri ambienti hanno il loro tsconfig:
+  // src/ (browser), worker/ (Cloudflare Workers), shared/ (neutro), tests/. `pnpm typecheck` li controlla tutti.
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": { "lib": ["ES2024"], "types": ["node"] },
+  "include": ["*.ts", "tools", "scripts"],
+  "exclude": ["node_modules", "dist", "spike", "worker-configuration.d.ts"]
 }

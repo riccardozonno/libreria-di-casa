@@ -1,0 +1,6 @@
+{
+  // Interfaccia nel browser: tipi DOM, nessun tipo del runtime Workers (niente D1, R2, env del Worker).
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": { "lib": ["ES2024", "DOM", "DOM.Iterable"], "types": ["vite/client"] },
+  "include": [".", "../shared"]
+}

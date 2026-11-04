@@ -1,0 +1,6 @@
+{
+  // Codice usato sia dall'interfaccia sia dal Worker: solo JavaScript standard, né DOM né tipi Workers.
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": { "lib": ["ES2024"], "types": [] },
+  "include": ["."]
+}

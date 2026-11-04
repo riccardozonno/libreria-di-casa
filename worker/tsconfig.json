@@ -1,0 +1,6 @@
+{
+  // API nel runtime Cloudflare Workers: tipi generati da `wrangler types`, nessun tipo DOM (niente window/document).
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": { "lib": ["ES2024"], "types": ["../worker-configuration.d.ts"] },
+  "include": [".", "../shared"]
+}

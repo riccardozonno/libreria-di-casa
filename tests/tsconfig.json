@@ -1,0 +1,9 @@
+{
+  // Test: unitari (Node), API nel runtime Workers (vitest-plugin) ed E2E (Playwright, con codice eseguito nella pagina).
+  "extends": "../tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2024", "DOM", "DOM.Iterable"],
+    "types": ["../worker-configuration.d.ts", "@cloudflare/vitest-plugin/types", "vite/client", "node"]
+  },
+  "include": [".", "../src", "../shared", "../worker", "../scripts", "../tools"]
+}
