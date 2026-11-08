@@ -28,7 +28,12 @@ test.describe("amministratore", () => {
     const sede = `Sede ${unique()}`;
     const titolo = `Perché la città ${unique()}`;
 
+    // Le sedi sono nell'area Admin; il vecchio indirizzo /sedi porta lì.
     await page.goto("/sedi");
+    await expect(page).toHaveURL(/\/admin\/sedi$/);
+    await page.goto("/admin");
+    await page.getByRole("link", { name: /^Sedi/ }).click();
+    await expect(page.getByRole("heading", { level: 1, name: "Sedi" })).toBeVisible();
     await page.getByLabel("Nuova sede").fill(sede);
     await page.getByRole("button", { name: "Crea sede" }).click();
     await expect(page.getByText("Sede creata.")).toBeVisible();
@@ -159,7 +164,7 @@ test.describe("amministratore", () => {
   });
 
   test("nessuna pagina scorre di lato sul telefono", async ({ page }) => {
-    for (const path of ["/", "/statistiche", "/aggiungi", "/sedi", "/profilo", "/installa", "/admin", "/admin/utenti", "/admin/registro", "/admin/csv"]) {
+    for (const path of ["/", "/statistiche", "/aggiungi", "/admin/sedi", "/profilo", "/installa", "/admin", "/admin/utenti", "/admin/registro", "/admin/csv"]) {
       await page.goto(path);
       await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
@@ -181,6 +186,14 @@ test.describe("amministratore", () => {
 
 test.describe("editor", () => {
   test.use(asUser("editor"));
+
+  test("vede nel Profilo le sedi che gestisce; niente pagina Sedi", async ({ page }) => {
+    await page.goto("/profilo");
+    await expect(page.getByText(`Sedi che gestisci: ${EDITOR_LOCATION.name}`)).toBeVisible();
+    await expect(page.getByRole("navigation", { name: "Navigazione principale" }).getByRole("link", { name: "Sedi" })).toHaveCount(0);
+    await page.goto("/admin/sedi");
+    await expect(page.getByRole("heading", { name: "Pagina non trovata" })).toBeVisible();
+  });
 
   test("aggiunge libri solo nella propria sede e non vede l'area admin", async ({ page }) => {
     await page.goto("/aggiungi");
@@ -237,10 +250,14 @@ test.describe("lettore", () => {
     await expect(page.getByText("Non sei editor di nessuna sede attiva")).toBeVisible();
   });
 
-  test("apre le Statistiche dal Catalogo", async ({ page }) => {
+  test("apre le Statistiche dalla barra in basso, dove non c'è più «Sedi»", async ({ page }) => {
     const violations = failOnCspViolation(page);
     await page.goto("/");
-    await page.getByRole("link", { name: "Statistiche" }).click();
+    const nav = page.getByRole("navigation", { name: "Navigazione principale" });
+    await expect(nav.getByRole("link", { name: "Sedi" })).toHaveCount(0);
+    // Nessun doppione: il pulsante nel Catalogo non c'è più.
+    await expect(page.getByRole("main").getByRole("link", { name: "Statistiche" })).toHaveCount(0);
+    await nav.getByRole("link", { name: "Statistiche" }).click();
     await expect(page).toHaveURL(/\/statistiche$/);
     await expect(page.getByRole("heading", { level: 1, name: "Statistiche" })).toBeVisible();
     for (const title of ["Chi legge di più", "Sta leggendo", "Letture per mese", "Letture per anno", "I più apprezzati", "Autori più letti", "Generi più letti", "Letture in comune"]) {
@@ -248,8 +265,12 @@ test.describe("lettore", () => {
     }
     // Sempre 12 mesi, anche a zero.
     await expect(page.getByRole("list", { name: "Letture per mese" }).getByRole("listitem")).toHaveCount(12);
-    await page.getByRole("link", { name: "← Catalogo" }).click();
+    await expect(page.getByRole("link", { name: "← Catalogo" })).toHaveCount(0);
+    await nav.getByRole("link", { name: "Catalogo" }).click();
     await expect(page.getByRole("heading", { name: "Catalogo" })).toBeVisible();
+    // Il vecchio indirizzo /sedi porta al Catalogo.
+    await page.goto("/sedi");
+    await expect(page).toHaveURL(/\/$/);
     expect(violations).toEqual([]);
   });
 
@@ -422,7 +443,7 @@ test.describe("app installabile", () => {
     });
     await page.reload();
     await context.setOffline(true);
-    await page.goto("/sedi").catch(() => undefined);
+    await page.goto("/profilo").catch(() => undefined);
     await expect(page.getByRole("heading", { name: "Sei offline" })).toBeVisible();
     await context.setOffline(false);
   });

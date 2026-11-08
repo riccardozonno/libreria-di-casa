@@ -4,7 +4,7 @@ import { asUser, EDITOR_LOCATION } from "./fixtures";
 
 // Accessibilità (WCAG 2.2 A/AA) con axe, in modalità chiara e scura: nessuna violazione seria o critica.
 
-const PAGES = ["/", "/statistiche", "/?genere=NONE", "/?lettura=UNREAD", "/aggiungi", "/sedi", "/profilo", "/installa", "/admin", "/admin/utenti", "/admin/registro", "/admin/csv"];
+const PAGES = ["/", "/statistiche", "/?genere=NONE", "/?lettura=UNREAD", "/aggiungi", "/admin/sedi", "/profilo", "/installa", "/admin", "/admin/utenti", "/admin/registro", "/admin/csv"];
 
 async function seriousViolations(page: Page): Promise<string[]> {
   const results = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"]).analyze();
