@@ -1,14 +1,16 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useSearchParams } from "react-router";
 import { locationColorClass } from "../../shared/location-colors";
 import { genreFilterSchema, type ReadingFilter, readingFilterSchema } from "../../shared/schemas";
 import { BookCover } from "../components/book-cover";
 import { GenreOptions } from "../components/genre-options";
-import { buttonClasses, LocationTag, Notice, PageHeader, SelectInput } from "../components/ui";
+import { Button, buttonClasses, LocationTag, Notice, PageHeader, SelectInput } from "../components/ui";
 import { useLocations } from "../lib/locations";
-import { useApi } from "../lib/use-api";
+import { countLabel } from "./catalog/infinite-list";
+import { useInfiniteCatalog } from "./catalog/use-infinite-catalog";
 
-// Catalogo: ricerca (titolo, autore, ISBN, senza accenti), filtri per sede, genere e lettura, pagine da 24.
+// Catalogo: ricerca (titolo, autore, ISBN, senza accenti), filtri per sede, genere e lettura. Scorrimento
+// continuo a blocchi da 24 (8/11/2026), con «Mostra altri» come riserva e il contatore «24 di 312 libri».
 
 interface BookListItem {
   id: string;
@@ -20,6 +22,8 @@ interface BookListItem {
 }
 
 const SEARCH_DELAY_MS = 300;
+// Il blocco successivo parte un po' prima del fondo, così di solito è già arrivato quando ci si arriva.
+const LOAD_AHEAD = "600px";
 const READING_FILTER_LABELS: Record<NonNullable<ReadingFilter>, string> = {
   UNREAD_BY_ME: "Non letti da me",
   UNREAD: "Non letti da nessuno",
@@ -41,7 +45,6 @@ export function CatalogPage() {
   const genre = genreFilterSchema.safeParse(rawGenre).success ? rawGenre : "";
   const rawReading = params.get("lettura") ?? "";
   const reading = readingFilterSchema.safeParse(rawReading).success ? rawReading : "";
-  const page = Math.max(0, Number(params.get("pagina") ?? 1) - 1) || 0;
   const [draft, setDraft] = useState(query);
 
   // La ricerca parte quando si smette di scrivere; l'URL resta la fonte (indietro/avanti funzionano).
@@ -64,8 +67,8 @@ export function CatalogPage() {
   if (locationId) apiQuery.set("location", locationId);
   if (genre) apiQuery.set("genre", genre);
   if (reading) apiQuery.set("reading", reading);
-  if (page > 0) apiQuery.set("page", String(page));
-  const { data, error, loading } = useApi<{ items: BookListItem[]; hasMore: boolean }>(`/books?${apiQuery.toString()}`);
+  const catalog = useInfiniteCatalog<BookListItem>(apiQuery.toString());
+  const { items, hasMore, total, isLoading, error, loadMore } = catalog;
   const isFiltered = Boolean(query.trim() || locationId || genre || reading);
 
   const linkWith = (changes: Record<string, string | null>) => {
@@ -160,9 +163,8 @@ export function CatalogPage() {
         </SelectInput>
       </div>
 
-      {error && <Notice tone="error">{error}</Notice>}
-      {!data && loading && <p className="px-1 py-6 text-center text-ink-soft">Caricamento…</p>}
-      {data && data.items.length === 0 && (
+      {items.length === 0 && isLoading && <p className="px-1 py-6 text-center text-ink-soft">Caricamento…</p>}
+      {items.length === 0 && !isLoading && !error && (
         <div className="rounded-[var(--radius-lg)] bg-surface px-5 py-10 text-center shadow-[var(--shadow-card)]">
           <p className="font-serif text-[20px]">{isFiltered ? "Nessun libro trovato" : "Il catalogo è vuoto"}</p>
           <p className="mt-2 text-[15px] text-ink-soft">
@@ -170,9 +172,9 @@ export function CatalogPage() {
           </p>
         </div>
       )}
-      {data && data.items.length > 0 && (
-        <ul aria-busy={loading} className="divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] bg-surface shadow-[var(--shadow-card)] aria-busy:opacity-70">
-          {data.items.map((book) => (
+      {items.length > 0 && (
+        <ul className="divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] bg-surface shadow-[var(--shadow-card)]">
+          {items.map((book) => (
             <li key={book.id}>
               <Link to={`/libri/${book.id}`} className="flex gap-3.5 px-4 py-3 active:bg-sunken">
                 <BookCover bookId={book.id} title={book.title} coverKey={book.coverKey} />
@@ -194,25 +196,38 @@ export function CatalogPage() {
         </ul>
       )}
 
-      {data && (page > 0 || data.hasMore) && (
-        <nav aria-label="Pagine" className="mt-4 flex items-center justify-between text-[15px]">
-          {page > 0 ? (
-            <Link to={linkWith({ pagina: page > 1 ? String(page) : null })} className="min-h-11 px-2 py-2.5 font-semibold text-accent">
-              ← Precedente
-            </Link>
-          ) : (
-            <span />
-          )}
-          <span className="text-ink-faint">Pagina {page + 1}</span>
-          {data.hasMore ? (
-            <Link to={linkWith({ pagina: String(page + 2) })} className="min-h-11 px-2 py-2.5 font-semibold text-accent">
-              Successiva →
-            </Link>
-          ) : (
-            <span />
-          )}
-        </nav>
-      )}
+      <div className="mt-4 space-y-3">
+        {hasMore && !error && <LoadAhead onVisible={loadMore} itemCount={items.length} />}
+        {error && <Notice tone="error">{items.length === 0 ? error : `Non è stato possibile caricare altri libri. ${error}`}</Notice>}
+        {isLoading && items.length > 0 && <p className="text-center text-[14px] text-ink-soft">Carico altri libri…</p>}
+        {/* Riserva: lettori di schermo, tastiera o rete che non risponde. */}
+        {!isLoading && (hasMore || (error && items.length === 0)) && (
+          <Button variant="secondary" className="w-full" onClick={loadMore}>
+            Mostra altri
+          </Button>
+        )}
+        {items.length > 0 && (
+          <p aria-live="polite" className="text-center text-[13px] text-ink-faint">
+            {countLabel(items.length, total)}
+          </p>
+        )}
+      </div>
     </>
   );
+}
+
+/** Segnaposto in fondo all'elenco: quando entra (quasi) nello schermo chiede il blocco successivo. */
+function LoadAhead({ onVisible, itemCount }: { onVisible: () => void; itemCount: number }) {
+  const marker = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const element = marker.current;
+    if (!element || typeof IntersectionObserver === "undefined") return;
+    // Ricreato a ogni blocco arrivato (itemCount): se il segnaposto è ancora visibile si chiede subito il prossimo.
+    const observer = new IntersectionObserver((entries) => {
+      if (entries.some((entry) => entry.isIntersecting)) onVisible();
+    }, { rootMargin: `0px 0px ${LOAD_AHEAD} 0px` });
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [onVisible, itemCount]);
+  return <div ref={marker} aria-hidden="true" />;
 }

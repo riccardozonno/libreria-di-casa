@@ -10,4 +10,7 @@ export const USERS = {
 
 export const EDITOR_LOCATION = { id: "e2e-casa", name: "Casa E2E", color: "VERDE" } as const;
 
+/** 30 libri «Scaffalone 01…30» per il catalogo a scorrimento (inseriti nel database, non via API: limite di scritture). */
+export const SCROLL_BOOKS = { word: "Scaffalone", count: 30 } as const;
+
 export const asUser = (user: keyof typeof USERS) => ({ extraHTTPHeaders: { "X-Dev-Identity": USERS[user].email } });
