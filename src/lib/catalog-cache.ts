@@ -27,7 +27,12 @@ export function saveCatalog<Item>(key: string, snapshot: CatalogSnapshot<Item>):
   snapshots.set(key, snapshot);
 }
 
-export function clearCatalog(): void {
+/** Svuota la memoria; con `only` solo le liste per cui vale (es. quelle filtrate per lettura). */
+export function clearCatalog(only?: (key: string) => boolean): void {
   generation += 1;
-  snapshots.clear();
+  if (!only) {
+    snapshots.clear();
+    return;
+  }
+  for (const key of [...snapshots.keys()]) if (only(key)) snapshots.delete(key);
 }

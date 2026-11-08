@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import { Link, useParams } from "react-router";
+import { useParams } from "react-router";
 import { type GenreKey, genreLabel } from "../../shared/genres";
 import { formatIsbn13 } from "../../shared/isbn";
+import { BackToCatalog } from "../components/back-to-catalog";
 import { BookCover } from "../components/book-cover";
 import { Button, Notice, Section } from "../components/ui";
 import { useLocations } from "../lib/locations";
@@ -74,9 +75,7 @@ function BookDetailPage({ id }: { id: string }) {
 
   return (
     <article className="pb-4 pt-2">
-      <Link to="/" className="-ml-2 inline-flex min-h-11 items-center px-2 text-[15px] font-semibold text-accent">
-        ← Catalogo
-      </Link>
+      <BackToCatalog />
 
       <header className="mt-2 flex gap-4">
         <BookCover bookId={book.id} title={book.title} coverKey={book.coverKey} size="lg" />

@@ -1,6 +1,8 @@
 // Client dell'API: stessa origine (cookie di Access inclusi), errori sempre con un messaggio in italiano.
 import { clearCatalog } from "./catalog-cache";
 
+const READING_WRITE = /^\/books\/[^/]+\/(readings|current-readers)\//;
+
 export class ApiError extends Error {
   constructor(
     message: string,
@@ -36,8 +38,9 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
   const isSafe = SAFE_METHODS.has((init?.method ?? "GET").toUpperCase());
   if (response.status >= 500 && isSafe) response = await request(path, init);
 
-  // Una scrittura riuscita può cambiare il catalogo: la prossima apertura lo ricarica dal server.
-  if (!isSafe && response.ok) clearCatalog();
+  // Una scrittura riuscita può cambiare il catalogo: la prossima apertura lo ricarica dal server. Letture e
+  // voti cambiano solo le liste filtrate per lettura: le altre restano (si torna alla stessa posizione).
+  if (!isSafe && response.ok) clearCatalog(READING_WRITE.test(path) ? (key) => key.includes("reading=") : undefined);
   if (response.status === 204) return null as T;
   const body = (await response.json().catch(() => null)) as (T & { error?: string; fields?: Record<string, string> }) | null;
   if (!response.ok) {

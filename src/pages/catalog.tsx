@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { Link, useLocation, useSearchParams } from "react-router";
 import { locationColorClass } from "../../shared/location-colors";
 import { genreFilterSchema, type ReadingFilter, readingFilterSchema } from "../../shared/schemas";
+import { FROM_CATALOG } from "../components/back-to-catalog";
 import { BookCover } from "../components/book-cover";
 import { GenreOptions } from "../components/genre-options";
 import { Button, buttonClasses, LocationTag, Notice, PageHeader, SelectInput } from "../components/ui";
@@ -111,7 +112,7 @@ export function CatalogPage() {
         title="Catalogo"
         subtitle={isFiltered ? "Risultati della ricerca" : "Tutti i libri di casa"}
         action={
-          <Link to="/statistiche" className={buttonClasses("secondary", "shrink-0")}>
+          <Link to="/statistiche" state={FROM_CATALOG} className={buttonClasses("secondary", "shrink-0")}>
             Statistiche
           </Link>
         }
@@ -190,7 +191,7 @@ export function CatalogPage() {
         <ul ref={list} className="divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] bg-surface shadow-[var(--shadow-card)]">
           {items.map((book) => (
             <li key={book.id}>
-              <Link to={`/libri/${book.id}`} className="flex gap-3.5 px-4 py-3 active:bg-sunken">
+              <Link to={`/libri/${book.id}`} state={FROM_CATALOG} className="flex gap-3.5 px-4 py-3 active:bg-sunken">
                 <BookCover bookId={book.id} title={book.title} coverKey={book.coverKey} />
                 <div className="min-w-0 flex-1">
                   <p className="font-serif text-[17px] font-semibold leading-snug [overflow-wrap:anywhere]">{book.title}</p>

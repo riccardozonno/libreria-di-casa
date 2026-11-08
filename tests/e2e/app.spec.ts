@@ -293,6 +293,28 @@ test.describe("catalogo a scorrimento continuo", () => {
     await expect(page.getByRole("link", { name: new RegExp(`${word} 28`) })).toBeInViewport();
   });
 
+  test("anche con il link «← Catalogo» della scheda (l'app sulla schermata Home non ha il tasto indietro)", async ({ page }) => {
+    const word = SCROLL_BOOKS.word;
+    await page.goto(`/?q=${word}`);
+    const books = page.getByRole("link", { name: new RegExp(word) });
+    await page.getByText("24 di 30 libri").scrollIntoViewIfNeeded();
+    await expect(books).toHaveCount(30);
+    await page.getByRole("link", { name: new RegExp(`${word} 28`) }).click();
+    await expect(page.getByRole("heading", { level: 1, name: `${word} 28` })).toBeVisible();
+    // Un cambio di stato di lettura nella scheda (scrittura) non deve far perdere la lista. Andata e ritorno
+    // a «Da leggere», così il test si ripete uguale su entrambi i browser.
+    const status = page.getByRole("group", { name: "Il tuo stato" });
+    await status.getByRole("button", { name: "Sto leggendo", exact: true }).click();
+    await expect(status.getByRole("button", { name: "Sto leggendo", exact: true })).toHaveAttribute("aria-pressed", "true");
+    await status.getByRole("button", { name: "Da leggere", exact: true }).click();
+    await expect(status.getByRole("button", { name: "Da leggere", exact: true })).toHaveAttribute("aria-pressed", "true");
+    await page.getByRole("link", { name: "← Catalogo" }).click();
+    await expect(page).toHaveURL(new RegExp(`\\?q=${word}$`));
+    await expect(page.getByLabel("Cerca per titolo, autore o ISBN")).toHaveValue(word);
+    await expect(books).toHaveCount(30);
+    await expect(page.getByRole("link", { name: new RegExp(`${word} 28`) })).toBeInViewport();
+  });
+
   test.describe("rete che non risponde", () => {
     // Con il service worker attivo WebKit fa passare la richiesta da lì e page.route non la vede.
     test.use({ serviceWorkers: "block" });

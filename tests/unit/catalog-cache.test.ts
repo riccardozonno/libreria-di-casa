@@ -14,4 +14,13 @@ describe("memoria del catalogo", () => {
     expect(readCatalog("q=rosa")).toBeUndefined();
     expect(catalogGeneration()).toBe(before + 1);
   });
+
+  it("svuotamento parziale: solo le liste indicate (es. quelle filtrate per lettura)", () => {
+    const snapshot = { items: [], hasMore: false, total: 0, nextPage: 1 };
+    saveCatalog("q=rosa", snapshot);
+    saveCatalog("reading=UNREAD", snapshot);
+    clearCatalog((key) => key.includes("reading="));
+    expect(readCatalog("q=rosa")).toEqual(snapshot);
+    expect(readCatalog("reading=UNREAD")).toBeUndefined();
+  });
 });
