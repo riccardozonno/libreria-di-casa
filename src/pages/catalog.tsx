@@ -5,7 +5,7 @@ import { genreFilterSchema, type ReadingFilter, readingFilterSchema } from "../.
 import { FROM_CATALOG } from "../components/back-to-catalog";
 import { BookCover } from "../components/book-cover";
 import { GenreOptions } from "../components/genre-options";
-import { Button, buttonClasses, LocationTag, Notice, PageHeader, SelectInput } from "../components/ui";
+import { Button, LocationTag, Notice, PageHeader, SelectInput } from "../components/ui";
 import { useLocations } from "../lib/locations";
 import { countLabel } from "./catalog/infinite-list";
 import { useInfiniteCatalog } from "./catalog/use-infinite-catalog";
@@ -111,11 +111,6 @@ export function CatalogPage() {
       <PageHeader
         title="Catalogo"
         subtitle={isFiltered ? "Risultati della ricerca" : "Tutti i libri di casa"}
-        action={
-          <Link to="/statistiche" state={FROM_CATALOG} className={buttonClasses("secondary", "shrink-0")}>
-            Statistiche
-          </Link>
-        }
       />
       {state?.deleted && (
         <div className="mb-3">

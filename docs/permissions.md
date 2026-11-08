@@ -6,7 +6,8 @@ Legenda: ✅ sì · ❌ no · **S** = sede della copia · **S→T** = da sede S 
 
 | Operazione | Admin | Editor | Lettore |
 |---|---|---|---|
-| Accedere, vedere catalogo, schede, sedi (anche archiviate), storico spostamenti | ✅ | ✅ | ✅ |
+| Accedere, vedere catalogo, schede, sedi (anche archiviate, come filtro del catalogo), storico spostamenti | ✅ | ✅ | ✅ |
+| Pagina **Sedi** (dall'8/11/2026 in Admin → Sedi; l'editor vede nel Profilo le sedi che gestisce) | ✅ | ❌ | ❌ |
 | Cercare e filtrare | ✅ | ✅ | ✅ |
 | Vedere le **Statistiche** di lettura di tutta la famiglia (le persone disattivate contano nei totali, non nelle classifiche per persona) | ✅ | ✅ | ✅ |
 | Segnare/togliere **sé stesso** in "Letto da" | ✅ | ✅ | ✅ |

@@ -72,7 +72,7 @@ Ogni tappa si pubblica e si prova online prima della successiva, con uno stop ‚è
 | Le statistiche superano i 10 ms di CPU | Bassa | Media | Pochi conteggi aggregati in una richiesta; misura prima del rilascio; dati piccoli (famiglia) |
 | Suggerimento del genere sbagliato | Alta | Bassa | Sempre confermabile; mai assegnato senza conferma |
 | Voti visibili a tutti creano imbarazzo | Bassa | Bassa | Voto facoltativo; scelta esplicita dell'admin (visibili a tutti) |
-| Barra di navigazione affollata | Media | Bassa | Statistiche da un pulsante nel Catalogo, non una nuova voce nella barra |
+| Barra di navigazione affollata | Media | Bassa | Statistiche da un pulsante nel Catalogo, non una nuova voce nella barra. **Aggiornato l'8/11/2026:** Statistiche nella barra al posto di Sedi (spostata in Admin), stesso numero di voci |
 
 ---
 *Status: COMPLETE ‚Äî tutte e 5 le tappe pubblicate e approvate (02/11/2026).*

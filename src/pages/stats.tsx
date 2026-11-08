@@ -1,7 +1,6 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router";
 import { type GenreKey, genreLabel } from "../../shared/genres";
-import { BackToCatalog } from "../components/back-to-catalog";
 import { BarList } from "../components/bar-list";
 import { Notice, PageHeader, Section } from "../components/ui";
 import { useApi } from "../lib/use-api";
@@ -47,7 +46,6 @@ export function StatsPage() {
 
   return (
     <div className="pb-4 pt-2">
-      <BackToCatalog />
       <PageHeader
         title="Statistiche"
         subtitle={data ? `${plural(data.totalReadings, "lettura", "letture")} · ${plural(data.catalogSize, "libro", "libri")} in catalogo` : "Le letture di tutta la famiglia"}

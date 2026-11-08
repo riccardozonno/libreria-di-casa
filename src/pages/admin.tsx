@@ -3,9 +3,10 @@ import { PageHeader } from "../components/ui";
 import { useSession } from "../lib/session";
 import { NotFoundPage } from "./not-found";
 
-// Area amministratore: utenti, registro attività, import/export CSV.
+// Area amministratore: sedi, utenti, registro attività, import/export CSV.
 
 const SECTIONS = [
+  { to: "/admin/sedi", title: "Sedi", description: "Crea, rinomina, colori e archivio" },
   { to: "/admin/utenti", title: "Utenti", description: "Chi può entrare, ruoli e sedi" },
   { to: "/admin/registro", title: "Registro attività", description: "Chi ha fatto cosa, e quando" },
   { to: "/admin/csv", title: "Import ed export CSV", description: "Scarica il catalogo o carica molti libri insieme" },

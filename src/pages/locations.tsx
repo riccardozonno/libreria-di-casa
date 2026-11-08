@@ -105,7 +105,7 @@ function LocationAdminControls({ location, usedBy, onChanged }: { location: Loca
 }
 
 export function LocationsPage() {
-  const { me, can } = useSession();
+  const { can } = useSession();
   const { locations, loaded, reload } = useLocations();
   const canManage = can({ type: "location.manage" });
   const usedBy: UsedColors = Object.fromEntries(locations.map((location) => [location.color, location.name]));
@@ -113,6 +113,9 @@ export function LocationsPage() {
 
   return (
     <>
+      <Link to="/admin" className="-ml-2 mt-2 inline-flex min-h-11 items-center px-2 text-[15px] font-semibold text-accent">
+        ← Admin
+      </Link>
       <PageHeader title="Sedi" subtitle={loaded ? `${locations.length} ${locations.length === 1 ? "sede" : "sedi"}` : undefined} />
       {!loaded ? (
         <p className="px-1 py-6 text-center text-ink-soft">Caricamento…</p>
@@ -133,7 +136,6 @@ export function LocationsPage() {
                   </p>
                   <p className="text-[14px] text-ink-faint">
                     {location.copyCount} {location.copyCount === 1 ? "copia" : "copie"}
-                    {me.role === "EDITOR" && me.editorLocationIds.includes(location.id) && " · puoi modificarla"}
                   </p>
                 </Link>
               </div>

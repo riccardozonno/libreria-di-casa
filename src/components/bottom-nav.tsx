@@ -19,11 +19,10 @@ const icons: Record<string, ReactNode> = {
       <path d="M8 8v8M11 8v8M14 8v8M16.5 8v8" />
     </svg>
   ),
-  sedi: (
+  statistiche: (
     <svg {...ICON_PROPS}>
-      <path d="m3 11 9-7 9 7" />
-      <path d="M5 10v9a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-9" />
-      <path d="M10 20v-5h4v5" />
+      <path d="M4 20h16" />
+      <path d="M7 16v-5M12 16V6M17 16v-8" />
     </svg>
   ),
   admin: (
@@ -56,7 +55,7 @@ export function BottomNav({ canAdd, isAdmin }: { canAdd: boolean; isAdmin: boole
   const items: NavItem[] = [
     { href: "/", label: "Catalogo", icon: "catalogo" },
     ...(canAdd ? [{ href: "/aggiungi", label: "Aggiungi", icon: "aggiungi" } as const] : []),
-    { href: "/sedi", label: "Sedi", icon: "sedi" },
+    { href: "/statistiche", label: "Statistiche", icon: "statistiche" },
     ...(isAdmin ? [{ href: "/admin", label: "Admin", icon: "admin" } as const] : []),
     { href: "/profilo", label: "Profilo", icon: "profilo" },
   ];

@@ -1,5 +1,5 @@
 import { type ComponentType, lazy, type ReactNode, Suspense } from "react";
-import { createBrowserRouter, RouterProvider } from "react-router";
+import { createBrowserRouter, Navigate, RouterProvider } from "react-router";
 import { Layout } from "./layout";
 import { LocationsProvider } from "./lib/locations";
 import { SessionProvider, useSession } from "./lib/session";
@@ -7,7 +7,6 @@ import { AddBookPage } from "./pages/add-book";
 import { BookPage } from "./pages/book";
 import { CatalogPage } from "./pages/catalog";
 import { InstallPage } from "./pages/install";
-import { LocationsPage } from "./pages/locations";
 import { NotFoundPage } from "./pages/not-found";
 import { ProfilePage } from "./pages/profile";
 import { RouteErrorPage } from "./pages/route-error";
@@ -26,6 +25,7 @@ function lazyPage<Module>(load: () => Promise<Module>, pick: (module: Module) =>
 }
 
 const AdminPage = lazyPage(() => import("./pages/admin"), (module) => module.AdminPage);
+const LocationsPage = lazyPage(() => import("./pages/locations"), (module) => module.LocationsPage);
 const AuditPage = lazyPage(() => import("./pages/audit"), (module) => module.AuditPage);
 const CsvPage = lazyPage(() => import("./pages/csv"), (module) => module.CsvPage);
 const StatsPage = lazyPage(() => import("./pages/stats"), (module) => module.StatsPage);
@@ -33,6 +33,12 @@ const UsersPage = lazyPage(() => import("./pages/users"), (module) => module.Use
 
 function OnDemand({ children }: { children: ReactNode }) {
   return <Suspense fallback={<p className="px-1 py-6 text-center text-ink-soft">Caricamento…</p>}>{children}</Suspense>;
+}
+
+/** Vecchio indirizzo delle sedi (prima dell'8/11/2026): l'admin va ad Admin → Sedi, gli altri al Catalogo. */
+function LegacyLocations() {
+  const { me } = useSession();
+  return <Navigate to={me.role === "ADMIN" ? "/admin/sedi" : "/"} replace />;
 }
 
 function AdminOnly({ children }: { children: ReactNode }) {
@@ -49,7 +55,8 @@ const router = createBrowserRouter([
       { path: "/libri/:id", element: <BookPage /> },
       { path: "/statistiche", element: <OnDemand><StatsPage /></OnDemand> },
       { path: "/aggiungi", element: <AddBookPage /> },
-      { path: "/sedi", element: <LocationsPage /> },
+      { path: "/sedi", element: <LegacyLocations /> },
+      { path: "/admin/sedi", element: <AdminOnly><OnDemand><LocationsPage /></OnDemand></AdminOnly> },
       { path: "/admin", element: <AdminOnly><OnDemand><AdminPage /></OnDemand></AdminOnly> },
       { path: "/admin/utenti", element: <AdminOnly><OnDemand><UsersPage /></OnDemand></AdminOnly> },
       { path: "/admin/registro", element: <AdminOnly><OnDemand><AuditPage /></OnDemand></AdminOnly> },
