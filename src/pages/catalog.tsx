@@ -55,7 +55,6 @@ export function CatalogPage() {
         const next = new URLSearchParams(current);
         if (draft.trim()) next.set("q", draft);
         else next.delete("q");
-        next.delete("pagina");
         return next;
       }, { replace: true });
     }, SEARCH_DELAY_MS);
@@ -69,6 +68,23 @@ export function CatalogPage() {
   if (reading) apiQuery.set("reading", reading);
   const catalog = useInfiniteCatalog<BookListItem>(apiQuery.toString());
   const { items, hasMore, total, isLoading, error, loadMore } = catalog;
+  // Dopo «Mostra altri» (tastiera, lettore di schermo) si annuncia quanti libri ci sono ora; durante lo
+  // scorrimento automatico no, sarebbe un annuncio a ogni blocco.
+  const [isManualLoad, setIsManualLoad] = useState(false);
+  // Dopo «Mostra altri» il focus va al primo libro nuovo (il tasto sparisce quando non ce ne sono altri).
+  const list = useRef<HTMLUListElement>(null);
+  const focusFrom = useRef<number | null>(null);
+  const showMore = () => {
+    setIsManualLoad(true);
+    focusFrom.current = items.length;
+    loadMore();
+  };
+  useEffect(() => {
+    const index = focusFrom.current;
+    if (index === null || isLoading || items.length <= index) return;
+    list.current?.querySelectorAll("a")[index]?.focus();
+    focusFrom.current = null;
+  }, [isLoading, items.length]);
   const isFiltered = Boolean(query.trim() || locationId || genre || reading);
 
   const linkWith = (changes: Record<string, string | null>) => {
@@ -81,13 +97,11 @@ export function CatalogPage() {
     return text ? `/?${text}` : "/";
   };
 
-  // Un menu cambiato riparte dalla prima pagina.
   const setFilter = (key: string, value: string) =>
     setParams((current) => {
       const next = new URLSearchParams(current);
       if (value) next.set(key, value);
       else next.delete(key);
-      next.delete("pagina");
       return next;
     });
 
@@ -126,11 +140,11 @@ export function CatalogPage() {
 
       {locations.length > 1 && (
         <nav aria-label="Filtra per sede" className="-mx-4 mb-3 flex gap-2 overflow-x-auto px-4 pb-1">
-          <Link to={linkWith({ sede: null, pagina: null })} aria-current={!locationId ? "true" : undefined} className={chipClasses}>
+          <Link to={linkWith({ sede: null })} aria-current={!locationId ? "true" : undefined} className={chipClasses}>
             Tutte
           </Link>
           {locations.map((location) => (
-            <Link key={location.id} to={linkWith({ sede: location.id, pagina: null })} aria-current={location.id === locationId ? "true" : undefined} className={chipClasses}>
+            <Link key={location.id} to={linkWith({ sede: location.id })} aria-current={location.id === locationId ? "true" : undefined} className={chipClasses}>
               <span aria-hidden className={`mr-1.5 inline-block h-2.5 w-2.5 rounded-full ${locationColorClass(location.color)}`} />
               {location.name}
               {location.archived && " (archiviata)"}
@@ -173,7 +187,7 @@ export function CatalogPage() {
         </div>
       )}
       {items.length > 0 && (
-        <ul className="divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] bg-surface shadow-[var(--shadow-card)]">
+        <ul ref={list} className="divide-y divide-line overflow-hidden rounded-[var(--radius-lg)] bg-surface shadow-[var(--shadow-card)]">
           {items.map((book) => (
             <li key={book.id}>
               <Link to={`/libri/${book.id}`} className="flex gap-3.5 px-4 py-3 active:bg-sunken">
@@ -199,18 +213,17 @@ export function CatalogPage() {
       <div className="mt-4 space-y-3">
         {hasMore && !error && <LoadAhead onVisible={loadMore} itemCount={items.length} />}
         {error && <Notice tone="error">{items.length === 0 ? error : `Non è stato possibile caricare altri libri. ${error}`}</Notice>}
-        {isLoading && items.length > 0 && <p className="text-center text-[14px] text-ink-soft">Carico altri libri…</p>}
-        {/* Riserva: lettori di schermo, tastiera o rete che non risponde. */}
-        {!isLoading && (hasMore || (error && items.length === 0)) && (
-          <Button variant="secondary" className="w-full" onClick={loadMore}>
-            Mostra altri
+        {/* Riserva: lettori di schermo, tastiera o rete che non risponde. Resta montato durante il caricamento
+            (aria-disabled), così il focus non si perde e l'altezza non cambia. */}
+        {(hasMore || (error && items.length === 0)) && (
+          <Button variant="secondary" className="w-full aria-disabled:opacity-60" aria-disabled={isLoading} onClick={() => !isLoading && showMore()}>
+            {isLoading ? "Carico altri libri…" : "Mostra altri"}
           </Button>
         )}
-        {items.length > 0 && (
-          <p aria-live="polite" className="text-center text-[13px] text-ink-faint">
-            {countLabel(items.length, total)}
-          </p>
-        )}
+        {items.length > 0 && <p className="text-center text-[13px] text-ink-faint">{countLabel(items.length, total)}</p>}
+        <p role="status" className="sr-only">
+          {isManualLoad && !isLoading && items.length > 0 ? countLabel(items.length, total) : ""}
+        </p>
       </div>
     </>
   );
@@ -219,15 +232,20 @@ export function CatalogPage() {
 /** Segnaposto in fondo all'elenco: quando entra (quasi) nello schermo chiede il blocco successivo. */
 function LoadAhead({ onVisible, itemCount }: { onVisible: () => void; itemCount: number }) {
   const marker = useRef<HTMLDivElement>(null);
+  // Sempre l'ultima funzione, senza ricreare l'osservatore a ogni cambio di stato.
+  const latest = useRef(onVisible);
+  useEffect(() => {
+    latest.current = onVisible;
+  });
   useEffect(() => {
     const element = marker.current;
     if (!element || typeof IntersectionObserver === "undefined") return;
     // Ricreato a ogni blocco arrivato (itemCount): se il segnaposto è ancora visibile si chiede subito il prossimo.
     const observer = new IntersectionObserver((entries) => {
-      if (entries.some((entry) => entry.isIntersecting)) onVisible();
+      if (entries.some((entry) => entry.isIntersecting)) latest.current();
     }, { rootMargin: `0px 0px ${LOAD_AHEAD} 0px` });
     observer.observe(element);
     return () => observer.disconnect();
-  }, [onVisible, itemCount]);
+  }, [itemCount]);
   return <div ref={marker} aria-hidden="true" />;
 }

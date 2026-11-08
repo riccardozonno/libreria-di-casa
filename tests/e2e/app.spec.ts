@@ -309,6 +309,8 @@ test.describe("catalogo a scorrimento continuo", () => {
       await page.getByRole("button", { name: "Mostra altri" }).click();
       await expect(books).toHaveCount(30);
       await expect(page.getByRole("alert")).toHaveCount(0);
+      // Il tasto non c'è più (tutti caricati): il focus è sul primo libro arrivato, non perso in cima.
+      await expect(page.getByRole("link", { name: new RegExp(`${word} 25`) })).toBeFocused();
     });
   });
 });

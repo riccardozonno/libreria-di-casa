@@ -125,7 +125,10 @@ describe("catalogo", () => {
     expect((await page("genre=STORIA")).total).toBe(10);
     expect((await page(`genre=STORIA&location=${mare.id}`)).total).toBe(5);
     expect((await page("q=libro 07")).total).toBe(1);
+    expect((await page("q=inesistente")).total).toBe(0);
     expect((await page("page=1")).total).toBeUndefined();
+    // Più di un blocco: il totale è quello vero, non i 24 del primo blocco.
+    expect(await page("")).toMatchObject({ total: 30, hasMore: true });
   });
 
   it("scheda: libro, copie con sede, letture e storico; 404 se non esiste", async () => {

@@ -28,6 +28,8 @@ describe("contatore", () => {
     [1, 1, "1 libro"],
     [1, 2, "1 di 2 libri"],
     [24, null, "24 libri"],
+    [0, 0, "0 libri"],
+    [0, 5, "0 di 5 libri"],
   ] as const)("%i caricati su %s → «%s»", (loaded, total, label) => {
     expect(countLabel(loaded, total)).toBe(label);
   });

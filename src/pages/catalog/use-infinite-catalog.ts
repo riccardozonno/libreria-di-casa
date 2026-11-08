@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api, errorMessage } from "../../lib/api";
-import { type CatalogSnapshot, readCatalog, saveCatalog } from "../../lib/catalog-cache";
+import { type CatalogSnapshot, catalogGeneration, readCatalog, saveCatalog } from "../../lib/catalog-cache";
 import { mergePages } from "./infinite-list";
 
 // Blocchi del catalogo per una ricerca/filtro (`query`, senza `page`): il primo all'apertura, gli altri con
-// `loadMore()`. Un blocco alla volta; i blocchi caricati restano in catalog-cache per il ritorno dalla scheda.
+// `loadMore()`. Un blocco alla volta; cambiando ricerca o uscendo dalla pagina la richiesta in corso si
+// annulla. I blocchi arrivati restano in catalog-cache per il ritorno dalla scheda.
 
 interface Page<Item> {
   items: Item[];
@@ -27,35 +28,52 @@ function fromCache<Item>(query: string): State<Item> | null {
 
 export function useInfiniteCatalog<Item extends { id: string }>(query: string) {
   const [state, setState] = useState<State<Item>>(() => fromCache<Item>(query) ?? emptyState<Item>(query));
-  const loading = useRef(false);
   // Cambiati ricerca o filtri: si riparte dalla memoria, se c'è, o dal primo blocco (in render, niente effetto).
   const current = state.query === query ? state : (fromCache<Item>(query) ?? emptyState<Item>(query));
   if (current !== state) setState(current);
 
+  // Ultimo stato mostrato: base per unire il blocco successivo (fuori dagli aggiornamenti di stato).
+  const shown = useRef(current);
+  useEffect(() => {
+    shown.current = current;
+  });
+
+  // Richiesta in corso (una sola); annullata quando cambia la ricerca o si lascia la pagina.
+  const inFlight = useRef<AbortController | null>(null);
+  useEffect(
+    () => () => {
+      inFlight.current?.abort();
+      inFlight.current = null;
+    },
+    [query],
+  );
+
   const load = useCallback(
-    async (page: number, signal?: AbortSignal) => {
-      if (loading.current) return;
-      loading.current = true;
-      setState((previous) => ({ ...previous, isLoading: true, error: "" }));
+    async (page: number) => {
+      if (inFlight.current) return;
+      const controller = new AbortController();
+      inFlight.current = controller;
+      // Se nel frattempo una modifica svuota la memoria, questo blocco (letto prima) non va salvato.
+      const generation = catalogGeneration();
+      setState((previous) => (previous.query === query ? { ...previous, isLoading: true, error: "" } : previous));
       try {
         const separator = query ? "&" : "";
-        const result = await api<Page<Item>>(`/books?${query}${separator}page=${page}`, { signal });
-        setState((previous) => {
-          if (previous.query !== query) return previous;
-          const next: CatalogSnapshot<Item> = {
-            items: page === 0 ? result.items : mergePages(previous.items, result.items),
-            hasMore: result.hasMore,
-            total: result.total ?? previous.total,
-            nextPage: page + 1,
-          };
-          saveCatalog(query, next);
-          return { ...next, query, isLoading: false, error: "" };
-        });
+        const result = await api<Page<Item>>(`/books?${query}${separator}page=${page}`, { signal: controller.signal });
+        if (controller.signal.aborted) return;
+        const base = shown.current.query === query ? shown.current : emptyState<Item>(query);
+        const next: CatalogSnapshot<Item> = {
+          items: page === 0 ? result.items : mergePages(base.items, result.items),
+          hasMore: result.hasMore,
+          total: result.total ?? base.total,
+          nextPage: page + 1,
+        };
+        if (catalogGeneration() === generation) saveCatalog(query, next);
+        setState({ ...next, query, isLoading: false, error: "" });
       } catch (error) {
-        if (signal?.aborted) return;
+        if (controller.signal.aborted) return;
         setState((previous) => (previous.query === query ? { ...previous, isLoading: false, error: errorMessage(error) } : previous));
       } finally {
-        loading.current = false;
+        if (inFlight.current === controller) inFlight.current = null;
       }
     },
     [query],
@@ -64,13 +82,7 @@ export function useInfiniteCatalog<Item extends { id: string }>(query: string) {
   // Primo blocco quando non c'è nulla in memoria per questa ricerca.
   const needsFirstPage = current.nextPage === 0 && current.items.length === 0 && !current.error;
   useEffect(() => {
-    if (!needsFirstPage) return;
-    const controller = new AbortController();
-    void load(0, controller.signal);
-    return () => {
-      controller.abort();
-      loading.current = false;
-    };
+    if (needsFirstPage) void load(0);
   }, [needsFirstPage, load]);
 
   // Anche dopo un errore sul primo blocco (nextPage 0) si può riprovare.

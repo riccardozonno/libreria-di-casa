@@ -1,5 +1,6 @@
 import { execFileSync } from "node:child_process";
-import { rmSync } from "node:fs";
+import { rmSync, writeFileSync } from "node:fs";
+import path from "node:path";
 import { E2E_STATE, EDITOR_LOCATION, SCROLL_BOOKS, USERS } from "./fixtures.ts";
 
 // D1 locale degli E2E ricreato da zero PRIMA di avviare il server (comando del webServer di Playwright):
@@ -28,7 +29,10 @@ function resetDatabase(): void {
     `INSERT INTO location_editor (user_id, location_id) SELECT id, ${quote(EDITOR_LOCATION.id)} FROM user WHERE email = ${quote(USERS.editor.email)};`,
     ...scrollBooks,
   ].join("\n");
-  wrangler(["d1", "execute", "DB", "--command", sql]);
+  // Da file e non con --command: con i libri di prova il testo è lungo e --command ha un limite di dimensione.
+  const file = path.join(E2E_STATE, "seed.sql");
+  writeFileSync(file, sql);
+  wrangler(["d1", "execute", "DB", "--file", file]);
 }
 
 resetDatabase();
