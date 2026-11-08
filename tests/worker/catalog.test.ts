@@ -114,6 +114,20 @@ describe("catalogo", () => {
     expect(second.hasMore).toBe(false);
   });
 
+  it("totale nel primo blocco (per il contatore «24 di 30 libri»), con filtri e ricerca; non nei blocchi successivi", async () => {
+    const statements = Array.from({ length: 30 }, (_, index) => [
+      env.DB.prepare("INSERT INTO book (id, title, genre, source) VALUES (?, ?, ?, 'MANUAL')").bind(`b${index}`, `Libro ${String(index).padStart(2, "0")}`, index < 10 ? "STORIA" : null),
+      env.DB.prepare("INSERT INTO copy (id, book_id, location_id) VALUES (?, ?, ?)").bind(`c${index}`, `b${index}`, index < 5 ? mare.id : casa.id),
+    ]).flat();
+    await env.DB.batch(statements);
+    const page = async (params: string) => (await (await reader.call(`/books?${params}`)).json()) as { items: unknown[]; total?: number };
+    expect((await page("")).total).toBe(30);
+    expect((await page("genre=STORIA")).total).toBe(10);
+    expect((await page(`genre=STORIA&location=${mare.id}`)).total).toBe(5);
+    expect((await page("q=libro 07")).total).toBe(1);
+    expect((await page("page=1")).total).toBeUndefined();
+  });
+
   it("scheda: libro, copie con sede, letture e storico; 404 se non esiste", async () => {
     const bookId = (await createBook(editorCasa)).body.bookId;
     const copyId = (await (await admin.call(`/books/${bookId}/copies`, { method: "POST", body: { locationId: mare.id, copy: {} } })).json() as { copyId: string }).copyId;

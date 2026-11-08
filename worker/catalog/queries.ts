@@ -32,6 +32,8 @@ export interface BookListItem {
 export interface BookPage {
   items: BookListItem[];
   hasMore: boolean;
+  /** Libri che rispettano filtri e ricerca: solo nel primo blocco (per il contatore «24 di 312 libri»). */
+  total?: number;
 }
 
 interface ListRow {
@@ -74,16 +76,21 @@ export async function listBooks(
   const search = match ? sql`JOIN book_fts ON book_fts.rowid = b.seq AND book_fts MATCH ${match}` : sql``;
   const order = match ? sql`ORDER BY book_fts.rank, b.title COLLATE NOCASE` : sql`ORDER BY b.title COLLATE NOCASE, b.seq`;
 
-  const rows = await db.all<ListRow>(sql`
+  const list = sql`
     SELECT b.id, b.title, b.authors, b.isbn13, b.published_year, b.cover_key, b.genre,
       (SELECT count(*) FROM copy c WHERE c.book_id = b.id) AS copy_count,
       (SELECT json_group_array(json_object('id', t.id, 'name', t.name, 'color', t.color))
          FROM (SELECT DISTINCT l.id, l.name, l.color, l.name_key FROM copy c JOIN location l ON l.id = c.location_id
                WHERE c.book_id = b.id ORDER BY l.name_key) t) AS locations
     FROM book b ${search} ${where} ${order}
-    LIMIT ${PAGE_SIZE + 1} OFFSET ${page * PAGE_SIZE}`);
+    LIMIT ${PAGE_SIZE + 1} OFFSET ${page * PAGE_SIZE}`;
+  // Il totale solo con il primo blocco, nella stessa andata a D1: i blocchi successivi non lo ricontano.
+  const [listResult, countResult] = await runBatch(db, page === 0 ? [list, sql`SELECT count(*) AS n FROM book b ${search} ${where}`] : [list]);
+  const rows = (listResult?.results ?? []) as ListRow[];
+  const total = countResult ? ((countResult.results?.[0] as { n: number } | undefined)?.n ?? 0) : undefined;
 
   return {
+    ...(total === undefined ? {} : { total }),
     hasMore: rows.length > PAGE_SIZE,
     items: rows.slice(0, PAGE_SIZE).map((row) => ({
       id: row.id,
