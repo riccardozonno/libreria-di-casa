@@ -193,6 +193,10 @@ test.describe("editor", () => {
     await expect(page.getByRole("navigation", { name: "Navigazione principale" }).getByRole("link", { name: "Sedi" })).toHaveCount(0);
     await page.goto("/admin/sedi");
     await expect(page.getByRole("heading", { name: "Pagina non trovata" })).toBeVisible();
+    // Il vecchio indirizzo /sedi porta l'editor al Catalogo.
+    await page.goto("/sedi");
+    await expect(page).toHaveURL(/\/$/);
+    await expect(page.getByRole("heading", { name: "Catalogo" })).toBeVisible();
   });
 
   test("aggiunge libri solo nella propria sede e non vede l'area admin", async ({ page }) => {

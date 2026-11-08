@@ -35,7 +35,7 @@ function OnDemand({ children }: { children: ReactNode }) {
   return <Suspense fallback={<p className="px-1 py-6 text-center text-ink-soft">Caricamento…</p>}>{children}</Suspense>;
 }
 
-/** Vecchio indirizzo delle sedi (prima dell'8/11/2026): l'admin va ad Admin → Sedi, gli altri al Catalogo. */
+/** Vecchio indirizzo delle sedi (ora in Admin): l'admin va ad Admin → Sedi, gli altri al Catalogo. */
 function LegacyLocations() {
   const { me } = useSession();
   return <Navigate to={me.role === "ADMIN" ? "/admin/sedi" : "/"} replace />;

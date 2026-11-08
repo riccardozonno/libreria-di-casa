@@ -3,6 +3,7 @@ import { Link } from "react-router";
 import { Button, buttonClasses, Notice, PageHeader, Section } from "../components/ui";
 import { errorMessage, send } from "../lib/api";
 import { useLocations } from "../lib/locations";
+import { managedLocationNames } from "../lib/managed-locations";
 import { leaveAccess, useSession } from "../lib/session";
 
 // Profilo: chi sei, e uscita (da questo dispositivo o da tutti). Niente password: accesso con Cloudflare Access.
@@ -11,8 +12,8 @@ const ROLE_LABELS = { ADMIN: "Amministratore", EDITOR: "Editor", READER: "Lettor
 
 export function ProfilePage() {
   const { me } = useSession();
-  const { locations } = useLocations();
-  const managed = locations.filter((location) => !location.archived && me.editorLocationIds.includes(location.id)).map((location) => location.name);
+  const { locations, loaded } = useLocations();
+  const managed = managedLocationNames(locations, me.editorLocationIds);
   const [error, setError] = useState("");
   const [isBusy, setIsBusy] = useState(false);
 
@@ -35,8 +36,9 @@ export function ProfilePage() {
         <p className="text-[19px] font-semibold">{me.name}</p>
         <p className="mt-1 text-[15px] text-ink-soft">{me.email}</p>
         <p className="mt-1 text-[15px] text-ink-soft">{ROLE_LABELS[me.role]}</p>
-        {/* Dall'8/11/2026 la pagina Sedi è solo dell'admin: qui l'editor vede dove può aggiungere e modificare. */}
-        {me.role === "EDITOR" && (
+        {/* La pagina Sedi è solo dell'admin: qui l'editor vede dove può aggiungere e modificare. Si aspetta
+            l'elenco delle sedi, per non mostrare «nessuna sede» mentre arriva. */}
+        {me.role === "EDITOR" && loaded && (
           <p className="mt-1 text-[15px] text-ink-soft">
             {managed.length > 0 ? `Sedi che gestisci: ${managed.join(", ")}` : "Non gestisci ancora nessuna sede."}
           </p>
