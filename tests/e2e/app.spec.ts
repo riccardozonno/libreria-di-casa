@@ -268,6 +268,66 @@ test("l'icona per la schermata Home è incorporata nella pagina (iOS la cerca se
   expect(html).toMatch(/<link rel="apple-touch-icon" href="data:image\/png;base64,[A-Za-z0-9+/=]{100,}"/);
 });
 
+test.describe("catalogo a scorrimento continuo", () => {
+  test.use(asUser("editor"));
+
+  // 30 libri con una parola unica nel titolo: la ricerca isola solo questi.
+  async function seedBooks(page: Page, word: string) {
+    await page.goto("/");
+    await page.evaluate(
+      async ({ word, locationId }) => {
+        for (let index = 1; index <= 30; index += 1) {
+          const response = await fetch("/api/books", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ book: { title: `${word} ${String(index).padStart(2, "0")}`, authors: [] }, source: "MANUAL", locationId, copy: {} }),
+          });
+          if (!response.ok) throw new Error(`creazione ${index}: ${response.status}`);
+        }
+      },
+      { word, locationId: EDITOR_LOCATION.id },
+    );
+  }
+
+  test("si scorre fino in fondo, il contatore segue e tornando dalla scheda lista e posizione restano", async ({ page }) => {
+    const word = `Scorrimento${unique()}`;
+    await seedBooks(page, word);
+    await page.goto(`/?q=${word}`);
+    const books = page.getByRole("link", { name: new RegExp(word) });
+    await expect(books).toHaveCount(24);
+    await expect(page.getByText("24 di 30 libri")).toBeVisible();
+    await expect(page.getByRole("navigation", { name: "Pagine" })).toHaveCount(0);
+
+    // Arrivando in fondo arrivano da soli gli altri 6.
+    await page.getByText("24 di 30 libri").scrollIntoViewIfNeeded();
+    await expect(books).toHaveCount(30);
+    await expect(page.getByText("30 libri", { exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Mostra altri" })).toHaveCount(0);
+
+    // Apro il 28° e torno indietro: stessi 30 libri, e il 28° è ancora sullo schermo.
+    await page.getByRole("link", { name: new RegExp(`${word} 28`) }).click();
+    await expect(page.getByRole("heading", { level: 1, name: `${word} 28` })).toBeVisible();
+    await page.goBack();
+    await expect(books).toHaveCount(30);
+    await expect(page.getByRole("link", { name: new RegExp(`${word} 28`) })).toBeInViewport();
+  });
+
+  test("se il caricamento automatico non va, c'è «Mostra altri»", async ({ page }) => {
+    const word = `Riserva${unique()}`;
+    await seedBooks(page, word);
+    // Il secondo blocco fallisce una volta (rete assente).
+    await page.route(/\/api\/books\?.*page=1/, (route) => route.abort(), { times: 1 });
+    await page.goto(`/?q=${word}`);
+    const books = page.getByRole("link", { name: new RegExp(word) });
+    await expect(books).toHaveCount(24);
+    await page.getByText("24 di 30 libri").scrollIntoViewIfNeeded();
+    await expect(page.getByRole("alert")).toBeVisible();
+    await page.getByRole("button", { name: "Mostra altri" }).click();
+    await expect(books).toHaveCount(30);
+    await expect(page.getByRole("alert")).toHaveCount(0);
+  });
+});
+
 test.describe("dopo una pubblicazione", () => {
   test.use(asUser("reader"));
 

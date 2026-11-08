@@ -1,4 +1,5 @@
 // Client dell'API: stessa origine (cookie di Access inclusi), errori sempre con un messaggio in italiano.
+import { clearCatalog } from "./catalog-cache";
 
 export class ApiError extends Error {
   constructor(
@@ -35,6 +36,8 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
   const isSafe = SAFE_METHODS.has((init?.method ?? "GET").toUpperCase());
   if (response.status >= 500 && isSafe) response = await request(path, init);
 
+  // Una scrittura riuscita può cambiare il catalogo: la prossima apertura lo ricarica dal server.
+  if (!isSafe && response.ok) clearCatalog();
   if (response.status === 204) return null as T;
   const body = (await response.json().catch(() => null)) as (T & { error?: string; fields?: Record<string, string> }) | null;
   if (!response.ok) {
