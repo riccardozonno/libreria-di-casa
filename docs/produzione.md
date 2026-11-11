@@ -18,7 +18,7 @@ se Access fosse configurato male, l'API risponde 401 invece di aprirsi.
 Primo amministratore (solo su un database nuovo, per esempio dopo un disastro senza backup):
 `pnpm admin:create --email tu@example.com --name "Nome" --remote`.
 
-Utenti al 31/10/2026: Riccardo (ADMIN), Filiberto Canino (EDITOR, 3 sedi), Giulia (EDITOR, 3 sedi).
+Utenti al 31/10/2026: un admin e due editor (3 sedi ciascuno).
 
 ## Pubblicare una nuova versione
 
@@ -62,7 +62,7 @@ Dal Mac resta possibile: `pnpm exec wrangler d1 migrations apply DB --remote && 
 | Prima pubblicazione da GitHub (run 41214691078) | riuscita: controlli verdi, nessuna migrazione da applicare, versione `0707ed59` |
 | API senza login | 302 verso il login di Access |
 | Vecchio indirizzo di anteprima | 404 |
-| Ruoli online | tre utenti attivi con i ruoli attesi (Giulia promossa a EDITOR dall'admin) |
+| Ruoli online | tre utenti attivi con i ruoli attesi (una lettrice promossa a editor dall'admin) |
 | Primo backup notturno automatico | riuscito il 01/11 e il 02/11/2026 (run 41286481371 e 41409644674). GitHub li ha avviati verso le 08:00 UTC invece delle 01:30: i cron di GitHub Actions possono partire con ore di ritardo, per un backup giornaliero va bene |
 | Controllo settimanale del lunedì | il 02/11/2026 GitHub non l'ha avviato; lanciato a mano: riuscito (622 richieste riuscite in 7 giorni, CPU p99 16,6 ms, database 200 KB). Spostato alle 06:17 UTC, lontano dall'ora esatta |
 

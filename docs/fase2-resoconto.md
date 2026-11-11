@@ -8,7 +8,7 @@
 - Permessi, ISBN, validazioni e colori portati dalla v1 con i loro test.
 - `pnpm admin:create` (SQL generato da input validati, testato).
 - Test: 115 unitari, 23 d'integrazione nel runtime Workers con le migrazioni vere, 6 E2E (iPhone/WebKit, Android/Chromium) sulla build vera; copertura ~92%. CI su GitHub Actions.
-- Online: Worker `homelibrary`, D1 `homelibrary`, bucket `homelibrary-covers`, app Access con One-time PIN. Utenti: Riccardo (admin), Filiberto Canino (editor).
+- Online: Worker `homelibrary`, D1 `homelibrary`, bucket `homelibrary-covers`, app Access con One-time PIN. Utenti: un admin e un editor.
 
 ## CPU per richiesta (`GET /api/me`, iPhone, limite gratuito 10 ms)
 
